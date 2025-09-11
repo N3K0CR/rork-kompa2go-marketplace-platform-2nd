@@ -37,6 +37,12 @@ export default function CalendarScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showReservationModal, setShowReservationModal] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<any>(null);
+  
+  // Debug state logging
+  useEffect(() => {
+    console.log('🔍 Modal state changed - showReservationModal:', showReservationModal);
+    console.log('🔍 Modal state changed - selectedReservation:', selectedReservation?.id || 'null');
+  }, [showReservationModal, selectedReservation]);
   const [showPersonalTaskModal, setShowPersonalTaskModal] = useState(false);
   const [newPersonalTask, setNewPersonalTask] = useState({
     title: '',
@@ -652,8 +658,11 @@ export default function CalendarScreen() {
                       style={[styles.clientActionButton, styles.reservationOptionsButton]}
                       onPress={() => {
                         console.log('🎯 Reservation options button pressed for appointment:', appointment.id);
+                        console.log('🎯 Current appointment data:', appointment);
+                        console.log('🎯 Setting selected reservation and showing modal');
                         setSelectedReservation(appointment);
                         setShowReservationModal(true);
+                        console.log('🎯 Modal should now be visible');
                       }}
                       activeOpacity={0.7}
                       testID={`reservation-options-${appointment.id}`}
@@ -685,6 +694,24 @@ export default function CalendarScreen() {
                     </TouchableOpacity>
                   </View>
                 )}
+                
+                {/* Debug button to test modal functionality */}
+                <TouchableOpacity 
+                  style={[styles.clientActionButton, { backgroundColor: '#FF5722', marginTop: 8 }]}
+                  onPress={() => {
+                    console.log('🔴 DEBUG: Testing modal functionality');
+                    console.log('🔴 DEBUG: Current appointment:', appointment);
+                    console.log('🔴 DEBUG: User type:', user?.userType);
+                    console.log('🔴 DEBUG: showReservationModal before:', showReservationModal);
+                    setSelectedReservation(appointment);
+                    setShowReservationModal(true);
+                    console.log('🔴 DEBUG: Modal state set to true');
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Settings size={16} color="white" />
+                  <Text style={styles.clientActionText}>DEBUG: Test Modal</Text>
+                </TouchableOpacity>
               </View>
             ))}
           </View>
@@ -848,23 +875,25 @@ export default function CalendarScreen() {
       )}
       
       {/* Reservation Management Modal for Clients */}
-      {showReservationModal && selectedReservation && (
-        <Modal
-          visible={showReservationModal}
-          transparent
-          animationType="slide"
-          onRequestClose={() => {
-            console.log('🔧 Closing reservation modal via onRequestClose');
-            setShowReservationModal(false);
-          }}
-        >
-          <View style={styles.modalOverlay}>
+      <Modal
+        visible={showReservationModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          console.log('🔧 Closing reservation modal via onRequestClose');
+          setShowReservationModal(false);
+          setSelectedReservation(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          {selectedReservation ? (
             <View style={styles.reservationModalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Opciones de Reserva</Text>
                 <TouchableOpacity onPress={() => {
                   console.log('🎯 Closing reservation options modal via X button');
                   setShowReservationModal(false);
+                  setSelectedReservation(null);
                 }}>
                   <X size={24} color="#666" />
                 </TouchableOpacity>
@@ -1047,9 +1076,23 @@ export default function CalendarScreen() {
                 </View>
               </View>
             </View>
-          </View>
-        </Modal>
-      )}
+          ) : (
+            <View style={styles.reservationModalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Error: No hay datos de reserva</Text>
+                <TouchableOpacity onPress={() => {
+                  console.log('🔧 Closing error modal');
+                  setShowReservationModal(false);
+                  setSelectedReservation(null);
+                }}>
+                  <X size={24} color="#666" />
+                </TouchableOpacity>
+              </View>
+              <Text>No se pudieron cargar los datos de la reserva. Por favor, inténtalo de nuevo.</Text>
+            </View>
+          )}
+        </View>
+      </Modal>
       
       {/* Date Detail Modal */}
       <Modal
