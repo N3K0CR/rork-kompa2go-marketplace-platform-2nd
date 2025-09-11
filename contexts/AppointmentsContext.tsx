@@ -182,6 +182,80 @@ const mockAppointments: Appointment[] = [
     service: 'No disponible - Día de descanso',
     type: 'dayoff',
     status: 'confirmed',
+  },
+  // Pending appointments for client interaction
+  {
+    id: '15',
+    date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    time: '12:00',
+    duration: 90,
+    clientName: 'Proveedor Kompa2Go',
+    clientPhone: '+506 8888-9999',
+    service: 'Limpieza Residencial',
+    type: 'kompa2go',
+    status: 'pending',
+    notes: 'Confirmación pendiente del cliente'
+  },
+  {
+    id: '16',
+    date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    time: '16:30',
+    duration: 120,
+    clientName: 'Proveedor Kompa2Go',
+    clientPhone: '+506 8888-9999',
+    service: 'Limpieza de Oficina',
+    type: 'kompa2go',
+    status: 'pending',
+    notes: 'Servicio de oficina programado'
+  }
+];
+
+// Mock appointments for client view (showing their reservations)
+const clientMockAppointments: Appointment[] = [
+  {
+    id: 'c1',
+    date: new Date().toISOString().split('T')[0], // Today
+    time: '10:00',
+    duration: 120,
+    clientName: 'Ana Cleaning Services',
+    clientPhone: '+506 8888-1234',
+    service: 'Limpieza Residencial Completa',
+    type: 'kompa2go',
+    status: 'confirmed',
+  },
+  {
+    id: 'c2',
+    date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    time: '14:00',
+    duration: 90,
+    clientName: 'María Cleaning Pro',
+    clientPhone: '+506 7777-5678',
+    service: 'Limpieza de Ventanas',
+    type: 'kompa2go',
+    status: 'pending',
+    notes: 'Pendiente de confirmación'
+  },
+  {
+    id: 'c3',
+    date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    time: '09:30',
+    duration: 180,
+    clientName: 'Carlos Home Services',
+    clientPhone: '+506 6666-9012',
+    service: 'Limpieza Profunda',
+    type: 'kompa2go',
+    status: 'confirmed',
+  },
+  {
+    id: 'c4',
+    date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    time: '11:00',
+    duration: 60,
+    clientName: 'Luis Express Clean',
+    service: 'Organización de Espacios',
+    type: 'kompa2go',
+    status: 'pending',
+    notes: 'Servicio de organización'
   }
 ];
 
@@ -189,6 +263,14 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
+  
+  // Function to get appropriate mock data based on user type
+  const getMockDataForUser = (userType?: string) => {
+    if (userType === 'client') {
+      return clientMockAppointments;
+    }
+    return mockAppointments;
+  };
 
   const loadAppointments = useCallback(async () => {
     try {
@@ -196,9 +278,10 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
       if (storedAppointments) {
         setAppointments(JSON.parse(storedAppointments));
       } else {
-        // Load mock data for testing
-        setAppointments(mockAppointments);
-        await AsyncStorage.setItem('appointments', JSON.stringify(mockAppointments));
+        // Load mock data for testing - use client appointments for client users
+        const mockData = mockAppointments; // Default to provider appointments
+        setAppointments(mockData);
+        await AsyncStorage.setItem('appointments', JSON.stringify(mockData));
       }
     } catch (error) {
       console.error('Error loading appointments:', error);

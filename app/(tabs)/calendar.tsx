@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
-import { Plus, Clock, X, Calendar as CalendarIcon, Users, Award, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react-native';
+import { Plus, Clock, X, Calendar as CalendarIcon, Users, Award, ChevronLeft, ChevronRight, RefreshCw, CheckCircle, XCircle, RotateCcw } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -12,7 +12,7 @@ export default function CalendarScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { t } = useLanguage();
-  const { addAppointment, getAppointmentsForDate, getTodayAppointments, refreshAppointments } = useAppointments();
+  const { addAppointment, updateAppointment, getAppointmentsForDate, getTodayAppointments, refreshAppointments } = useAppointments();
   const { collaborators, consolidatedData } = useTeamCalendar();
   
   // Simplified state
@@ -27,6 +27,8 @@ export default function CalendarScreen() {
   });
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showReservationModal, setShowReservationModal] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState<any>(null);
 
   // Get appointments for selected date
   const selectedDateAppointments = useMemo(() => {
@@ -216,6 +218,14 @@ export default function CalendarScreen() {
             ]}
             onPress={() => {
               setSelectedDate(dayData.dateString);
+              // For clients, if there are appointments on this date, show reservation modal
+              if (user?.userType === 'client' && dayData.appointments.length > 0) {
+                const clientReservation = dayData.appointments.find(apt => apt.type === 'kompa2go');
+                if (clientReservation) {
+                  setSelectedReservation(clientReservation);
+                  setShowReservationModal(true);
+                }
+              }
             }}
           >
             <Text style={[
@@ -529,19 +539,20 @@ export default function CalendarScreen() {
                 <View style={styles.clientAppointmentActions}>
                   <TouchableOpacity 
                     style={styles.clientActionButton}
+                    onPress={() => {
+                      setSelectedReservation(appointment);
+                      setShowReservationModal(true);
+                    }}
+                  >
+                    <Text style={styles.clientActionText}>Gestionar</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={styles.clientActionButton}
                     onPress={() => Alert.alert('Contactar', 'Función de contacto próximamente')}
                   >
                     <Text style={styles.clientActionText}>Contactar</Text>
                   </TouchableOpacity>
-                  
-                  {appointment.status === 'confirmed' && (
-                    <TouchableOpacity 
-                      style={[styles.clientActionButton, styles.cancelButton]}
-                      onPress={() => Alert.alert('Cancelar', '¿Estás seguro de cancelar esta cita?')}
-                    >
-                      <Text style={[styles.clientActionText, styles.cancelButtonText]}>Cancelar</Text>
-                    </TouchableOpacity>
-                  )}
                 </View>
               </View>
             ))}
@@ -694,6 +705,122 @@ export default function CalendarScreen() {
               >
                 <Text style={styles.timePickerCloseText}>Cerrar</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
+      
+      {/* Reservation Management Modal for Clients */}
+      {showReservationModal && selectedReservation && (
+        <Modal
+          visible={showReservationModal}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowReservationModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.reservationModalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Gestionar Reserva</Text>
+                <TouchableOpacity onPress={() => setShowReservationModal(false)}>
+                  <X size={24} color="#666" />
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.reservationDetails}>
+                <Text style={styles.reservationDetailTitle}>Detalles de la Reserva</Text>
+                <View style={styles.reservationDetailRow}>
+                  <Text style={styles.reservationDetailLabel}>Fecha:</Text>
+                  <Text style={styles.reservationDetailValue}>
+                    {new Date(selectedReservation.date).toLocaleDateString('es-ES', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </Text>
+                </View>
+                <View style={styles.reservationDetailRow}>
+                  <Text style={styles.reservationDetailLabel}>Hora:</Text>
+                  <Text style={styles.reservationDetailValue}>{selectedReservation.time}</Text>
+                </View>
+                <View style={styles.reservationDetailRow}>
+                  <Text style={styles.reservationDetailLabel}>Servicio:</Text>
+                  <Text style={styles.reservationDetailValue}>{selectedReservation.service}</Text>
+                </View>
+                <View style={styles.reservationDetailRow}>
+                  <Text style={styles.reservationDetailLabel}>Proveedor:</Text>
+                  <Text style={styles.reservationDetailValue}>{selectedReservation.clientName}</Text>
+                </View>
+                <View style={styles.reservationDetailRow}>
+                  <Text style={styles.reservationDetailLabel}>Estado:</Text>
+                  <View style={[
+                    styles.statusBadge,
+                    selectedReservation.status === 'confirmed' && styles.statusConfirmed,
+                    selectedReservation.status === 'pending' && styles.statusPending,
+                    selectedReservation.status === 'cancelled' && styles.statusCancelled
+                  ]}>
+                    <Text style={styles.statusText}>
+                      {selectedReservation.status === 'confirmed' ? 'Confirmada' :
+                       selectedReservation.status === 'pending' ? 'Pendiente' : 'Cancelada'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+              
+              <View style={styles.reservationActions}>
+                {selectedReservation.status === 'pending' && (
+                  <TouchableOpacity 
+                    style={[styles.reservationActionButton, styles.confirmButton]}
+                    onPress={async () => {
+                      await updateAppointment(selectedReservation.id, { status: 'confirmed' });
+                      setShowReservationModal(false);
+                      Alert.alert('Confirmado', 'Tu reserva ha sido confirmada. El proveedor será notificado.');
+                    }}
+                  >
+                    <CheckCircle size={20} color="white" />
+                    <Text style={styles.reservationActionText}>Confirmar</Text>
+                  </TouchableOpacity>
+                )}
+                
+                <TouchableOpacity 
+                  style={[styles.reservationActionButton, styles.rescheduleButton]}
+                  onPress={() => {
+                    setShowReservationModal(false);
+                    Alert.alert('Reprogramar', 'Función de reprogramación próximamente. Contacta al proveedor para reprogramar.');
+                  }}
+                >
+                  <RotateCcw size={20} color="white" />
+                  <Text style={styles.reservationActionText}>Reprogramar</Text>
+                </TouchableOpacity>
+                
+                {selectedReservation.status !== 'cancelled' && (
+                  <TouchableOpacity 
+                    style={[styles.reservationActionButton, styles.cancelReservationButton]}
+                    onPress={() => {
+                      Alert.alert(
+                        'Cancelar Reserva',
+                        '¿Estás seguro de que deseas cancelar esta reserva?',
+                        [
+                          { text: 'No', style: 'cancel' },
+                          {
+                            text: 'Sí, Cancelar',
+                            style: 'destructive',
+                            onPress: async () => {
+                              await updateAppointment(selectedReservation.id, { status: 'cancelled' });
+                              setShowReservationModal(false);
+                              Alert.alert('Cancelada', 'Tu reserva ha sido cancelada. El proveedor será notificado.');
+                            }
+                          }
+                        ]
+                      );
+                    }}
+                  >
+                    <XCircle size={20} color="white" />
+                    <Text style={styles.reservationActionText}>Cancelar</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           </View>
         </Modal>
@@ -1319,6 +1446,91 @@ const styles = StyleSheet.create({
   clientActionText: {
     color: 'white',
     fontSize: 12,
+    fontWeight: '600',
+  },
+  reservationModalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+    maxHeight: '80%',
+  },
+  reservationDetails: {
+    marginBottom: 24,
+  },
+  reservationDetailTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 16,
+  },
+  reservationDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  reservationDetailLabel: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  reservationDetailValue: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'right',
+    textTransform: 'capitalize',
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  statusConfirmed: {
+    backgroundColor: '#4CAF50',
+  },
+  statusPending: {
+    backgroundColor: '#FF9800',
+  },
+  statusCancelled: {
+    backgroundColor: '#F44336',
+  },
+  statusText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  reservationActions: {
+    gap: 12,
+  },
+  reservationActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  confirmButton: {
+    backgroundColor: '#4CAF50',
+  },
+  rescheduleButton: {
+    backgroundColor: '#2196F3',
+  },
+  cancelReservationButton: {
+    backgroundColor: '#F44336',
+  },
+  reservationActionText: {
+    color: 'white',
+    fontSize: 14,
     fontWeight: '600',
   },
 });
