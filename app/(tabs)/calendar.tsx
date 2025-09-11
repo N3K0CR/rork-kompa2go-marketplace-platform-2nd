@@ -46,6 +46,14 @@ export default function CalendarScreen() {
 
   // Force re-render when modal state changes
   const [forceUpdate, setForceUpdate] = useState(0);
+  
+  // Handle reservation options button press
+  const handleReservationOptions = useCallback((appointment: any) => {
+    console.log('🎯 Opening reservation options for appointment:', appointment.id);
+    setSelectedReservation(appointment);
+    setShowReservationModal(true);
+    setForceUpdate(prev => prev + 1);
+  }, []);
   const [showPersonalTaskModal, setShowPersonalTaskModal] = useState(false);
   const [newPersonalTask, setNewPersonalTask] = useState({
     title: '',
@@ -659,19 +667,7 @@ export default function CalendarScreen() {
                   <View style={styles.clientAppointmentActions}>
                     <TouchableOpacity 
                       style={[styles.clientActionButton, styles.reservationOptionsButton]}
-                      onPress={() => {
-                        console.log('🎯 Reservation options button pressed for appointment:', appointment.id);
-                        console.log('🎯 Current appointment data:', appointment);
-                        console.log('🎯 Setting selected reservation and showing modal');
-                        
-                        // Use setTimeout to ensure state updates properly
-                        setTimeout(() => {
-                          setSelectedReservation(appointment);
-                          setShowReservationModal(true);
-                          setForceUpdate(prev => prev + 1);
-                          console.log('🎯 Modal state updated - should be visible now');
-                        }, 100);
-                      }}
+                      onPress={() => handleReservationOptions(appointment)}
                       activeOpacity={0.7}
                       testID={`reservation-options-${appointment.id}`}
                     >
@@ -716,11 +712,7 @@ export default function CalendarScreen() {
                         {
                           text: 'Open Modal Test',
                           style: 'default',
-                          onPress: () => {
-                            setSelectedReservation(appointment);
-                            setShowReservationModal(true);
-                            setForceUpdate(prev => prev + 1);
-                          }
+                          onPress: () => handleReservationOptions(appointment)
                         }
                       ]
                     );
@@ -895,7 +887,7 @@ export default function CalendarScreen() {
       {/* Reservation Management Modal for Clients */}
       <Modal
         visible={showReservationModal}
-        transparent
+        transparent={true}
         animationType="slide"
         onRequestClose={() => {
           console.log('🔧 Closing reservation modal via onRequestClose');
@@ -904,7 +896,20 @@ export default function CalendarScreen() {
         }}
         key={`reservation-modal-${forceUpdate}`}
       >
-        <View style={styles.modalOverlay}>
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => {
+            console.log('🔧 Closing modal via overlay press');
+            setShowReservationModal(false);
+            setSelectedReservation(null);
+          }}
+        >
+          <TouchableOpacity 
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+            style={styles.modalContentContainer}
+          >
           {selectedReservation ? (
             <View style={styles.reservationModalContent}>
               <View style={styles.modalHeader}>
@@ -1110,7 +1115,8 @@ export default function CalendarScreen() {
               <Text>No se pudieron cargar los datos de la reserva. Por favor, inténtalo de nuevo.</Text>
             </View>
           )}
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
       
       {/* Date Detail Modal */}
@@ -1779,11 +1785,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -2333,5 +2335,10 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
+  },
+  modalContentContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
