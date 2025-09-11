@@ -576,31 +576,34 @@ export default function CalendarScreen() {
                   <Text style={styles.appointmentDetailNotes}>📝 {appointment.notes}</Text>
                 )}
                 
-                <View style={styles.clientAppointmentActions}>
-                  <TouchableOpacity 
-                    style={[styles.clientActionButton, styles.manageButton]}
-                    onPress={() => {
-                      setSelectedReservation(appointment);
-                      setShowReservationModal(true);
-                    }}
-                  >
-                    <Text style={styles.clientActionText}>Gestionar</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    style={[styles.clientActionButton, styles.callButton]}
-                    onPress={() => Alert.alert('Llamar', `Llamando a ${appointment.clientName}...`)}
-                  >
-                    <Phone size={16} color="white" />
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    style={[styles.clientActionButton, styles.chatButton]}
-                    onPress={() => Alert.alert('Chat', `Iniciando chat con ${appointment.clientName}...`)}
-                  >
-                    <MessageCircle size={16} color="white" />
-                  </TouchableOpacity>
-                </View>
+                {/* Only show management actions for kompa2go appointments */}
+                {appointment.type === 'kompa2go' && (
+                  <View style={styles.clientAppointmentActions}>
+                    <TouchableOpacity 
+                      style={[styles.clientActionButton, styles.manageButton]}
+                      onPress={() => {
+                        setSelectedReservation(appointment);
+                        setShowReservationModal(true);
+                      }}
+                    >
+                      <Text style={styles.clientActionText}>Gestionar</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={[styles.clientActionButton, styles.callButton]}
+                      onPress={() => Alert.alert('Llamar', `Llamando a ${appointment.clientName}...`)}
+                    >
+                      <Phone size={16} color="white" />
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={[styles.clientActionButton, styles.chatButton]}
+                      onPress={() => Alert.alert('Chat', `Iniciando chat con ${appointment.clientName}...`)}
+                    >
+                      <MessageCircle size={16} color="white" />
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             ))}
           </View>
@@ -828,11 +831,15 @@ export default function CalendarScreen() {
                     onPress={async () => {
                       await updateAppointment(selectedReservation.id, { status: 'confirmed' });
                       setShowReservationModal(false);
-                      Alert.alert('Confirmado', 'Tu reserva ha sido confirmada. El proveedor será notificado.');
+                      Alert.alert(
+                        'Reserva Confirmada', 
+                        'Tu reserva ha sido confirmada exitosamente. El proveedor será notificado y tu cita está asegurada.',
+                        [{ text: 'Entendido', style: 'default' }]
+                      );
                     }}
                   >
                     <CheckCircle size={20} color="white" />
-                    <Text style={styles.reservationActionText}>Confirmar</Text>
+                    <Text style={styles.reservationActionText}>Confirmar Reserva</Text>
                   </TouchableOpacity>
                 )}
                 
@@ -840,7 +847,20 @@ export default function CalendarScreen() {
                   style={[styles.reservationActionButton, styles.rescheduleButton]}
                   onPress={() => {
                     setShowReservationModal(false);
-                    Alert.alert('Reprogramar', 'Función de reprogramación próximamente. Contacta al proveedor para reprogramar.');
+                    Alert.alert(
+                      'Reprogramar Cita', 
+                      'Para reprogramar tu cita, por favor contacta directamente al proveedor usando los botones de llamada o chat. Ellos te ayudarán a encontrar una nueva fecha y hora que funcione para ambos.',
+                      [
+                        { text: 'Entendido', style: 'default' },
+                        { 
+                          text: 'Contactar Ahora', 
+                          style: 'default',
+                          onPress: () => {
+                            Alert.alert('Contactar Proveedor', `Llamando a ${selectedReservation.clientName}...`);
+                          }
+                        }
+                      ]
+                    );
                   }}
                 >
                   <RotateCcw size={20} color="white" />
@@ -853,16 +873,23 @@ export default function CalendarScreen() {
                     onPress={() => {
                       Alert.alert(
                         'Cancelar Reserva',
-                        '¿Estás seguro de que deseas cancelar esta reserva?',
+                        'IMPORTANTE: Al cancelar esta reserva, la comisión pagada NO será reembolsada según nuestros términos de servicio.\n\n¿Estás seguro de que deseas proceder con la cancelación?',
                         [
-                          { text: 'No', style: 'cancel' },
+                          { text: 'No, Mantener Reserva', style: 'cancel' },
                           {
-                            text: 'Sí, Cancelar',
+                            text: 'Sí, Cancelar (Sin Reembolso)',
                             style: 'destructive',
                             onPress: async () => {
-                              await updateAppointment(selectedReservation.id, { status: 'cancelled' });
+                              await updateAppointment(selectedReservation.id, { 
+                                status: 'cancelled',
+                                notes: (selectedReservation.notes || '') + ' [Cancelada por cliente - Comisión no reembolsable]'
+                              });
                               setShowReservationModal(false);
-                              Alert.alert('Cancelada', 'Tu reserva ha sido cancelada. El proveedor será notificado.');
+                              Alert.alert(
+                                'Reserva Cancelada', 
+                                'Tu reserva ha sido cancelada. El proveedor será notificado. Recuerda que la comisión no es reembolsable.',
+                                [{ text: 'Entendido', style: 'default' }]
+                              );
                             }
                           }
                         ]
@@ -945,7 +972,7 @@ export default function CalendarScreen() {
                         <Text style={styles.appointmentCardNotes}>📝 {appointment.notes}</Text>
                       )}
                       
-                      {/* Action buttons for kompa2go appointments (client view) */}
+                      {/* Enhanced action buttons for kompa2go appointments (client view) */}
                       {user?.userType === 'client' && appointment.type === 'kompa2go' && (
                         <View style={styles.appointmentActions}>
                           {appointment.status === 'pending' && (
@@ -953,7 +980,11 @@ export default function CalendarScreen() {
                               style={[styles.appointmentActionButton, styles.confirmActionButton]}
                               onPress={async () => {
                                 await updateAppointment(appointment.id, { status: 'confirmed' });
-                                Alert.alert('Confirmado', 'Tu reserva ha sido confirmada.');
+                                Alert.alert(
+                                  'Reserva Confirmada', 
+                                  'Tu reserva ha sido confirmada exitosamente. El proveedor será notificado.',
+                                  [{ text: 'Perfecto', style: 'default' }]
+                                );
                               }}
                             >
                               <CheckCircle size={16} color="white" />
@@ -964,7 +995,18 @@ export default function CalendarScreen() {
                           <TouchableOpacity 
                             style={[styles.appointmentActionButton, styles.rescheduleActionButton]}
                             onPress={() => {
-                              Alert.alert('Reprogramar', 'Contacta al proveedor para reprogramar esta cita.');
+                              Alert.alert(
+                                'Reprogramar Cita', 
+                                'Para reprogramar, contacta al proveedor directamente. Ellos te ayudarán a encontrar una nueva fecha.',
+                                [
+                                  { text: 'Entendido', style: 'default' },
+                                  { 
+                                    text: 'Contactar', 
+                                    style: 'default',
+                                    onPress: () => Alert.alert('Contactando...', `Llamando a ${appointment.clientName}...`)
+                                  }
+                                ]
+                              );
                             }}
                           >
                             <RotateCcw size={16} color="white" />
@@ -977,15 +1019,22 @@ export default function CalendarScreen() {
                               onPress={() => {
                                 Alert.alert(
                                   'Cancelar Reserva',
-                                  '¿Estás seguro de que deseas cancelar esta reserva?',
+                                  'ATENCIÓN: La comisión pagada NO será reembolsada.\n\n¿Confirmas la cancelación?',
                                   [
-                                    { text: 'No', style: 'cancel' },
+                                    { text: 'No, Mantener', style: 'cancel' },
                                     {
                                       text: 'Sí, Cancelar',
                                       style: 'destructive',
                                       onPress: async () => {
-                                        await updateAppointment(appointment.id, { status: 'cancelled' });
-                                        Alert.alert('Cancelada', 'Tu reserva ha sido cancelada.');
+                                        await updateAppointment(appointment.id, { 
+                                          status: 'cancelled',
+                                          notes: (appointment.notes || '') + ' [Cancelada - Sin reembolso de comisión]'
+                                        });
+                                        Alert.alert(
+                                          'Reserva Cancelada', 
+                                          'Tu reserva ha sido cancelada. La comisión no es reembolsable.',
+                                          [{ text: 'Entendido', style: 'default' }]
+                                        );
                                       }
                                     }
                                   ]
