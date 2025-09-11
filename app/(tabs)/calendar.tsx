@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
 import { Plus, Clock, X, Calendar as CalendarIcon, Users, Award, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAppointments } from '@/contexts/AppointmentsContext';
@@ -8,9 +9,10 @@ import { useTeamCalendar } from '@/contexts/TeamCalendarContext';
 import FloatingKompi from '@/components/FloatingKompi';
 
 export default function CalendarScreen() {
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { t } = useLanguage();
-  const { appointments, addAppointment, getAppointmentsForDate, getTodayAppointments, refreshAppointments } = useAppointments();
+  const { addAppointment, getAppointmentsForDate, getTodayAppointments, refreshAppointments } = useAppointments();
   const { collaborators, consolidatedData } = useTeamCalendar();
   
   // Simplified state
@@ -265,7 +267,7 @@ export default function CalendarScreen() {
   
   const renderCalendarView = () => (
     <ScrollView style={styles.scrollContainer}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <View style={styles.headerLeft}>
           <Text style={styles.title}>Mi Calendario</Text>
         </View>
@@ -384,10 +386,176 @@ export default function CalendarScreen() {
     </ScrollView>
   );
 
+  // Client view - show their appointments and booking history
+  const renderClientCalendarView = () => (
+    <ScrollView style={styles.scrollContainer}>
+      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.title}>Mi Calendario</Text>
+          <Text style={styles.subtitle}>Mis citas y reservas</Text>
+        </View>
+        <View style={styles.headerRight}>
+          <TouchableOpacity 
+            style={styles.refreshButton}
+            onPress={async () => {
+              setIsRefreshing(true);
+              await refreshAppointments();
+              setIsRefreshing(false);
+            }}
+            disabled={isRefreshing}
+          >
+            <RefreshCw 
+              size={20} 
+              color={isRefreshing ? '#999' : '#D81B60'} 
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Client Dashboard Widgets */}
+      <View style={styles.widgetsContainer}>
+        <TouchableOpacity 
+          style={styles.widget}
+          onPress={() => {
+            const today = new Date().toISOString().split('T')[0];
+            setSelectedDate(today);
+          }}
+        >
+          <CalendarIcon size={24} color="#D81B60" />
+          <Text style={styles.widgetNumber}>{getTodayAppointments().length}</Text>
+          <Text style={styles.widgetLabel}>Citas Hoy</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.widget}
+          onPress={() => {
+            Alert.alert('Historial', 'Total de servicios completados: 12');
+          }}
+        >
+          <Clock size={24} color="#4CAF50" />
+          <Text style={styles.widgetNumber}>12</Text>
+          <Text style={styles.widgetLabel}>Completados</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.widget}
+          onPress={() => {
+            Alert.alert('Próximas Citas', 'Tienes 3 citas programadas esta semana');
+          }}
+        >
+          <Users size={24} color="#FF9800" />
+          <Text style={styles.widgetNumber}>3</Text>
+          <Text style={styles.widgetLabel}>Próximas</Text>
+        </TouchableOpacity>
+      </View>
+
+      {renderCustomCalendar()}
+      
+      {/* Client-specific sections */}
+      <View style={styles.clientSection}>
+        <Text style={styles.clientSectionTitle}>Mis Reservas</Text>
+        <Text style={styles.clientSectionSubtitle}>
+          Aquí puedes ver todas tus citas programadas
+        </Text>
+        
+        <View style={styles.clientStatsContainer}>
+          <View style={styles.clientStatCard}>
+            <Text style={styles.clientStatNumber}>2</Text>
+            <Text style={styles.clientStatLabel}>Esta Semana</Text>
+          </View>
+          <View style={styles.clientStatCard}>
+            <Text style={styles.clientStatNumber}>5</Text>
+            <Text style={styles.clientStatLabel}>Este Mes</Text>
+          </View>
+          <View style={styles.clientStatCard}>
+            <Text style={styles.clientStatNumber}>4.9</Text>
+            <Text style={styles.clientStatLabel}>Mi Calificación</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Selected Date Events for Client */}
+      {selectedDateAppointments.length > 0 && (
+        <View style={styles.selectedDateSection}>
+          <Text style={styles.selectedDateTitle}>
+            Mis citas para {new Date(selectedDate).toLocaleDateString('es-ES', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}
+          </Text>
+          <Text style={styles.selectedDateSubtitle}>
+            Total de citas: {selectedDateAppointments.length}
+          </Text>
+          
+          <View style={styles.selectedDateScrollContainer}>
+            {selectedDateAppointments.map((appointment) => (
+              <View 
+                key={appointment.id} 
+                style={[
+                  styles.appointmentDetailCard,
+                  { borderLeftColor: getEventColor(appointment.type) }
+                ]}
+              >
+                <View style={styles.appointmentDetailHeader}>
+                  <View style={styles.appointmentTimeContainer}>
+                    <Text style={styles.appointmentDetailTime}>{appointment.time}</Text>
+                    <Text style={styles.appointmentDuration}>({appointment.duration} min)</Text>
+                  </View>
+                  <View style={[
+                    styles.appointmentTypeIndicator,
+                    { backgroundColor: getEventColor(appointment.type) }
+                  ]}>
+                    <Text style={styles.appointmentTypeText}>
+                      {appointment.status === 'confirmed' ? 'CONF' :
+                       appointment.status === 'pending' ? 'PEND' : 
+                       appointment.status === 'cancelled' ? 'CANC' : 'UNK'}
+                    </Text>
+                  </View>
+                </View>
+                
+                <Text style={styles.appointmentDetailClient}>Proveedor: {appointment.clientName}</Text>
+                <Text style={styles.appointmentDetailService}>{appointment.service}</Text>
+                
+                {appointment.clientPhone && (
+                  <Text style={styles.appointmentDetailPhone}>📞 {appointment.clientPhone}</Text>
+                )}
+                
+                {appointment.notes && (
+                  <Text style={styles.appointmentDetailNotes}>📝 {appointment.notes}</Text>
+                )}
+                
+                <View style={styles.clientAppointmentActions}>
+                  <TouchableOpacity 
+                    style={styles.clientActionButton}
+                    onPress={() => Alert.alert('Contactar', 'Función de contacto próximamente')}
+                  >
+                    <Text style={styles.clientActionText}>Contactar</Text>
+                  </TouchableOpacity>
+                  
+                  {appointment.status === 'confirmed' && (
+                    <TouchableOpacity 
+                      style={[styles.clientActionButton, styles.cancelButton]}
+                      onPress={() => Alert.alert('Cancelar', '¿Estás seguro de cancelar esta cita?')}
+                    >
+                      <Text style={[styles.clientActionText, styles.cancelButtonText]}>Cancelar</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+    </ScrollView>
+  );
+
   if (user?.userType !== 'provider') {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Esta función es solo para proveedores</Text>
+        {renderClientCalendarView()}
+        <FloatingKompi isVisible={true} />
       </View>
     );
   }
@@ -547,7 +715,6 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: 'white',
-    paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
@@ -560,6 +727,11 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
   },
   errorText: {
     fontSize: 18,
@@ -1079,6 +1251,74 @@ const styles = StyleSheet.create({
   timePickerCloseText: {
     color: '#666',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  clientSection: {
+    backgroundColor: 'white',
+    marginTop: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  clientSectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  clientSectionSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+  },
+  clientStatsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    gap: 8,
+  },
+  clientStatCard: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    borderLeftWidth: 3,
+    borderLeftColor: '#4CAF50',
+  },
+  clientStatNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  clientStatLabel: {
+    fontSize: 11,
+    color: '#666',
+    textAlign: 'center',
+  },
+  clientAppointmentActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  clientActionButton: {
+    flex: 1,
+    backgroundColor: '#D81B60',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+  },
+  clientActionText: {
+    color: 'white',
+    fontSize: 12,
     fontWeight: '600',
   },
 });
