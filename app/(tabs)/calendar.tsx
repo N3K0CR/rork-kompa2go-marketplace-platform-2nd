@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
-import { Plus, Clock, X, Calendar as CalendarIcon, Users, Award, ChevronLeft, ChevronRight, RefreshCw, CheckCircle, XCircle, RotateCcw } from 'lucide-react-native';
+import { Plus, Clock, X, Calendar as CalendarIcon, Users, Award, ChevronLeft, ChevronRight, RefreshCw, CheckCircle, XCircle, RotateCcw, Phone, MessageCircle } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -578,7 +578,7 @@ export default function CalendarScreen() {
                 
                 <View style={styles.clientAppointmentActions}>
                   <TouchableOpacity 
-                    style={styles.clientActionButton}
+                    style={[styles.clientActionButton, styles.manageButton]}
                     onPress={() => {
                       setSelectedReservation(appointment);
                       setShowReservationModal(true);
@@ -588,10 +588,17 @@ export default function CalendarScreen() {
                   </TouchableOpacity>
                   
                   <TouchableOpacity 
-                    style={styles.clientActionButton}
-                    onPress={() => Alert.alert('Contactar', 'Función de contacto próximamente')}
+                    style={[styles.clientActionButton, styles.callButton]}
+                    onPress={() => Alert.alert('Llamar', `Llamando a ${appointment.clientName}...`)}
                   >
-                    <Text style={styles.clientActionText}>Contactar</Text>
+                    <Phone size={16} color="white" />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={[styles.clientActionButton, styles.chatButton]}
+                    onPress={() => Alert.alert('Chat', `Iniciando chat con ${appointment.clientName}...`)}
+                  >
+                    <MessageCircle size={16} color="white" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1749,6 +1756,19 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  manageButton: {
+    flex: 2,
+    backgroundColor: '#D81B60',
+  },
+  callButton: {
+    flex: 1,
+    backgroundColor: '#4CAF50',
+  },
+  chatButton: {
+    flex: 1,
+    backgroundColor: '#2196F3',
   },
   clientActionText: {
     color: 'white',
