@@ -1,0 +1,21 @@
+export default {
+  primary: '#D81B60',
+  primaryLight: '#E91E63',
+  primaryDark: '#C2185B',
+  secondary: '#F06292',
+  background: '#F8F9FA',
+  surface: '#FFFFFF',
+  text: '#333333',
+  textSecondary: '#666666',
+  border: '#E5E5E5',
+  success: '#4CAF50',
+  warning: '#FF9800',
+  error: '#F44336',
+  light: {
+    text: '#000',
+    background: '#fff',
+    tint: '#D81B60',
+    tabIconDefault: '#ccc',
+    tabIconSelected: '#D81B60',
+  },
+};
