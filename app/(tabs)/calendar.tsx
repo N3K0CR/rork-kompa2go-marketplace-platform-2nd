@@ -649,22 +649,17 @@ export default function CalendarScreen() {
                 {appointment.type === 'kompa2go' && (
                   <View style={styles.clientAppointmentActions}>
                     <TouchableOpacity 
-                      style={[styles.clientActionButton, styles.manageButton]}
+                      style={[styles.clientActionButton, styles.reservationOptionsButton]}
                       onPress={() => {
-                        console.log('🔧 Gestionar button pressed for appointment:', appointment.id, appointment);
-                        console.log('🔧 Setting selected reservation and opening modal');
-                        console.log('🔧 Current showReservationModal state:', showReservationModal);
+                        console.log('🎯 Reservation options button pressed for appointment:', appointment.id);
                         setSelectedReservation(appointment);
-                        setTimeout(() => {
-                          console.log('🔧 Opening reservation modal after timeout');
-                          setShowReservationModal(true);
-                        }, 100);
+                        setShowReservationModal(true);
                       }}
                       activeOpacity={0.7}
-                      testID={`manage-appointment-${appointment.id}`}
+                      testID={`reservation-options-${appointment.id}`}
                     >
                       <Settings size={16} color="white" />
-                      <Text style={styles.clientActionText}>Gestionar</Text>
+                      <Text style={styles.clientActionText}>Opciones de Reserva</Text>
                     </TouchableOpacity>
                     
                     <TouchableOpacity 
@@ -866,9 +861,9 @@ export default function CalendarScreen() {
           <View style={styles.modalOverlay}>
             <View style={styles.reservationModalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Gestionar Reserva</Text>
+                <Text style={styles.modalTitle}>Opciones de Reserva</Text>
                 <TouchableOpacity onPress={() => {
-                  console.log('🔧 Closing reservation modal via X button');
+                  console.log('🎯 Closing reservation options modal via X button');
                   setShowReservationModal(false);
                 }}>
                   <X size={24} color="#666" />
@@ -1966,7 +1961,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
-  manageButton: {
+  reservationOptionsButton: {
     flex: 2,
     backgroundColor: '#D81B60',
   },
