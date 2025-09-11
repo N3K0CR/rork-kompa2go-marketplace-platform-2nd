@@ -9,7 +9,7 @@ export interface Appointment {
   clientName: string;
   clientPhone?: string;
   service: string;
-  type: 'kompa2go' | 'manual' | 'blocked' | 'dayoff';
+  type: 'kompa2go' | 'manual' | 'blocked' | 'dayoff' | 'personal';
   status: 'confirmed' | 'pending' | 'cancelled';
   notes?: string;
   collaboratorId?: string;

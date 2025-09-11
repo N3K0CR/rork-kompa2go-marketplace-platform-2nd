@@ -29,6 +29,13 @@ export default function CalendarScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showReservationModal, setShowReservationModal] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<any>(null);
+  const [showPersonalTaskModal, setShowPersonalTaskModal] = useState(false);
+  const [newPersonalTask, setNewPersonalTask] = useState({
+    title: '',
+    time: '',
+    notes: '',
+    date: new Date().toISOString().split('T')[0],
+  });
 
   // Get appointments for selected date
   const selectedDateAppointments = useMemo(() => {
@@ -90,6 +97,7 @@ export default function CalendarScreen() {
       case 'manual': return '#2196F3';
       case 'blocked': return '#FF9800';
       case 'dayoff': return '#9E9E9E';
+      case 'personal': return '#9C27B0';
       default: return '#666';
     }
   };
@@ -136,6 +144,37 @@ export default function CalendarScreen() {
       Alert.alert('Éxito', 'Cita agregada correctamente');
     } catch (error) {
       Alert.alert('Error', 'No se pudo agregar la cita');
+    }
+  };
+
+  const handleAddPersonalTask = async () => {
+    if (!newPersonalTask.title || !newPersonalTask.time) {
+      Alert.alert('Error', 'Por favor completa el título y la hora');
+      return;
+    }
+    
+    try {
+      await addAppointment({
+        date: newPersonalTask.date,
+        time: newPersonalTask.time,
+        duration: 60,
+        clientName: 'Tarea Personal',
+        service: newPersonalTask.title,
+        type: 'personal',
+        status: 'confirmed',
+        notes: newPersonalTask.notes
+      });
+      
+      setShowPersonalTaskModal(false);
+      setNewPersonalTask({ 
+        title: '', 
+        time: '', 
+        notes: '', 
+        date: new Date().toISOString().split('T')[0]
+      });
+      Alert.alert('Éxito', 'Tarea personal agregada correctamente');
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo agregar la tarea personal');
     }
   };
 
@@ -224,8 +263,17 @@ export default function CalendarScreen() {
                 if (clientReservation) {
                   setSelectedReservation(clientReservation);
                   setShowReservationModal(true);
+                  return;
                 }
               }
+              // For all users, show personal task modal when clicking on a date
+              setNewPersonalTask({
+                title: '',
+                time: '',
+                notes: '',
+                date: dayData.dateString,
+              });
+              setShowPersonalTaskModal(true);
             }}
           >
             <Text style={[
@@ -253,6 +301,8 @@ export default function CalendarScreen() {
                   >
                     <Text style={styles.eventText} numberOfLines={1}>
                       {appointment.type === 'dayoff' ? 'Día libre' : 
+                       appointment.type === 'personal' ? 
+                       (appointment.service.length > 6 ? appointment.service.substring(0, 6) + '...' : appointment.service) :
                        appointment.clientName.length > 6 ? 
                        appointment.clientName.substring(0, 6) + '...' : 
                        appointment.clientName}
@@ -362,12 +412,15 @@ export default function CalendarScreen() {
                       {appointment.type === 'kompa2go' ? 'K2G' :
                        appointment.type === 'manual' ? 'MAN' : 
                        appointment.type === 'blocked' ? 'BLK' : 
-                       appointment.type === 'dayoff' ? 'OFF' : 'UNK'}
+                       appointment.type === 'dayoff' ? 'OFF' :
+                       appointment.type === 'personal' ? 'PER' : 'UNK'}
                     </Text>
                   </View>
                 </View>
                 
-                <Text style={styles.appointmentDetailClient}>{appointment.clientName}</Text>
+                <Text style={styles.appointmentDetailClient}>
+                  {appointment.type === 'personal' ? 'Tarea Personal' : appointment.clientName}
+                </Text>
                 <Text style={styles.appointmentDetailService}>{appointment.service}</Text>
                 
                 {appointment.clientPhone && (
@@ -675,7 +728,9 @@ export default function CalendarScreen() {
                 {Array.from({ length: 10 }, (_, i) => i + 8).map((hour) => {
                   return [0, 30].map((minute) => {
                     const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-                    const isSelected = newAppointment.time === timeString;
+                    const isSelected = showPersonalTaskModal ? 
+                      newPersonalTask.time === timeString : 
+                      newAppointment.time === timeString;
                     return (
                       <TouchableOpacity
                         key={timeString}
@@ -684,7 +739,11 @@ export default function CalendarScreen() {
                           isSelected && styles.timePickerOptionSelected
                         ]}
                         onPress={() => {
-                          setNewAppointment({...newAppointment, time: timeString});
+                          if (showPersonalTaskModal) {
+                            setNewPersonalTask({...newPersonalTask, time: timeString});
+                          } else {
+                            setNewAppointment({...newAppointment, time: timeString});
+                          }
                           setShowTimePicker(false);
                         }}
                       >
@@ -825,6 +884,93 @@ export default function CalendarScreen() {
           </View>
         </Modal>
       )}
+      
+      {/* Personal Task Modal */}
+      <Modal
+        visible={showPersonalTaskModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPersonalTaskModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Agregar Tarea Personal</Text>
+              <TouchableOpacity onPress={() => setShowPersonalTaskModal(false)}>
+                <X size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.modalForm}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Título de la Tarea *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={newPersonalTask.title}
+                  onChangeText={(text) => setNewPersonalTask({...newPersonalTask, title: text})}
+                  placeholder="Ej: Reunión, Ejercicio, Compras..."
+                  placeholderTextColor="#666"
+                />
+              </View>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Hora *</Text>
+                <TouchableOpacity 
+                  style={styles.timeButton}
+                  onPress={() => setShowTimePicker(true)}
+                >
+                  <Clock size={20} color="#666" />
+                  <Text style={styles.timeButtonText}>
+                    {newPersonalTask.time || 'Seleccionar hora'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Notas (Opcional)</Text>
+                <TextInput
+                  style={[styles.textInput, { height: 80, textAlignVertical: 'top' }]}
+                  value={newPersonalTask.notes}
+                  onChangeText={(text) => setNewPersonalTask({...newPersonalTask, notes: text})}
+                  placeholder="Agregar detalles adicionales..."
+                  placeholderTextColor="#666"
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Fecha</Text>
+                <View style={styles.dateDisplay}>
+                  <Text style={styles.dateDisplayText}>
+                    {new Date(newPersonalTask.date).toLocaleDateString('es-ES', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={styles.cancelButton}
+                onPress={() => setShowPersonalTaskModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.saveButton, { backgroundColor: '#9C27B0' }]}
+                onPress={handleAddPersonalTask}
+              >
+                <Text style={styles.saveButtonText}>Agregar Tarea</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       
       <FloatingKompi isVisible={true} />
     </View>
@@ -1532,5 +1678,18 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
+  },
+  dateDisplay: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+  },
+  dateDisplayText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+    textTransform: 'capitalize',
   },
 });
