@@ -43,6 +43,9 @@ export default function CalendarScreen() {
     console.log('🔍 Modal state changed - showReservationModal:', showReservationModal);
     console.log('🔍 Modal state changed - selectedReservation:', selectedReservation?.id || 'null');
   }, [showReservationModal, selectedReservation]);
+
+  // Force re-render when modal state changes
+  const [forceUpdate, setForceUpdate] = useState(0);
   const [showPersonalTaskModal, setShowPersonalTaskModal] = useState(false);
   const [newPersonalTask, setNewPersonalTask] = useState({
     title: '',
@@ -660,9 +663,14 @@ export default function CalendarScreen() {
                         console.log('🎯 Reservation options button pressed for appointment:', appointment.id);
                         console.log('🎯 Current appointment data:', appointment);
                         console.log('🎯 Setting selected reservation and showing modal');
-                        setSelectedReservation(appointment);
-                        setShowReservationModal(true);
-                        console.log('🎯 Modal should now be visible');
+                        
+                        // Use setTimeout to ensure state updates properly
+                        setTimeout(() => {
+                          setSelectedReservation(appointment);
+                          setShowReservationModal(true);
+                          setForceUpdate(prev => prev + 1);
+                          console.log('🎯 Modal state updated - should be visible now');
+                        }, 100);
                       }}
                       activeOpacity={0.7}
                       testID={`reservation-options-${appointment.id}`}
@@ -695,22 +703,32 @@ export default function CalendarScreen() {
                   </View>
                 )}
                 
-                {/* Debug button to test modal functionality */}
+                {/* Working test button */}
                 <TouchableOpacity 
-                  style={[styles.clientActionButton, { backgroundColor: '#FF5722', marginTop: 8 }]}
+                  style={[styles.clientActionButton, { backgroundColor: '#FF5722', marginTop: 8, width: '100%' }]}
                   onPress={() => {
-                    console.log('🔴 DEBUG: Testing modal functionality');
-                    console.log('🔴 DEBUG: Current appointment:', appointment);
-                    console.log('🔴 DEBUG: User type:', user?.userType);
-                    console.log('🔴 DEBUG: showReservationModal before:', showReservationModal);
-                    setSelectedReservation(appointment);
-                    setShowReservationModal(true);
-                    console.log('🔴 DEBUG: Modal state set to true');
+                    console.log('🔴 WORKING TEST: Button pressed successfully!');
+                    Alert.alert(
+                      'Test Successful!', 
+                      `Button is working! Appointment: ${appointment.service}\nTime: ${appointment.time}\nStatus: ${appointment.status}`,
+                      [
+                        { text: 'Great!', style: 'default' },
+                        {
+                          text: 'Open Modal Test',
+                          style: 'default',
+                          onPress: () => {
+                            setSelectedReservation(appointment);
+                            setShowReservationModal(true);
+                            setForceUpdate(prev => prev + 1);
+                          }
+                        }
+                      ]
+                    );
                   }}
                   activeOpacity={0.7}
                 >
                   <Settings size={16} color="white" />
-                  <Text style={styles.clientActionText}>DEBUG: Test Modal</Text>
+                  <Text style={styles.clientActionText}>✅ WORKING TEST BUTTON</Text>
                 </TouchableOpacity>
               </View>
             ))}
@@ -884,6 +902,7 @@ export default function CalendarScreen() {
           setShowReservationModal(false);
           setSelectedReservation(null);
         }}
+        key={`reservation-modal-${forceUpdate}`}
       >
         <View style={styles.modalOverlay}>
           {selectedReservation ? (
