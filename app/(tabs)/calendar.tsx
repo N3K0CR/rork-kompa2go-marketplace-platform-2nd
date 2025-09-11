@@ -653,8 +653,12 @@ export default function CalendarScreen() {
                       onPress={() => {
                         console.log('🔧 Gestionar button pressed for appointment:', appointment.id, appointment);
                         console.log('🔧 Setting selected reservation and opening modal');
+                        console.log('🔧 Current showReservationModal state:', showReservationModal);
                         setSelectedReservation(appointment);
-                        setShowReservationModal(true);
+                        setTimeout(() => {
+                          console.log('🔧 Opening reservation modal after timeout');
+                          setShowReservationModal(true);
+                        }, 100);
                       }}
                       activeOpacity={0.7}
                       testID={`manage-appointment-${appointment.id}`}
@@ -854,13 +858,19 @@ export default function CalendarScreen() {
           visible={showReservationModal}
           transparent
           animationType="slide"
-          onRequestClose={() => setShowReservationModal(false)}
+          onRequestClose={() => {
+            console.log('🔧 Closing reservation modal via onRequestClose');
+            setShowReservationModal(false);
+          }}
         >
           <View style={styles.modalOverlay}>
             <View style={styles.reservationModalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Gestionar Reserva</Text>
-                <TouchableOpacity onPress={() => setShowReservationModal(false)}>
+                <TouchableOpacity onPress={() => {
+                  console.log('🔧 Closing reservation modal via X button');
+                  setShowReservationModal(false);
+                }}>
                   <X size={24} color="#666" />
                 </TouchableOpacity>
               </View>
