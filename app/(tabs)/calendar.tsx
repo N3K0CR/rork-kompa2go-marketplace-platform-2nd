@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
-import { Plus, Clock, X, Calendar as CalendarIcon, Users, Award, ChevronLeft, ChevronRight, RefreshCw, CheckCircle, XCircle, RotateCcw, Phone, MessageCircle } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, TextInput, Linking, Platform } from 'react-native';
+import { Plus, Clock, X, Calendar as CalendarIcon, Users, Award, ChevronLeft, ChevronRight, RefreshCw, CheckCircle, XCircle, RotateCcw, Phone, MessageCircle, Settings } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -148,6 +148,67 @@ export default function CalendarScreen() {
       Alert.alert('Error', 'No se pudo agregar la cita');
     }
   };
+
+  // Enhanced communication handlers
+  const handlePhoneCall = useCallback((phoneNumber: string) => {
+    const cleanPhone = phoneNumber.replace(/[^0-9+]/g, '');
+    const telUrl = `tel:${cleanPhone}`;
+    
+    Alert.alert(
+      'Realizar Llamada',
+      `¿Deseas llamar a ${phoneNumber}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Llamar',
+          onPress: () => {
+            Linking.openURL(telUrl).catch(() => {
+              Alert.alert('Error', 'No se pudo realizar la llamada. Verifica que tu dispositivo soporte llamadas.');
+            });
+          }
+        }
+      ]
+    );
+  }, []);
+
+  const handleChatOptions = useCallback((appointment: any) => {
+    Alert.alert(
+      'Opciones de Chat',
+      `Selecciona cómo deseas contactar a ${appointment.clientName}:`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Chat Kompa2Go',
+          onPress: () => {
+            // Navigate to in-app chat
+            Alert.alert(
+              'Chat Kompa2Go',
+              'Función de chat interno en desarrollo. Por ahora usa WhatsApp.',
+              [{ text: 'Entendido', style: 'default' }]
+            );
+          }
+        },
+        {
+          text: 'WhatsApp',
+          onPress: () => {
+            const phoneNumber = appointment.clientPhone?.replace(/[^0-9]/g, '') || '50688880000';
+            const message = encodeURIComponent(
+              `Hola ${appointment.clientName}, te contacto desde Kompa2Go sobre tu reserva del ${new Date(appointment.date).toLocaleDateString('es-ES')} a las ${appointment.time} para ${appointment.service}.`
+            );
+            const whatsappUrl = `whatsapp://send?phone=${phoneNumber}&text=${message}`;
+            const whatsappWebUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+            
+            Linking.openURL(whatsappUrl).catch(() => {
+              // Fallback to WhatsApp Web
+              Linking.openURL(whatsappWebUrl).catch(() => {
+                Alert.alert('Error', 'No se pudo abrir WhatsApp. Verifica que esté instalado.');
+              });
+            });
+          }
+        }
+      ]
+    );
+  }, []);
 
   const handleAddPersonalTask = async () => {
     if (!newPersonalTask.title || !newPersonalTask.time) {
@@ -576,7 +637,7 @@ export default function CalendarScreen() {
                   <Text style={styles.appointmentDetailNotes}>📝 {appointment.notes}</Text>
                 )}
                 
-                {/* Only show management actions for kompa2go appointments */}
+                {/* Enhanced management actions for kompa2go appointments */}
                 {appointment.type === 'kompa2go' && (
                   <View style={styles.clientAppointmentActions}>
                     <TouchableOpacity 
@@ -586,19 +647,20 @@ export default function CalendarScreen() {
                         setShowReservationModal(true);
                       }}
                     >
+                      <Settings size={16} color="white" />
                       <Text style={styles.clientActionText}>Gestionar</Text>
                     </TouchableOpacity>
                     
                     <TouchableOpacity 
                       style={[styles.clientActionButton, styles.callButton]}
-                      onPress={() => Alert.alert('Llamar', `Llamando a ${appointment.clientName}...`)}
+                      onPress={() => handlePhoneCall(appointment.clientPhone || '+506 8888-0000')}
                     >
                       <Phone size={16} color="white" />
                     </TouchableOpacity>
                     
                     <TouchableOpacity 
                       style={[styles.clientActionButton, styles.chatButton]}
-                      onPress={() => Alert.alert('Chat', `Iniciando chat con ${appointment.clientName}...`)}
+                      onPress={() => handleChatOptions(appointment)}
                     >
                       <MessageCircle size={16} color="white" />
                     </TouchableOpacity>
@@ -825,16 +887,33 @@ export default function CalendarScreen() {
               </View>
               
               <View style={styles.reservationActions}>
+                {/* Enhanced Confirmation Process */}
                 {selectedReservation.status === 'pending' && (
                   <TouchableOpacity 
                     style={[styles.reservationActionButton, styles.confirmButton]}
                     onPress={async () => {
-                      await updateAppointment(selectedReservation.id, { status: 'confirmed' });
-                      setShowReservationModal(false);
                       Alert.alert(
-                        'Reserva Confirmada', 
-                        'Tu reserva ha sido confirmada exitosamente. El proveedor será notificado y tu cita está asegurada.',
-                        [{ text: 'Entendido', style: 'default' }]
+                        'Confirmar Reserva',
+                        `¿Confirmas tu cita para el ${new Date(selectedReservation.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })} a las ${selectedReservation.time}?\n\nServicio: ${selectedReservation.service}\nProveedor: ${selectedReservation.clientName}\n\nAl confirmar, tu cita quedará asegurada y el proveedor será notificado inmediatamente.`,
+                        [
+                          { text: 'Revisar Más', style: 'cancel' },
+                          {
+                            text: 'Sí, Confirmar',
+                            style: 'default',
+                            onPress: async () => {
+                              await updateAppointment(selectedReservation.id, { 
+                                status: 'confirmed',
+                                notes: (selectedReservation.notes || '') + ' [Confirmada por cliente]'
+                              });
+                              setShowReservationModal(false);
+                              Alert.alert(
+                                '✅ Reserva Confirmada', 
+                                'Tu reserva ha sido confirmada exitosamente.\n\n• El proveedor ha sido notificado\n• Tu cita está asegurada\n• Recibirás un recordatorio 24h antes\n\n¡Gracias por usar Kompa2Go!',
+                                [{ text: 'Perfecto', style: 'default' }]
+                              );
+                            }
+                          }
+                        ]
                       );
                     }}
                   >
@@ -843,21 +922,25 @@ export default function CalendarScreen() {
                   </TouchableOpacity>
                 )}
                 
+                {/* Improved Rescheduling Flow */}
                 <TouchableOpacity 
                   style={[styles.reservationActionButton, styles.rescheduleButton]}
                   onPress={() => {
                     setShowReservationModal(false);
                     Alert.alert(
                       'Reprogramar Cita', 
-                      'Para reprogramar tu cita, por favor contacta directamente al proveedor usando los botones de llamada o chat. Ellos te ayudarán a encontrar una nueva fecha y hora que funcione para ambos.',
+                      `Para reprogramar tu cita del ${new Date(selectedReservation.date).toLocaleDateString('es-ES')} necesitas coordinar directamente con ${selectedReservation.clientName}.\n\n¿Cómo prefieres contactarlos?`,
                       [
-                        { text: 'Entendido', style: 'default' },
+                        { text: 'Cancelar', style: 'cancel' },
                         { 
-                          text: 'Contactar Ahora', 
+                          text: '📞 Llamar Ahora', 
                           style: 'default',
-                          onPress: () => {
-                            Alert.alert('Contactar Proveedor', `Llamando a ${selectedReservation.clientName}...`);
-                          }
+                          onPress: () => handlePhoneCall(selectedReservation.clientPhone || '+506 8888-0000')
+                        },
+                        {
+                          text: '💬 WhatsApp',
+                          style: 'default',
+                          onPress: () => handleChatOptions(selectedReservation)
                         }
                       ]
                     );
@@ -867,28 +950,43 @@ export default function CalendarScreen() {
                   <Text style={styles.reservationActionText}>Reprogramar</Text>
                 </TouchableOpacity>
                 
+                {/* Commission-Aware Cancellation */}
                 {selectedReservation.status !== 'cancelled' && (
                   <TouchableOpacity 
                     style={[styles.reservationActionButton, styles.cancelReservationButton]}
                     onPress={() => {
                       Alert.alert(
-                        'Cancelar Reserva',
-                        'IMPORTANTE: Al cancelar esta reserva, la comisión pagada NO será reembolsada según nuestros términos de servicio.\n\n¿Estás seguro de que deseas proceder con la cancelación?',
+                        '⚠️ Cancelar Reserva',
+                        `POLÍTICA DE CANCELACIÓN:\n\n• La comisión pagada NO será reembolsada\n• El proveedor será notificado inmediatamente\n• Esta acción no se puede deshacer\n\nReserva: ${selectedReservation.service}\nFecha: ${new Date(selectedReservation.date).toLocaleDateString('es-ES')}\nHora: ${selectedReservation.time}\n\n¿Estás completamente seguro?`,
                         [
                           { text: 'No, Mantener Reserva', style: 'cancel' },
                           {
                             text: 'Sí, Cancelar (Sin Reembolso)',
                             style: 'destructive',
-                            onPress: async () => {
-                              await updateAppointment(selectedReservation.id, { 
-                                status: 'cancelled',
-                                notes: (selectedReservation.notes || '') + ' [Cancelada por cliente - Comisión no reembolsable]'
-                              });
-                              setShowReservationModal(false);
+                            onPress: () => {
+                              // Double confirmation for cancellation
                               Alert.alert(
-                                'Reserva Cancelada', 
-                                'Tu reserva ha sido cancelada. El proveedor será notificado. Recuerda que la comisión no es reembolsable.',
-                                [{ text: 'Entendido', style: 'default' }]
+                                'Confirmación Final',
+                                'Esta es tu última oportunidad para mantener la reserva.\n\n¿Proceder con la cancelación SIN reembolso de comisión?',
+                                [
+                                  { text: 'No, Mantener', style: 'cancel' },
+                                  {
+                                    text: 'Sí, Cancelar Definitivamente',
+                                    style: 'destructive',
+                                    onPress: async () => {
+                                      await updateAppointment(selectedReservation.id, { 
+                                        status: 'cancelled',
+                                        notes: (selectedReservation.notes || '') + ` [Cancelada por cliente ${new Date().toLocaleString('es-ES')} - Comisión no reembolsable]`
+                                      });
+                                      setShowReservationModal(false);
+                                      Alert.alert(
+                                        '❌ Reserva Cancelada', 
+                                        'Tu reserva ha sido cancelada exitosamente.\n\n• El proveedor ha sido notificado\n• La comisión no es reembolsable\n• Puedes hacer una nueva reserva cuando gustes\n\nGracias por usar Kompa2Go.',
+                                        [{ text: 'Entendido', style: 'default' }]
+                                      );
+                                    }
+                                  }
+                                ]
                               );
                             }
                           }
@@ -900,6 +998,28 @@ export default function CalendarScreen() {
                     <Text style={styles.reservationActionText}>Cancelar</Text>
                   </TouchableOpacity>
                 )}
+                
+                {/* Better Action Visibility - Contact Options */}
+                <View style={styles.contactActionsSection}>
+                  <Text style={styles.contactSectionTitle}>Contactar Proveedor:</Text>
+                  <View style={styles.contactButtonsRow}>
+                    <TouchableOpacity 
+                      style={[styles.contactActionButton, styles.callContactButton]}
+                      onPress={() => handlePhoneCall(selectedReservation.clientPhone || '+506 8888-0000')}
+                    >
+                      <Phone size={18} color="white" />
+                      <Text style={styles.contactActionText}>Llamar</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={[styles.contactActionButton, styles.chatContactButton]}
+                      onPress={() => handleChatOptions(selectedReservation)}
+                    >
+                      <MessageCircle size={18} color="white" />
+                      <Text style={styles.contactActionText}>Chat</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
             </View>
           </View>
@@ -2076,6 +2196,45 @@ const styles = StyleSheet.create({
   addTaskButtonText: {
     color: 'white',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  // Enhanced contact and action styles
+  contactActionsSection: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5E5',
+  },
+  contactSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  contactButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  contactActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  callContactButton: {
+    backgroundColor: '#4CAF50',
+  },
+  chatContactButton: {
+    backgroundColor: '#25D366', // WhatsApp green
+  },
+  contactActionText: {
+    color: 'white',
+    fontSize: 14,
     fontWeight: '600',
   },
 });
