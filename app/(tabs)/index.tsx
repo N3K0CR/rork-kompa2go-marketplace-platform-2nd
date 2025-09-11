@@ -126,16 +126,54 @@ export default function HomeScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('upcoming_appointments')}</Text>
-          <View style={styles.emptyState}>
-            <Calendar size={48} color="#CCC" />
-            <Text style={styles.emptyText}>{t('no_appointments')}</Text>
-            <TouchableOpacity 
-              style={styles.emptyButton}
-              onPress={() => router.push('/search')}
-            >
-              <Text style={styles.emptyButtonText}>{t('search_services')}</Text>
-            </TouchableOpacity>
-          </View>
+          {upcomingAppointments.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {upcomingAppointments.slice(0, 5).map((appointment) => (
+                <View key={appointment.id} style={styles.appointmentCard}>
+                  <View style={styles.appointmentHeader}>
+                    <Text style={styles.appointmentDate}>
+                      {new Date(appointment.date).toLocaleDateString('es-ES', { 
+                        month: 'short', 
+                        day: 'numeric' 
+                      })}
+                    </Text>
+                    <Text style={styles.appointmentTime}>{appointment.time}</Text>
+                  </View>
+                  <Text style={styles.appointmentClient}>{appointment.clientName}</Text>
+                  <Text style={styles.appointmentService}>{appointment.service}</Text>
+                  <View style={[
+                    styles.appointmentType,
+                    { backgroundColor: 
+                      appointment.type === 'kompa2go' ? '#FFE8F0' :
+                      appointment.type === 'manual' ? '#E3F2FD' : '#FFF3E0'
+                    }
+                  ]}>
+                    <Text style={[
+                      styles.appointmentTypeText,
+                      { color: 
+                        appointment.type === 'kompa2go' ? '#D81B60' :
+                        appointment.type === 'manual' ? '#2196F3' : '#FF9800'
+                      }
+                    ]}>
+                      {appointment.type === 'kompa2go' ? 'Kompa2Go' :
+                       appointment.type === 'manual' ? 'Manual' : 'Bloqueado'}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={styles.emptyState}>
+              <Calendar size={48} color="#CCC" />
+              <Text style={styles.emptyText}>{t('no_appointments')}</Text>
+              <TouchableOpacity 
+                style={styles.emptyButton}
+                onPress={() => router.push('/search')}
+              >
+                <Text style={styles.emptyButtonText}>{t('search_services')}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>
