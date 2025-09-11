@@ -10,6 +10,10 @@ export default function TabLayout() {
   const { user } = useAuth();
   const { t } = useLanguage();
   const userType = user?.userType || 'client';
+  
+  console.log('📱 TabLayout - Current user:', user);
+  console.log('📱 TabLayout - UserType:', userType);
+  console.log('📱 TabLayout - Should show calendar for client?', userType === 'client');
 
   const headerRight = () => (
     <View style={{ marginRight: 15 }}>

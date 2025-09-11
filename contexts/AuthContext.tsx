@@ -67,8 +67,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         { email: 'onlycr@yahoo.com', password: 'kompa2go_mikompa22025', name: 'Cliente Demo 2', alias: 'mikompa2', userType: 'client' as const },
       ];
       
+      console.log('🔍 SignIn attempt:', { email, password });
+      console.log('🔍 Available test users:', testUsers.map(u => ({ email: u.email, password: u.password, userType: u.userType, name: u.name })));
+      
       // Find matching user
       const testUser = testUsers.find(user => user.email === email && user.password === password);
+      
+      console.log('🔍 Found test user:', testUser);
       
       let mockUser: User;
       if (testUser) {
@@ -85,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           uniqueId: testUser.userType === 'client' ? `MK${String(Math.floor(Math.random() * 100000)).padStart(8, '0')}` : 
                    testUser.userType === 'provider' ? `2K${String(Math.floor(Math.random() * 100000)).padStart(8, '0')}` : undefined,
         };
+        console.log('✅ Created mock user:', mockUser);
       } else if (email.includes('admin')) {
         mockUser = {
           id: '1',
@@ -115,6 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       await AsyncStorage.setItem('user', JSON.stringify(mockUser));
+      console.log('✅ User saved to storage and state:', mockUser);
       setUser(mockUser);
     } catch (error) {
       throw new Error('Error al iniciar sesión');
