@@ -36,6 +36,8 @@ export default function CalendarScreen() {
     notes: '',
     date: new Date().toISOString().split('T')[0],
   });
+  const [showDateDetailModal, setShowDateDetailModal] = useState(false);
+  const [selectedDateForDetail, setSelectedDateForDetail] = useState('');
 
   // Get appointments for selected date
   const selectedDateAppointments = useMemo(() => {
@@ -257,23 +259,8 @@ export default function CalendarScreen() {
             ]}
             onPress={() => {
               setSelectedDate(dayData.dateString);
-              // For clients, if there are appointments on this date, show reservation modal
-              if (user?.userType === 'client' && dayData.appointments.length > 0) {
-                const clientReservation = dayData.appointments.find(apt => apt.type === 'kompa2go');
-                if (clientReservation) {
-                  setSelectedReservation(clientReservation);
-                  setShowReservationModal(true);
-                  return;
-                }
-              }
-              // For all users, show personal task modal when clicking on a date
-              setNewPersonalTask({
-                title: '',
-                time: '',
-                notes: '',
-                date: dayData.dateString,
-              });
-              setShowPersonalTaskModal(true);
+              setSelectedDateForDetail(dayData.dateString);
+              setShowDateDetailModal(true);
             }}
           >
             <Text style={[
@@ -884,6 +871,180 @@ export default function CalendarScreen() {
           </View>
         </Modal>
       )}
+      
+      {/* Date Detail Modal */}
+      <Modal
+        visible={showDateDetailModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowDateDetailModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.dateDetailModalContent}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>
+                  {new Date(selectedDateForDetail).toLocaleDateString('es-ES', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long'
+                  })}
+                </Text>
+                <Text style={styles.modalSubtitle}>
+                  {getAppointmentsForDate(selectedDateForDetail).length} eventos programados
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowDateDetailModal(false)}>
+                <X size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.dateDetailContent}>
+              {/* Existing Appointments */}
+              {getAppointmentsForDate(selectedDateForDetail).length > 0 ? (
+                <View style={styles.existingAppointmentsSection}>
+                  <Text style={styles.sectionTitle}>Eventos del Día</Text>
+                  {getAppointmentsForDate(selectedDateForDetail)
+                    .sort((a, b) => a.time.localeCompare(b.time))
+                    .map((appointment) => (
+                    <View key={appointment.id} style={[
+                      styles.appointmentCard,
+                      { borderLeftColor: getEventColor(appointment.type) }
+                    ]}>
+                      <View style={styles.appointmentCardHeader}>
+                        <View style={styles.appointmentTimeInfo}>
+                          <Text style={styles.appointmentCardTime}>{appointment.time}</Text>
+                          <Text style={styles.appointmentCardDuration}>({appointment.duration} min)</Text>
+                        </View>
+                        <View style={[
+                          styles.appointmentStatusBadge,
+                          appointment.status === 'confirmed' && styles.statusConfirmed,
+                          appointment.status === 'pending' && styles.statusPending,
+                          appointment.status === 'cancelled' && styles.statusCancelled
+                        ]}>
+                          <Text style={styles.appointmentStatusText}>
+                            {appointment.status === 'confirmed' ? 'Confirmado' :
+                             appointment.status === 'pending' ? 'Pendiente' : 'Cancelado'}
+                          </Text>
+                        </View>
+                      </View>
+                      
+                      <Text style={styles.appointmentCardTitle}>
+                        {appointment.type === 'personal' ? appointment.service : appointment.clientName}
+                      </Text>
+                      <Text style={styles.appointmentCardService}>{appointment.service}</Text>
+                      
+                      {appointment.notes && (
+                        <Text style={styles.appointmentCardNotes}>📝 {appointment.notes}</Text>
+                      )}
+                      
+                      {/* Action buttons for kompa2go appointments (client view) */}
+                      {user?.userType === 'client' && appointment.type === 'kompa2go' && (
+                        <View style={styles.appointmentActions}>
+                          {appointment.status === 'pending' && (
+                            <TouchableOpacity 
+                              style={[styles.appointmentActionButton, styles.confirmActionButton]}
+                              onPress={async () => {
+                                await updateAppointment(appointment.id, { status: 'confirmed' });
+                                Alert.alert('Confirmado', 'Tu reserva ha sido confirmada.');
+                              }}
+                            >
+                              <CheckCircle size={16} color="white" />
+                              <Text style={styles.appointmentActionText}>Confirmar</Text>
+                            </TouchableOpacity>
+                          )}
+                          
+                          <TouchableOpacity 
+                            style={[styles.appointmentActionButton, styles.rescheduleActionButton]}
+                            onPress={() => {
+                              Alert.alert('Reprogramar', 'Contacta al proveedor para reprogramar esta cita.');
+                            }}
+                          >
+                            <RotateCcw size={16} color="white" />
+                            <Text style={styles.appointmentActionText}>Reprogramar</Text>
+                          </TouchableOpacity>
+                          
+                          {appointment.status !== 'cancelled' && (
+                            <TouchableOpacity 
+                              style={[styles.appointmentActionButton, styles.cancelActionButton]}
+                              onPress={() => {
+                                Alert.alert(
+                                  'Cancelar Reserva',
+                                  '¿Estás seguro de que deseas cancelar esta reserva?',
+                                  [
+                                    { text: 'No', style: 'cancel' },
+                                    {
+                                      text: 'Sí, Cancelar',
+                                      style: 'destructive',
+                                      onPress: async () => {
+                                        await updateAppointment(appointment.id, { status: 'cancelled' });
+                                        Alert.alert('Cancelada', 'Tu reserva ha sido cancelada.');
+                                      }
+                                    }
+                                  ]
+                                );
+                              }}
+                            >
+                              <XCircle size={16} color="white" />
+                              <Text style={styles.appointmentActionText}>Cancelar</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.emptyDaySection}>
+                  <CalendarIcon size={48} color="#ccc" />
+                  <Text style={styles.emptyDayTitle}>Día Libre</Text>
+                  <Text style={styles.emptyDaySubtitle}>No tienes eventos programados para este día</Text>
+                </View>
+              )}
+              
+              {/* Add New Task Section */}
+              <View style={styles.addTaskSection}>
+                <Text style={styles.sectionTitle}>Agregar Nuevo Evento</Text>
+                <TouchableOpacity 
+                  style={styles.addTaskButton}
+                  onPress={() => {
+                    setNewPersonalTask({
+                      title: '',
+                      time: '',
+                      notes: '',
+                      date: selectedDateForDetail,
+                    });
+                    setShowDateDetailModal(false);
+                    setShowPersonalTaskModal(true);
+                  }}
+                >
+                  <Plus size={20} color="white" />
+                  <Text style={styles.addTaskButtonText}>Agregar Tarea Personal</Text>
+                </TouchableOpacity>
+                
+                {user?.userType === 'provider' && (
+                  <TouchableOpacity 
+                    style={[styles.addTaskButton, { backgroundColor: '#2196F3' }]}
+                    onPress={() => {
+                      setNewAppointment({
+                        client: '',
+                        service: '',
+                        time: '',
+                        date: selectedDateForDetail,
+                      });
+                      setShowDateDetailModal(false);
+                      setShowAddModal(true);
+                    }}
+                  >
+                    <Plus size={20} color="white" />
+                    <Text style={styles.addTaskButtonText}>Agregar Cita Manual</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
       
       {/* Personal Task Modal */}
       <Modal
@@ -1691,5 +1852,161 @@ const styles = StyleSheet.create({
     color: '#333',
     fontWeight: '500',
     textTransform: 'capitalize',
+  },
+  // Date Detail Modal Styles
+  dateDetailModalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 0,
+    width: '95%',
+    maxWidth: 450,
+    maxHeight: '85%',
+    overflow: 'hidden',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
+  dateDetailContent: {
+    flex: 1,
+    padding: 20,
+  },
+  existingAppointmentsSection: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 16,
+  },
+  appointmentCard: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  appointmentCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  appointmentTimeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  appointmentCardTime: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  appointmentCardDuration: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  appointmentStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  appointmentStatusText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  appointmentCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  appointmentCardService: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  appointmentCardNotes: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    marginBottom: 8,
+  },
+  appointmentActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  appointmentActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    gap: 4,
+  },
+  confirmActionButton: {
+    backgroundColor: '#4CAF50',
+  },
+  rescheduleActionButton: {
+    backgroundColor: '#2196F3',
+  },
+  cancelActionButton: {
+    backgroundColor: '#F44336',
+  },
+  appointmentActionText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  emptyDaySection: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    marginBottom: 24,
+  },
+  emptyDayTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyDaySubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  addTaskSection: {
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5E5',
+    paddingTop: 20,
+  },
+  addTaskButton: {
+    backgroundColor: '#9C27B0',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  addTaskButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
