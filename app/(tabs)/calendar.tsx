@@ -643,9 +643,11 @@ export default function CalendarScreen() {
                     <TouchableOpacity 
                       style={[styles.clientActionButton, styles.manageButton]}
                       onPress={() => {
+                        console.log('Gestionar button pressed for appointment:', appointment.id);
                         setSelectedReservation(appointment);
                         setShowReservationModal(true);
                       }}
+                      activeOpacity={0.7}
                     >
                       <Settings size={16} color="white" />
                       <Text style={styles.clientActionText}>Gestionar</Text>
@@ -653,14 +655,22 @@ export default function CalendarScreen() {
                     
                     <TouchableOpacity 
                       style={[styles.clientActionButton, styles.callButton]}
-                      onPress={() => handlePhoneCall(appointment.clientPhone || '+506 8888-0000')}
+                      onPress={() => {
+                        console.log('Call button pressed for:', appointment.clientPhone);
+                        handlePhoneCall(appointment.clientPhone || '+506 8888-0000');
+                      }}
+                      activeOpacity={0.7}
                     >
                       <Phone size={16} color="white" />
                     </TouchableOpacity>
                     
                     <TouchableOpacity 
                       style={[styles.clientActionButton, styles.chatButton]}
-                      onPress={() => handleChatOptions(appointment)}
+                      onPress={() => {
+                        console.log('Chat button pressed for appointment:', appointment.id);
+                        handleChatOptions(appointment);
+                      }}
+                      activeOpacity={0.7}
                     >
                       <MessageCircle size={16} color="white" />
                     </TouchableOpacity>
@@ -1917,15 +1927,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginTop: 12,
+    alignItems: 'stretch',
   },
   clientActionButton: {
     flex: 1,
     backgroundColor: '#D81B60',
     borderRadius: 8,
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    minHeight: 40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   manageButton: {
     flex: 2,
@@ -1943,6 +1962,7 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 12,
     fontWeight: '600',
+    textAlign: 'center',
   },
   reservationModalContent: {
     backgroundColor: 'white',
