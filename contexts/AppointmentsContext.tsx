@@ -28,6 +28,7 @@ interface AppointmentsContextType {
   getAvailableTimeSlotsForDate: (date: string, providerId?: string) => string[];
   getClientVisibleAppointments: (providerId: string) => Appointment[];
   refreshAppointments: () => Promise<void>;
+  setUserTypeAndReload: (userType: string) => Promise<void>;
 }
 
 const AppointmentsContext = createContext<AppointmentsContextType | undefined>(undefined);
@@ -263,6 +264,7 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
+  const [userType, setUserType] = useState<string>('provider');
   
   // Function to get appropriate mock data based on user type
   const getMockDataForUser = (userType?: string) => {
@@ -272,36 +274,49 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
     return mockAppointments;
   };
 
-  const loadAppointments = useCallback(async () => {
+  const loadAppointments = useCallback(async (currentUserType?: string) => {
     try {
-      const storedAppointments = await AsyncStorage.getItem('appointments');
+      const userTypeToUse = currentUserType || userType;
+      const storageKey = userTypeToUse === 'client' ? 'client_appointments' : 'appointments';
+      
+      const storedAppointments = await AsyncStorage.getItem(storageKey);
       if (storedAppointments) {
         setAppointments(JSON.parse(storedAppointments));
       } else {
-        // Load mock data for testing - use client appointments for client users
-        const mockData = mockAppointments; // Default to provider appointments
+        // Load appropriate mock data based on user type
+        const mockData = getMockDataForUser(userTypeToUse);
         setAppointments(mockData);
-        await AsyncStorage.setItem('appointments', JSON.stringify(mockData));
+        await AsyncStorage.setItem(storageKey, JSON.stringify(mockData));
       }
     } catch (error) {
       console.error('Error loading appointments:', error);
-      // Fallback to mock data
-      setAppointments(mockAppointments);
+      // Fallback to appropriate mock data
+      const mockData = getMockDataForUser(userType);
+      setAppointments(mockData);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userType]);
 
   const saveAppointments = useCallback(async (newAppointments: Appointment[]) => {
     try {
-      await AsyncStorage.setItem('appointments', JSON.stringify(newAppointments));
+      const storageKey = userType === 'client' ? 'client_appointments' : 'appointments';
+      await AsyncStorage.setItem(storageKey, JSON.stringify(newAppointments));
     } catch (error) {
       console.error('Error saving appointments:', error);
     }
-  }, []);
+  }, [userType]);
 
   useEffect(() => {
     loadAppointments();
+  }, [loadAppointments]);
+
+  // Function to set user type and reload appointments
+  const setUserTypeAndReload = useCallback(async (newUserType: string) => {
+    console.log('Setting user type and reloading appointments:', newUserType);
+    setUserType(newUserType);
+    setLoading(true);
+    await loadAppointments(newUserType);
   }, [loadAppointments]);
 
 
@@ -426,7 +441,8 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
     getAvailableTimeSlotsForDate,
     getClientVisibleAppointments,
     refreshAppointments,
-  }), [appointments, loading, addAppointment, updateAppointment, deleteAppointment, getAppointmentsForDate, getTodayAppointments, getUpcomingAppointments, getAvailableTimeSlotsForDate, getClientVisibleAppointments, refreshAppointments]);
+    setUserTypeAndReload,
+  }), [appointments, loading, addAppointment, updateAppointment, deleteAppointment, getAppointmentsForDate, getTodayAppointments, getUpcomingAppointments, getAvailableTimeSlotsForDate, getClientVisibleAppointments, refreshAppointments, setUserTypeAndReload]);
 
   return (
     <AppointmentsContext.Provider value={value}>

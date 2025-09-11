@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, TextInput, Linking, Platform } from 'react-native';
 import { Plus, Clock, X, Calendar as CalendarIcon, Users, Award, ChevronLeft, ChevronRight, RefreshCw, CheckCircle, XCircle, RotateCcw, Phone, MessageCircle, Settings } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,9 +12,17 @@ export default function CalendarScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { t } = useLanguage();
-  const { addAppointment, updateAppointment, getAppointmentsForDate, getTodayAppointments, refreshAppointments } = useAppointments();
+  const { addAppointment, updateAppointment, getAppointmentsForDate, getTodayAppointments, refreshAppointments, setUserTypeAndReload } = useAppointments();
   const { collaborators, consolidatedData } = useTeamCalendar();
   
+  // Initialize appointments context with correct user type
+  useEffect(() => {
+    if (user?.userType) {
+      console.log('🔄 Setting user type in appointments context:', user.userType);
+      setUserTypeAndReload(user.userType);
+    }
+  }, [user?.userType, setUserTypeAndReload]);
+
   // Simplified state
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -643,11 +651,13 @@ export default function CalendarScreen() {
                     <TouchableOpacity 
                       style={[styles.clientActionButton, styles.manageButton]}
                       onPress={() => {
-                        console.log('Gestionar button pressed for appointment:', appointment.id);
+                        console.log('🔧 Gestionar button pressed for appointment:', appointment.id, appointment);
+                        console.log('🔧 Setting selected reservation and opening modal');
                         setSelectedReservation(appointment);
                         setShowReservationModal(true);
                       }}
                       activeOpacity={0.7}
+                      testID={`manage-appointment-${appointment.id}`}
                     >
                       <Settings size={16} color="white" />
                       <Text style={styles.clientActionText}>Gestionar</Text>
