@@ -47,13 +47,132 @@ export default function CalendarScreen() {
   // Force re-render when modal state changes
   const [forceUpdate, setForceUpdate] = useState(0);
   
-  // Handle reservation options button press
-  const handleReservationOptions = useCallback((appointment: any) => {
-    console.log('🎯 Opening reservation options for appointment:', appointment.id);
-    setSelectedReservation(appointment);
-    setShowReservationModal(true);
-    setForceUpdate(prev => prev + 1);
+  // Enhanced communication handlers - MOVED UP TO AVOID DEPENDENCY ISSUES
+  const handlePhoneCall = useCallback((phoneNumber: string) => {
+    const cleanPhone = phoneNumber.replace(/[^0-9+]/g, '');
+    const telUrl = `tel:${cleanPhone}`;
+    
+    Alert.alert(
+      'Realizar Llamada',
+      `¿Deseas llamar a ${phoneNumber}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Llamar',
+          onPress: () => {
+            Linking.openURL(telUrl).catch(() => {
+              Alert.alert('Error', 'No se pudo realizar la llamada. Verifica que tu dispositivo soporte llamadas.');
+            });
+          }
+        }
+      ]
+    );
   }, []);
+  
+  // Chat options handler
+  const handleChatOptions = useCallback((appointment: any) => {
+    Alert.alert(
+      'Opciones de Chat',
+      `Selecciona cómo deseas contactar a ${appointment.clientName}:`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Chat Kompa2Go',
+          onPress: () => {
+            // Navigate to in-app chat
+            Alert.alert(
+              'Chat Kompa2Go',
+              'Función de chat interno en desarrollo. Por ahora usa WhatsApp.',
+              [{ text: 'Entendido', style: 'default' }]
+            );
+          }
+        },
+        {
+          text: 'WhatsApp',
+          onPress: () => {
+            const phoneNumber = appointment.clientPhone?.replace(/[^0-9]/g, '') || '50688880000';
+            const message = encodeURIComponent(
+              `Hola ${appointment.clientName}, te contacto desde Kompa2Go sobre tu reserva del ${new Date(appointment.date).toLocaleDateString('es-ES')} a las ${appointment.time} para ${appointment.service}.`
+            );
+            const whatsappUrl = `whatsapp://send?phone=${phoneNumber}&text=${message}`;
+            const whatsappWebUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+            
+            Linking.openURL(whatsappUrl).catch(() => {
+              // Fallback to WhatsApp Web
+              Linking.openURL(whatsappWebUrl).catch(() => {
+                Alert.alert('Error', 'No se pudo abrir WhatsApp. Verifica que esté instalado.');
+              });
+            });
+          }
+        }
+      ]
+    );
+  }, []);
+  
+  // Handle reservation options button press - SIMPLIFIED VERSION
+  const handleReservationOptions = useCallback((appointment: any) => {
+    console.log('🎯 SIMPLIFIED: Opening reservation options for appointment:', appointment.id);
+    console.log('🎯 SIMPLIFIED: Appointment data:', JSON.stringify(appointment, null, 2));
+    
+    // Direct alert for immediate feedback
+    Alert.alert(
+      'Opciones de Reserva',
+      `Reserva: ${appointment.service}\nFecha: ${new Date(appointment.date).toLocaleDateString('es-ES')}\nHora: ${appointment.time}\nEstado: ${appointment.status}\n\n¿Qué deseas hacer?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: '✅ Confirmar Reserva',
+          style: 'default',
+          onPress: async () => {
+            await updateAppointment(appointment.id, { status: 'confirmed' });
+            Alert.alert('✅ Confirmado', 'Tu reserva ha sido confirmada exitosamente.');
+          }
+        },
+        {
+          text: '🔄 Reprogramar',
+          style: 'default',
+          onPress: () => {
+            Alert.alert(
+              'Reprogramar Cita',
+              'Para reprogramar, contacta al proveedor directamente.',
+              [
+                { text: 'Entendido', style: 'default' },
+                {
+                  text: '📞 Llamar',
+                  style: 'default',
+                  onPress: () => handlePhoneCall(appointment.clientPhone || '+506 8888-0000')
+                }
+              ]
+            );
+          }
+        },
+        {
+          text: '❌ Cancelar Reserva',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              '⚠️ Cancelar Reserva',
+              'ATENCIÓN: La comisión pagada NO será reembolsada.\n\n¿Confirmas la cancelación?',
+              [
+                { text: 'No, Mantener', style: 'cancel' },
+                {
+                  text: 'Sí, Cancelar',
+                  style: 'destructive',
+                  onPress: async () => {
+                    await updateAppointment(appointment.id, { 
+                      status: 'cancelled',
+                      notes: (appointment.notes || '') + ' [Cancelada - Sin reembolso]'
+                    });
+                    Alert.alert('❌ Cancelada', 'Tu reserva ha sido cancelada.');
+                  }
+                }
+              ]
+            );
+          }
+        }
+      ]
+    );
+  }, [updateAppointment, handlePhoneCall, handleChatOptions]);
   const [showPersonalTaskModal, setShowPersonalTaskModal] = useState(false);
   const [newPersonalTask, setNewPersonalTask] = useState({
     title: '',
@@ -174,66 +293,10 @@ export default function CalendarScreen() {
     }
   };
 
-  // Enhanced communication handlers
-  const handlePhoneCall = useCallback((phoneNumber: string) => {
-    const cleanPhone = phoneNumber.replace(/[^0-9+]/g, '');
-    const telUrl = `tel:${cleanPhone}`;
-    
-    Alert.alert(
-      'Realizar Llamada',
-      `¿Deseas llamar a ${phoneNumber}?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Llamar',
-          onPress: () => {
-            Linking.openURL(telUrl).catch(() => {
-              Alert.alert('Error', 'No se pudo realizar la llamada. Verifica que tu dispositivo soporte llamadas.');
-            });
-          }
-        }
-      ]
-    );
-  }, []);
+  // Chat options handler
 
-  const handleChatOptions = useCallback((appointment: any) => {
-    Alert.alert(
-      'Opciones de Chat',
-      `Selecciona cómo deseas contactar a ${appointment.clientName}:`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Chat Kompa2Go',
-          onPress: () => {
-            // Navigate to in-app chat
-            Alert.alert(
-              'Chat Kompa2Go',
-              'Función de chat interno en desarrollo. Por ahora usa WhatsApp.',
-              [{ text: 'Entendido', style: 'default' }]
-            );
-          }
-        },
-        {
-          text: 'WhatsApp',
-          onPress: () => {
-            const phoneNumber = appointment.clientPhone?.replace(/[^0-9]/g, '') || '50688880000';
-            const message = encodeURIComponent(
-              `Hola ${appointment.clientName}, te contacto desde Kompa2Go sobre tu reserva del ${new Date(appointment.date).toLocaleDateString('es-ES')} a las ${appointment.time} para ${appointment.service}.`
-            );
-            const whatsappUrl = `whatsapp://send?phone=${phoneNumber}&text=${message}`;
-            const whatsappWebUrl = `https://wa.me/${phoneNumber}?text=${message}`;
-            
-            Linking.openURL(whatsappUrl).catch(() => {
-              // Fallback to WhatsApp Web
-              Linking.openURL(whatsappWebUrl).catch(() => {
-                Alert.alert('Error', 'No se pudo abrir WhatsApp. Verifica que esté instalado.');
-              });
-            });
-          }
-        }
-      ]
-    );
-  }, []);
+
+
 
   const handleAddPersonalTask = async () => {
     if (!newPersonalTask.title || !newPersonalTask.time) {
@@ -667,7 +730,10 @@ export default function CalendarScreen() {
                   <View style={styles.clientAppointmentActions}>
                     <TouchableOpacity 
                       style={[styles.clientActionButton, styles.reservationOptionsButton]}
-                      onPress={() => handleReservationOptions(appointment)}
+                      onPress={() => {
+                        console.log('🔥 DIRECT PRESS: Reservation options button pressed!');
+                        handleReservationOptions(appointment);
+                      }}
                       activeOpacity={0.7}
                       testID={`reservation-options-${appointment.id}`}
                     >
@@ -699,18 +765,18 @@ export default function CalendarScreen() {
                   </View>
                 )}
                 
-                {/* Working test button */}
+                {/* Simplified test button */}
                 <TouchableOpacity 
-                  style={[styles.clientActionButton, { backgroundColor: '#FF5722', marginTop: 8, width: '100%' }]}
+                  style={[styles.clientActionButton, { backgroundColor: '#4CAF50', marginTop: 8, width: '100%' }]}
                   onPress={() => {
-                    console.log('🔴 WORKING TEST: Button pressed successfully!');
+                    console.log('🟢 SIMPLIFIED TEST: Button working!');
                     Alert.alert(
-                      'Test Successful!', 
-                      `Button is working! Appointment: ${appointment.service}\nTime: ${appointment.time}\nStatus: ${appointment.status}`,
+                      '✅ Sistema Funcionando', 
+                      `Reserva: ${appointment.service}\nHora: ${appointment.time}\nEstado: ${appointment.status}\n\nEl sistema está funcionando correctamente.`,
                       [
-                        { text: 'Great!', style: 'default' },
+                        { text: 'Perfecto', style: 'default' },
                         {
-                          text: 'Open Modal Test',
+                          text: 'Probar Opciones',
                           style: 'default',
                           onPress: () => handleReservationOptions(appointment)
                         }
@@ -720,7 +786,7 @@ export default function CalendarScreen() {
                   activeOpacity={0.7}
                 >
                   <Settings size={16} color="white" />
-                  <Text style={styles.clientActionText}>✅ WORKING TEST BUTTON</Text>
+                  <Text style={styles.clientActionText}>✅ SISTEMA OK - PROBAR</Text>
                 </TouchableOpacity>
               </View>
             ))}
