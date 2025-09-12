@@ -12,6 +12,7 @@ interface User {
   walletBalance?: number;
   uniqueId?: string;
   alias?: string;
+  isSpecialProvider?: boolean;
 }
 
 interface AuthContextType {
@@ -22,6 +23,8 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   switchRole: (email: string, password: string, targetRole: 'client' | 'provider') => Promise<void>;
   getAvailableRoles: (email: string) => ('client' | 'provider')[];
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -62,6 +65,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         { email: 'agostounonueve@gmail.com', password: 'kompa2go_2kompa12025', name: 'Proveedor Demo 1', alias: '2kompa1', userType: 'provider' as const },
         { email: 'onlycr@yahoo.com', password: 'kompa2go_2kompa22025', name: 'Proveedor Demo 2', alias: '2kompa2', userType: 'provider' as const },
         
+        // Sakura Beauty Salon - Special provider with unrestricted access
+        { email: 'Marfanar@', password: 'lov3myJob25', name: 'Sakura Beauty Salon', alias: 'sakura', userType: 'provider' as const, isSpecialProvider: true },
+        
         // Client users
         { email: 'agostounonueve@gmail.com', password: 'kompa2go_mikompa12025', name: 'Cliente Demo 1', alias: 'mikompa1', userType: 'client' as const },
         { email: 'onlycr@yahoo.com', password: 'kompa2go_mikompa22025', name: 'Cliente Demo 2', alias: 'mikompa2', userType: 'client' as const },
@@ -89,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           walletBalance: testUser.userType === 'client' ? 0 : undefined,
           uniqueId: testUser.userType === 'client' ? `MK${String(Math.floor(Math.random() * 100000)).padStart(8, '0')}` : 
                    testUser.userType === 'provider' ? `2K${String(Math.floor(Math.random() * 100000)).padStart(8, '0')}` : undefined,
+          isSpecialProvider: (testUser as any).isSpecialProvider || false,
         };
         console.log('✅ Created mock user:', mockUser);
       } else if (email.includes('admin')) {
@@ -168,6 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Provider users
         { email: 'agostounonueve@gmail.com', password: 'kompa2go_2kompa12025', name: 'Proveedor Demo 1', alias: '2kompa1', userType: 'provider' as const },
         { email: 'onlycr@yahoo.com', password: 'kompa2go_2kompa22025', name: 'Proveedor Demo 2', alias: '2kompa2', userType: 'provider' as const },
+        { email: 'Marfanar@', password: 'lov3myJob25', name: 'Sakura Beauty Salon', alias: 'sakura', userType: 'provider' as const, isSpecialProvider: true },
         
         // Client users
         { email: 'agostounonueve@gmail.com', password: 'kompa2go_mikompa12025', name: 'Cliente Demo 1', alias: 'mikompa1', userType: 'client' as const },
@@ -193,6 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         walletBalance: testUser.userType === 'client' ? 0 : undefined,
         uniqueId: testUser.userType === 'client' ? `MK${String(Math.floor(Math.random() * 100000)).padStart(8, '0')}` : 
                  testUser.userType === 'provider' ? `2K${String(Math.floor(Math.random() * 100000)).padStart(8, '0')}` : undefined,
+        isSpecialProvider: (testUser as any).isSpecialProvider || false,
       };
 
       await AsyncStorage.setItem('user', JSON.stringify(mockUser));
@@ -206,15 +215,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const availableRoles: ('client' | 'provider')[] = [];
     
     // Check if email has provider role available
-    if (email === 'agostounonueve@gmail.com' || email === 'onlycr@yahoo.com') {
+    if (email === 'agostounonueve@gmail.com' || email === 'onlycr@yahoo.com' || email === 'Marfanar@') {
       availableRoles.push('provider', 'client');
     }
     
     return availableRoles;
   };
 
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      if (!user) {
+        throw new Error('Usuario no autenticado');
+      }
+      
+      // In a real app, you would verify the current password with the server
+      // For demo purposes, we'll just simulate success
+      console.log('Password changed successfully for user:', user.email);
+      
+      // In a real implementation, you might want to force re-login after password change
+      // await signOut();
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al cambiar la contraseña');
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // In a real app, this would send a password reset email
+      console.log('Password reset email sent to:', email);
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al enviar el correo de recuperación');
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, switchRole, getAvailableRoles }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, switchRole, getAvailableRoles, changePassword, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );

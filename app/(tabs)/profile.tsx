@@ -1,13 +1,22 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { User, Settings, CreditCard, History, LogOut, Shield, Calendar, Users, BarChart3, Star, TrendingUp } from 'lucide-react-native';
+import { User, Settings, CreditCard, History, LogOut, Shield, Calendar, Users, BarChart3, Star, TrendingUp, Lock, X, Key } from 'lucide-react-native';
 import { router } from 'expo-router';
 
 export default function ProfileScreen() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, changePassword, resetPassword } = useAuth();
   const { t } = useLanguage();
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [resetEmail, setResetEmail] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSignOut = () => {
     Alert.alert(
@@ -53,6 +62,12 @@ export default function ProfileScreen() {
       case 'settings':
         Alert.alert(t('configurations'), 'Configuraciones en desarrollo');
         break;
+      case 'change_password':
+        setShowPasswordModal(true);
+        break;
+      case 'reset_password':
+        setShowResetModal(true);
+        break;
       case 'calendar':
         router.push('/(tabs)/calendar');
         break;
@@ -82,10 +97,60 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleChangePassword = async () => {
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      Alert.alert('Error', 'Por favor completa todos los campos');
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      Alert.alert('Error', 'Las contraseñas no coinciden');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      Alert.alert('Error', 'La nueva contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await changePassword(passwordData.currentPassword, passwordData.newPassword);
+      Alert.alert('Éxito', 'Contraseña cambiada exitosamente');
+      setShowPasswordModal(false);
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Error al cambiar la contraseña');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetEmail) {
+      Alert.alert('Error', 'Por favor ingresa tu correo electrónico');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await resetPassword(resetEmail);
+      Alert.alert('Éxito', 'Se ha enviado un correo de recuperación a tu email');
+      setShowResetModal(false);
+      setResetEmail('');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Error al enviar el correo de recuperación');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const menuItems = [
     { icon: User, title: t('edit_profile'), subtitle: t('update_personal_info'), action: 'edit_profile' },
     ...(user?.userType === 'client' ? [{ icon: CreditCard, title: t('my_wallet'), subtitle: t('manage_credits_payments'), action: 'wallet' }] : []),
     { icon: History, title: t('historical'), subtitle: t('view_previous_bookings'), action: 'history' },
+    { icon: Lock, title: 'Cambiar Contraseña', subtitle: 'Actualizar tu contraseña de acceso', action: 'change_password' },
+    { icon: Key, title: 'Recuperar Contraseña', subtitle: 'Enviar correo de recuperación', action: 'reset_password' },
     ...(user?.userType !== 'provider' ? [{ icon: Settings, title: t('configurations'), subtitle: t('app_preferences'), action: 'settings' }] : []),
   ];
 
@@ -194,6 +259,123 @@ export default function ProfileScreen() {
           <Text style={styles.signOutText}>{t('sign_out')}</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Change Password Modal */}
+      <Modal
+        visible={showPasswordModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPasswordModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Cambiar Contraseña</Text>
+              <TouchableOpacity
+                onPress={() => setShowPasswordModal(false)}
+                style={styles.closeButton}
+              >
+                <X size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Lock size={20} color="#666" />
+              <TextInput
+                style={styles.input}
+                placeholder="Contraseña actual"
+                value={passwordData.currentPassword}
+                onChangeText={(text) => setPasswordData({ ...passwordData, currentPassword: text })}
+                secureTextEntry
+                placeholderTextColor="#666"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Lock size={20} color="#666" />
+              <TextInput
+                style={styles.input}
+                placeholder="Nueva contraseña"
+                value={passwordData.newPassword}
+                onChangeText={(text) => setPasswordData({ ...passwordData, newPassword: text })}
+                secureTextEntry
+                placeholderTextColor="#666"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Lock size={20} color="#666" />
+              <TextInput
+                style={styles.input}
+                placeholder="Confirmar nueva contraseña"
+                value={passwordData.confirmPassword}
+                onChangeText={(text) => setPasswordData({ ...passwordData, confirmPassword: text })}
+                secureTextEntry
+                placeholderTextColor="#666"
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={handleChangePassword}
+              disabled={loading}
+            >
+              <Text style={styles.modalButtonText}>
+                {loading ? 'Cambiando...' : 'Cambiar Contraseña'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Reset Password Modal */}
+      <Modal
+        visible={showResetModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowResetModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Recuperar Contraseña</Text>
+              <TouchableOpacity
+                onPress={() => setShowResetModal(false)}
+                style={styles.closeButton}
+              >
+                <X size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalDescription}>
+              Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.
+            </Text>
+
+            <View style={styles.inputContainer}>
+              <User size={20} color="#666" />
+              <TextInput
+                style={styles.input}
+                placeholder="Correo electrónico"
+                value={resetEmail}
+                onChangeText={setResetEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                placeholderTextColor="#666"
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={handleResetPassword}
+              disabled={loading}
+            >
+              <Text style={styles.modalButtonText}>
+                {loading ? 'Enviando...' : 'Enviar Correo'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -378,6 +560,68 @@ const styles = StyleSheet.create({
   signOutText: {
     color: '#FF4444',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    gap: 12,
+    marginBottom: 16,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#333',
+  },
+  modalButton: {
+    backgroundColor: '#D81B60',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  modalButtonText: {
+    color: 'white',
+    fontSize: 18,
     fontWeight: '600',
   },
 });
