@@ -5,6 +5,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useLocationSearch } from '@/contexts/LocationSearchContext';
 import ExtendRadiusDialog from '@/components/ExtendRadiusDialog';
 import { router } from 'expo-router';
+import { useReservationPlans } from '@/contexts/ReservationPlansContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 const { width } = Dimensions.get('window');
 
@@ -40,6 +42,7 @@ const featuredProviders = [
     location: 'San José Centro',
     price: '₡8,000/hora',
     image: '👩‍💼',
+    isSpecialProvider: false,
   },
   {
     id: 2,
@@ -51,6 +54,7 @@ const featuredProviders = [
     location: 'Escazú',
     price: '₡12,000/visita',
     image: '👨‍🔧',
+    isSpecialProvider: false,
   },
   {
     id: 3,
@@ -62,11 +66,26 @@ const featuredProviders = [
     location: 'Cartago',
     price: '₡15,000/día',
     image: '👩‍🌾',
+    isSpecialProvider: false,
+  },
+  {
+    id: 999,
+    name: 'Sakura Beauty Salon',
+    fullName: 'Sakura Beauty Salon',
+    service: 'Servicios de Belleza',
+    rating: 5.0,
+    reviews: 250,
+    location: 'San José Centro',
+    price: '₡15,000/sesión',
+    image: '🌸',
+    isSpecialProvider: true,
   },
 ];
 
 export default function SearchScreen() {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const { hasActiveReservations } = useReservationPlans();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   
@@ -124,6 +143,67 @@ export default function SearchScreen() {
       return searchError;
     }
     return null;
+  };
+
+  const canViewProviderDetails = (provider: any) => {
+    if (!user || user.userType !== 'client') return true;
+    if (provider.isSpecialProvider || provider.id === 999) return true;
+    return hasActiveReservations();
+  };
+
+  const renderProviderCard = (provider: any) => {
+    const canView = canViewProviderDetails(provider);
+    
+    return (
+      <TouchableOpacity
+        key={provider.id}
+        style={styles.providerCard}
+        onPress={() => router.push(`/provider/${provider.id}`)}
+      >
+        <View style={styles.providerHeader}>
+          <Text style={styles.providerImage}>{provider.image}</Text>
+          <View style={styles.providerInfo}>
+            <Text style={styles.providerName}>{provider.name}</Text>
+            <Text style={styles.providerService}>{provider.service}</Text>
+            <View style={styles.providerMeta}>
+              <View style={styles.rating}>
+                <Star size={14} color="#FFD700" fill="#FFD700" />
+                <Text style={styles.ratingText}>{provider.rating}</Text>
+                <Text style={styles.reviewsText}>({provider.reviews})</Text>
+              </View>
+              {canView && (
+                <View style={styles.location}>
+                  <MapPin size={14} color="#666" />
+                  <Text style={styles.locationText}>{provider.location}</Text>
+                  {provider.distance && (
+                    <Text style={styles.distanceText}>
+                      • {provider.distance.toFixed(1)}km
+                    </Text>
+                  )}
+                </View>
+              )}
+            </View>
+          </View>
+          <View style={styles.providerPrice}>
+            {canView ? (
+              <Text style={styles.priceText}>{provider.price}</Text>
+            ) : (
+              <View style={styles.restrictedAccess}>
+                <Text style={styles.restrictedText}>🔒</Text>
+                <Text style={styles.restrictedSubtext}>Plan requerido</Text>
+              </View>
+            )}
+          </View>
+        </View>
+        {!canView && (
+          <View style={styles.restrictedBanner}>
+            <Text style={styles.restrictedBannerText}>
+              💎 Información de contacto disponible con plan de reservas
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
   };
 
   return (
@@ -223,71 +303,10 @@ export default function SearchScreen() {
           
           {/* Show search results if available */}
           {foundProviders.length > 0 ? (
-            foundProviders.map((provider) => (
-              <TouchableOpacity
-                key={provider.id}
-                style={styles.providerCard}
-                onPress={() => router.push(`/provider/${provider.id}`)}
-              >
-                <View style={styles.providerHeader}>
-                  <Text style={styles.providerImage}>{provider.image}</Text>
-                  <View style={styles.providerInfo}>
-                    <Text style={styles.providerName}>{provider.name}</Text>
-                    <Text style={styles.providerService}>{provider.service}</Text>
-                    <View style={styles.providerMeta}>
-                      <View style={styles.rating}>
-                        <Star size={14} color="#FFD700" fill="#FFD700" />
-                        <Text style={styles.ratingText}>{provider.rating}</Text>
-                        <Text style={styles.reviewsText}>({provider.reviews})</Text>
-                      </View>
-                      <View style={styles.location}>
-                        <MapPin size={14} color="#666" />
-                        <Text style={styles.locationText}>{provider.location}</Text>
-                        {provider.distance && (
-                          <Text style={styles.distanceText}>
-                            • {provider.distance.toFixed(1)}km
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-                  </View>
-                  <View style={styles.providerPrice}>
-                    <Text style={styles.priceText}>{provider.price}</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))
+            foundProviders.map((provider) => renderProviderCard(provider))
           ) : (
             /* Show default featured providers */
-            featuredProviders.map((provider) => (
-              <TouchableOpacity
-                key={provider.id}
-                style={styles.providerCard}
-                onPress={() => router.push(`/provider/${provider.id}`)}
-              >
-                <View style={styles.providerHeader}>
-                  <Text style={styles.providerImage}>{provider.image}</Text>
-                  <View style={styles.providerInfo}>
-                    <Text style={styles.providerName}>{provider.name}</Text>
-                    <Text style={styles.providerService}>{provider.service}</Text>
-                    <View style={styles.providerMeta}>
-                      <View style={styles.rating}>
-                        <Star size={14} color="#FFD700" fill="#FFD700" />
-                        <Text style={styles.ratingText}>{provider.rating}</Text>
-                        <Text style={styles.reviewsText}>({provider.reviews})</Text>
-                      </View>
-                      <View style={styles.location}>
-                        <MapPin size={14} color="#666" />
-                        <Text style={styles.locationText}>{provider.location}</Text>
-                      </View>
-                    </View>
-                  </View>
-                  <View style={styles.providerPrice}>
-                    <Text style={styles.priceText}>{provider.price}</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))
+            featuredProviders.map((provider) => renderProviderCard(provider))
           )}
         </View>
 
@@ -558,5 +577,31 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  restrictedAccess: {
+    alignItems: 'center',
+  },
+  restrictedText: {
+    fontSize: 20,
+    marginBottom: 2,
+  },
+  restrictedSubtext: {
+    fontSize: 10,
+    color: '#999',
+    textAlign: 'center',
+  },
+  restrictedBanner: {
+    backgroundColor: 'rgba(216, 27, 96, 0.1)',
+    padding: 12,
+    marginTop: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#D81B60',
+  },
+  restrictedBannerText: {
+    fontSize: 12,
+    color: '#D81B60',
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });
