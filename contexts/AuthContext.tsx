@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setAuthToken } from '@/lib/trpc';
 
 interface User {
   id: string;
@@ -41,7 +42,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const storedUser = await AsyncStorage.getItem('user');
       if (storedUser) {
-        setUser(JSON.parse(storedUser));
+        const user = JSON.parse(storedUser);
+        setUser(user);
+        
+        // Set auth token for tRPC client
+        const token = user.userType === 'admin' ? 'admin-token' : 'client-token';
+        setAuthToken(token);
       }
     } catch (error) {
       console.error('Error loading stored user:', error);
@@ -129,6 +135,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       await AsyncStorage.setItem('user', JSON.stringify(mockUser));
       console.log('✅ User saved to storage and state:', mockUser);
+      
+      // Set auth token for tRPC client
+      const token = mockUser.userType === 'admin' ? 'admin-token' : 'client-token';
+      setAuthToken(token);
+      
       setUser(mockUser);
     } catch (error) {
       throw new Error('Error al iniciar sesión');
@@ -150,6 +161,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
 
       await AsyncStorage.setItem('user', JSON.stringify(newUser));
+      
+      // Set auth token for tRPC client
+      const token = newUser.userType === 'admin' ? 'admin-token' : 'client-token';
+      setAuthToken(token);
+      
       setUser(newUser);
     } catch (error) {
       throw new Error('Error al crear cuenta');
@@ -159,6 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     try {
       await AsyncStorage.removeItem('user');
+      setAuthToken(null); // Clear auth token
       setUser(null);
     } catch (error) {
       console.error('Error signing out:', error);
@@ -205,6 +222,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
 
       await AsyncStorage.setItem('user', JSON.stringify(mockUser));
+      
+      // Set auth token for tRPC client
+      const token = mockUser.userType === 'admin' ? 'admin-token' : 'client-token';
+      setAuthToken(token);
+      
       setUser(mockUser);
     } catch (error: any) {
       throw new Error(error.message || 'Error al cambiar de rol');

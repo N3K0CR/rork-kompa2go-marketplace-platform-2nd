@@ -15,11 +15,32 @@ const getBaseUrl = () => {
   );
 };
 
+// Global token storage for tRPC client
+let currentAuthToken: string | null = null;
+
+// Function to set auth token (called from AuthContext)
+export const setAuthToken = (token: string | null) => {
+  currentAuthToken = token;
+  console.log('🔑 Auth token updated:', token ? 'Token set' : 'Token cleared');
+};
+
+// Function to get current auth token
+export const getAuthToken = () => {
+  return currentAuthToken;
+};
+
 export const trpcClient = trpc.createClient({
   links: [
     httpLink({
       url: `${getBaseUrl()}/api/trpc`,
       transformer: superjson,
+      headers: () => {
+        const token = getAuthToken();
+        console.log('🔍 tRPC request headers - token:', token ? 'Present' : 'Missing');
+        return token ? {
+          authorization: `Bearer ${token}`,
+        } : {};
+      },
     }),
   ],
 });

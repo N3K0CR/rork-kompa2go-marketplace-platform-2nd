@@ -16,24 +16,39 @@ export const createContext = async (opts: FetchCreateContextFnOptions) => {
   const authHeader = opts.req.headers.get('authorization');
   let user: User | null = null;
   
+  console.log('🔍 Auth header received:', authHeader);
+  
   if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.substring(7);
-    // Mock user extraction from token
-    if (token === 'admin-token') {
-      user = {
-        id: 'admin-1',
-        name: 'Admin User',
-        email: 'admin@kompa2go.com',
-        userType: 'admin'
-      };
-    } else if (token === 'client-token') {
-      user = {
-        id: 'client-1',
-        name: 'Client User',
-        email: 'client@example.com',
-        userType: 'client'
-      };
+    const token = authHeader.substring(7).trim();
+    console.log('🔍 Extracted token:', token);
+    
+    // Validate token format and length
+    if (token && token.length > 0 && token.length < 100) {
+      // Mock user extraction from token
+      if (token === 'admin-token') {
+        user = {
+          id: 'admin-1',
+          name: 'Admin User',
+          email: 'admin@kompa2go.com',
+          userType: 'admin'
+        };
+        console.log('✅ Admin user authenticated');
+      } else if (token === 'client-token') {
+        user = {
+          id: 'client-1',
+          name: 'Client User',
+          email: 'client@example.com',
+          userType: 'client'
+        };
+        console.log('✅ Client user authenticated');
+      } else {
+        console.log('❌ Invalid token:', token);
+      }
+    } else {
+      console.log('❌ Invalid token format or length:', { token, length: token?.length });
     }
+  } else {
+    console.log('🔍 No valid authorization header found');
   }
   
   return {
