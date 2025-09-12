@@ -15,6 +15,7 @@ import { ProviderProvider } from "@/contexts/ProviderContext";
 import { ReservationPlansProvider } from "@/contexts/ReservationPlansContext";
 import { PendingPaymentsProvider } from "@/contexts/PendingPaymentsContext";
 import { LocationSearchProvider } from "@/contexts/LocationSearchContext";
+import { PaymentBackendProvider } from "@/contexts/PaymentBackendContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ReservationAlertModal } from "@/components/ReservationAlertModal";
 import { trpc, trpcClient } from "@/lib/trpc";
@@ -49,6 +50,7 @@ function RootLayoutNav() {
       <Stack.Screen name="booking/[providerId]" options={{ title: "Reservar Servicio" }} />
       <Stack.Screen name="chat" options={{ title: "Kompi - Asistente" }} />
       <Stack.Screen name="provider/[id]" options={{ title: "Detalles del Proveedor" }} />
+      <Stack.Screen name="purchase-plan" options={{ headerShown: false }} />
     </Stack>
   );
 }
@@ -72,10 +74,12 @@ export default function RootLayout() {
                       <ReservationPlansProvider>
                         <PendingPaymentsProvider>
                           <LocationSearchProvider>
-                            <GestureHandlerRootView style={styles.container}>
-                              <RootLayoutNav />
-                              <ReservationAlertModal />
-                            </GestureHandlerRootView>
+                            <PaymentBackendProvider>
+                              <GestureHandlerRootView style={styles.container}>
+                                <RootLayoutNav />
+                                <ReservationAlertModal />
+                              </GestureHandlerRootView>
+                            </PaymentBackendProvider>
                           </LocationSearchProvider>
                         </PendingPaymentsProvider>
                       </ReservationPlansProvider>

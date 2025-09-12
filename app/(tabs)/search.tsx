@@ -198,8 +198,22 @@ export default function SearchScreen() {
         {!canView && (
           <View style={styles.restrictedBanner}>
             <Text style={styles.restrictedBannerText}>
-              💎 Información de contacto disponible con plan de reservas
+              💎 Información Restringida - Adquiere un plan de reservas para ver información de contacto y realizar reservas
             </Text>
+            <View style={styles.restrictedActions}>
+              <TouchableOpacity 
+                style={styles.restrictedButton}
+                onPress={() => router.push('/purchase-plan')}
+              >
+                <Text style={styles.restrictedButtonText}>Ver Planes</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.restrictedButton, styles.primaryRestrictedButton]}
+                onPress={() => router.push('/purchase-plan')}
+              >
+                <Text style={[styles.restrictedButtonText, styles.primaryRestrictedButtonText]}>Adquirir Plan para contactar</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </TouchableOpacity>
@@ -610,5 +624,31 @@ const styles = StyleSheet.create({
     color: '#D81B60',
     fontWeight: '500',
     textAlign: 'center',
+    marginBottom: 12,
+  },
+  restrictedActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  restrictedButton: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#D81B60',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+  },
+  primaryRestrictedButton: {
+    backgroundColor: '#D81B60',
+  },
+  restrictedButtonText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#D81B60',
+  },
+  primaryRestrictedButtonText: {
+    color: 'white',
   },
 });
