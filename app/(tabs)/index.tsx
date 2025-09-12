@@ -756,35 +756,7 @@ export default function HomeScreen() {
                     
                     <View style={styles.contactButtonsRow}>
                       <TouchableOpacity 
-                        style={[styles.contactButton, styles.callButton]}
-                        onPress={() => {
-                          const phoneNumber = selectedReservation.clientPhone;
-                          const cleanPhone = phoneNumber.replace(/[^0-9+]/g, '');
-                          const telUrl = `tel:${cleanPhone}`;
-                          
-                          Alert.alert(
-                            'Realizar Llamada',
-                            `¿Deseas llamar a ${phoneNumber}?`,
-                            [
-                              { text: 'Cancelar', style: 'cancel' },
-                              {
-                                text: 'Llamar',
-                                onPress: () => {
-                                  Linking.openURL(telUrl).catch(() => {
-                                    Alert.alert('Error', 'No se pudo realizar la llamada.');
-                                  });
-                                }
-                              }
-                            ]
-                          );
-                        }}
-                      >
-                        <Phone size={18} color="white" />
-                        <Text style={styles.contactButtonText}>Llamar</Text>
-                      </TouchableOpacity>
-                      
-                      <TouchableOpacity 
-                        style={[styles.contactButton, styles.whatsappButton]}
+                        style={[styles.contactButton, styles.whatsappButton, { flex: 1 }]}
                         onPress={() => {
                           const phoneNumber = selectedReservation.clientPhone?.replace(/[^0-9]/g, '') || '50688880000';
                           const message = encodeURIComponent(
@@ -801,7 +773,7 @@ export default function HomeScreen() {
                         }}
                       >
                         <MessageCircle size={18} color="white" />
-                        <Text style={styles.contactButtonText}>WhatsApp</Text>
+                        <Text style={styles.contactButtonText}>Chat con Proveedor</Text>
                       </TouchableOpacity>
                     </View>
                   </View>

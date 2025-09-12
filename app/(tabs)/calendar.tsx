@@ -765,29 +765,7 @@ export default function CalendarScreen() {
                   </View>
                 )}
                 
-                {/* Simplified test button */}
-                <TouchableOpacity 
-                  style={[styles.clientActionButton, { backgroundColor: '#4CAF50', marginTop: 8, width: '100%' }]}
-                  onPress={() => {
-                    console.log('🟢 SIMPLIFIED TEST: Button working!');
-                    Alert.alert(
-                      '✅ Sistema Funcionando', 
-                      `Reserva: ${appointment.service}\nHora: ${appointment.time}\nEstado: ${appointment.status}\n\nEl sistema está funcionando correctamente.`,
-                      [
-                        { text: 'Perfecto', style: 'default' },
-                        {
-                          text: 'Probar Opciones',
-                          style: 'default',
-                          onPress: () => handleReservationOptions(appointment)
-                        }
-                      ]
-                    );
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Settings size={16} color="white" />
-                  <Text style={styles.clientActionText}>✅ SISTEMA OK - PROBAR</Text>
-                </TouchableOpacity>
+
               </View>
             ))}
           </View>
