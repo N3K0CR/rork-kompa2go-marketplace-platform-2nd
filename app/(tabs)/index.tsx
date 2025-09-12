@@ -8,9 +8,10 @@ import { useAppointments } from '@/contexts/AppointmentsContext';
 import { useReservationAlert } from '@/contexts/ReservationAlertContext';
 import { useReservationPlans } from '@/contexts/ReservationPlansContext';
 import { usePendingPayments } from '@/contexts/PendingPaymentsContext';
-import { Search, Calendar, Star, TrendingUp, Users, DollarSign, RefreshCw, X, Mail, Lock, Award, Bell, CreditCard, Camera, Upload, Package, Check } from 'lucide-react-native';
+import { Search, Calendar, Star, TrendingUp, Users, DollarSign, RefreshCw, X, Mail, Lock, Award, Bell, CreditCard, Camera, Upload, Package, Check, Phone, MessageCircle, Settings, CheckCircle, XCircle, RotateCcw } from 'lucide-react-native';
 import FloatingKompi from '@/components/FloatingKompi';
 import { router } from 'expo-router';
+import { Linking } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 const { width } = Dimensions.get('window');
@@ -19,7 +20,7 @@ export default function HomeScreen() {
   const { user, loading, switchRole } = useAuth();
   const { walletBalance, okoins, bookingPasses } = useWallet();
   const { t } = useLanguage();
-  const { getTodayAppointments, getUpcomingAppointments } = useAppointments();
+  const { getTodayAppointments, getUpcomingAppointments, updateAppointment } = useAppointments();
   const { simulateNewReservation, pendingReservations, isAlertActive } = useReservationAlert();
   const userType = user?.userType || 'client';
   
@@ -40,6 +41,8 @@ export default function HomeScreen() {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const { getAvailablePlans, purchasePlan } = useReservationPlans();
   const { addPaymentProof, getPendingCount } = usePendingPayments();
+  const [showReservationDetailsModal, setShowReservationDetailsModal] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState<any>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -129,7 +132,16 @@ export default function HomeScreen() {
           {upcomingAppointments.length > 0 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {upcomingAppointments.slice(0, 5).map((appointment) => (
-                <View key={appointment.id} style={styles.appointmentCard}>
+                <TouchableOpacity 
+                  key={appointment.id} 
+                  style={styles.appointmentCard}
+                  onPress={() => {
+                    console.log('🎯 Opening reservation details for:', appointment.id);
+                    setSelectedReservation(appointment);
+                    setShowReservationDetailsModal(true);
+                  }}
+                  activeOpacity={0.7}
+                >
                   <View style={styles.appointmentHeader}>
                     <Text style={styles.appointmentDate}>
                       {new Date(appointment.date).toLocaleDateString('es-ES', { 
@@ -159,7 +171,22 @@ export default function HomeScreen() {
                        appointment.type === 'manual' ? 'Manual' : 'Bloqueado'}
                     </Text>
                   </View>
-                </View>
+                  
+                  {/* Status indicator for client view */}
+                  {userType === 'client' && (
+                    <View style={[
+                      styles.statusIndicator,
+                      appointment.status === 'confirmed' && styles.statusConfirmed,
+                      appointment.status === 'pending' && styles.statusPending,
+                      appointment.status === 'cancelled' && styles.statusCancelled
+                    ]}>
+                      <Text style={styles.statusIndicatorText}>
+                        {appointment.status === 'confirmed' ? '✅ Confirmada' :
+                         appointment.status === 'pending' ? '⏳ Pendiente' : '❌ Cancelada'}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
               ))}
             </ScrollView>
           ) : (
@@ -489,6 +516,296 @@ export default function HomeScreen() {
               )}
             </View>
           </ScrollView>
+        </View>
+      </Modal>
+      
+      {/* Reservation Details Modal */}
+      <Modal
+        visible={showReservationDetailsModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => {
+          setShowReservationDetailsModal(false);
+          setSelectedReservation(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.reservationDetailsModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Detalles de Reserva</Text>
+              <TouchableOpacity onPress={() => {
+                setShowReservationDetailsModal(false);
+                setSelectedReservation(null);
+              }}>
+                <X size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            {selectedReservation && (
+              <ScrollView style={styles.reservationDetailsContent}>
+                {/* Reservation Information */}
+                <View style={styles.reservationInfoSection}>
+                  <Text style={styles.sectionTitle}>Información de la Reserva</Text>
+                  
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Fecha:</Text>
+                    <Text style={styles.detailValue}>
+                      {new Date(selectedReservation.date).toLocaleDateString('es-ES', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Hora:</Text>
+                    <Text style={styles.detailValue}>{selectedReservation.time}</Text>
+                  </View>
+                  
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Duración:</Text>
+                    <Text style={styles.detailValue}>{selectedReservation.duration} minutos</Text>
+                  </View>
+                  
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Servicio:</Text>
+                    <Text style={styles.detailValue}>{selectedReservation.service}</Text>
+                  </View>
+                  
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>
+                      {userType === 'client' ? 'Proveedor:' : 'Cliente:'}
+                    </Text>
+                    <Text style={styles.detailValue}>{selectedReservation.clientName}</Text>
+                  </View>
+                  
+                  {selectedReservation.clientPhone && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Teléfono:</Text>
+                      <Text style={styles.detailValue}>{selectedReservation.clientPhone}</Text>
+                    </View>
+                  )}
+                  
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Estado:</Text>
+                    <View style={[
+                      styles.statusBadge,
+                      selectedReservation.status === 'confirmed' && styles.statusConfirmed,
+                      selectedReservation.status === 'pending' && styles.statusPending,
+                      selectedReservation.status === 'cancelled' && styles.statusCancelled
+                    ]}>
+                      <Text style={styles.statusText}>
+                        {selectedReservation.status === 'confirmed' ? 'Confirmada' :
+                         selectedReservation.status === 'pending' ? 'Pendiente' : 'Cancelada'}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  {selectedReservation.notes && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Notas:</Text>
+                      <Text style={styles.detailValue}>{selectedReservation.notes}</Text>
+                    </View>
+                  )}
+                </View>
+                
+                {/* Action Buttons */}
+                <View style={styles.reservationActionsSection}>
+                  <Text style={styles.sectionTitle}>Administrar Reserva</Text>
+                  
+                  {/* Confirmation Action */}
+                  {selectedReservation.status === 'pending' && (
+                    <TouchableOpacity 
+                      style={[styles.actionButton, styles.confirmButton]}
+                      onPress={async () => {
+                        Alert.alert(
+                          'Confirmar Reserva',
+                          `¿Confirmas tu reserva para el ${new Date(selectedReservation.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })} a las ${selectedReservation.time}?\n\nServicio: ${selectedReservation.service}\n${userType === 'client' ? `Proveedor: ${selectedReservation.clientName}` : `Cliente: ${selectedReservation.clientName}`}`,
+                          [
+                            { text: 'Cancelar', style: 'cancel' },
+                            {
+                              text: 'Confirmar',
+                              style: 'default',
+                              onPress: async () => {
+                                await updateAppointment(selectedReservation.id, { 
+                                  status: 'confirmed',
+                                  notes: (selectedReservation.notes || '') + ` [Confirmada por ${userType} el ${new Date().toLocaleString('es-ES')}]`
+                                });
+                                setShowReservationDetailsModal(false);
+                                Alert.alert('✅ Confirmada', 'Tu reserva ha sido confirmada exitosamente.');
+                              }
+                            }
+                          ]
+                        );
+                      }}
+                    >
+                      <CheckCircle size={20} color="white" />
+                      <Text style={styles.actionButtonText}>Confirmar Reserva</Text>
+                    </TouchableOpacity>
+                  )}
+                  
+                  {/* Reschedule Action */}
+                  <TouchableOpacity 
+                    style={[styles.actionButton, styles.rescheduleButton]}
+                    onPress={() => {
+                      setShowReservationDetailsModal(false);
+                      Alert.alert(
+                        'Reprogramar Cita',
+                        `Para reprogramar tu reserva del ${new Date(selectedReservation.date).toLocaleDateString('es-ES')} necesitas coordinar directamente con ${userType === 'client' ? 'el proveedor' : 'el cliente'}.\n\n¿Cómo prefieres contactarlos?`,
+                        [
+                          { text: 'Cancelar', style: 'cancel' },
+                          {
+                            text: '📞 Llamar',
+                            style: 'default',
+                            onPress: () => {
+                              const phoneNumber = selectedReservation.clientPhone || '+506 8888-0000';
+                              const cleanPhone = phoneNumber.replace(/[^0-9+]/g, '');
+                              const telUrl = `tel:${cleanPhone}`;
+                              
+                              Alert.alert(
+                                'Realizar Llamada',
+                                `¿Deseas llamar a ${phoneNumber}?`,
+                                [
+                                  { text: 'Cancelar', style: 'cancel' },
+                                  {
+                                    text: 'Llamar',
+                                    onPress: () => {
+                                      Linking.openURL(telUrl).catch(() => {
+                                        Alert.alert('Error', 'No se pudo realizar la llamada.');
+                                      });
+                                    }
+                                  }
+                                ]
+                              );
+                            }
+                          },
+                          {
+                            text: '💬 WhatsApp',
+                            style: 'default',
+                            onPress: () => {
+                              const phoneNumber = selectedReservation.clientPhone?.replace(/[^0-9]/g, '') || '50688880000';
+                              const message = encodeURIComponent(
+                                `Hola, te contacto desde Kompa2Go sobre la reserva del ${new Date(selectedReservation.date).toLocaleDateString('es-ES')} a las ${selectedReservation.time} para ${selectedReservation.service}. Necesito reprogramar la cita.`
+                              );
+                              const whatsappUrl = `whatsapp://send?phone=${phoneNumber}&text=${message}`;
+                              const whatsappWebUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+                              
+                              Linking.openURL(whatsappUrl).catch(() => {
+                                Linking.openURL(whatsappWebUrl).catch(() => {
+                                  Alert.alert('Error', 'No se pudo abrir WhatsApp.');
+                                });
+                              });
+                            }
+                          }
+                        ]
+                      );
+                    }}
+                  >
+                    <RotateCcw size={20} color="white" />
+                    <Text style={styles.actionButtonText}>Reprogramar</Text>
+                  </TouchableOpacity>
+                  
+                  {/* Cancel Action */}
+                  {selectedReservation.status !== 'cancelled' && (
+                    <TouchableOpacity 
+                      style={[styles.actionButton, styles.cancelButton]}
+                      onPress={() => {
+                        Alert.alert(
+                          '⚠️ Cancelar Reserva',
+                          userType === 'client' ? 
+                            'POLÍTICA DE CANCELACIÓN:\n\n• La comisión pagada NO será reembolsada\n• El proveedor será notificado inmediatamente\n• Esta acción no se puede deshacer\n\n¿Estás completamente seguro?' :
+                            'Esta acción cancelará la reserva y notificará al cliente inmediatamente.\n\n¿Confirmas la cancelación?',
+                          [
+                            { text: 'No, Mantener', style: 'cancel' },
+                            {
+                              text: 'Sí, Cancelar',
+                              style: 'destructive',
+                              onPress: async () => {
+                                await updateAppointment(selectedReservation.id, { 
+                                  status: 'cancelled',
+                                  notes: (selectedReservation.notes || '') + ` [Cancelada por ${userType} el ${new Date().toLocaleString('es-ES')}${userType === 'client' ? ' - Comisión no reembolsable' : ''}]`
+                                });
+                                setShowReservationDetailsModal(false);
+                                Alert.alert(
+                                  '❌ Reserva Cancelada', 
+                                  userType === 'client' ? 
+                                    'Tu reserva ha sido cancelada. La comisión no es reembolsable.' :
+                                    'La reserva ha sido cancelada y el cliente ha sido notificado.'
+                                );
+                              }
+                            }
+                          ]
+                        );
+                      }}
+                    >
+                      <XCircle size={20} color="white" />
+                      <Text style={styles.actionButtonText}>Cancelar Reserva</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                
+                {/* Contact Section */}
+                {selectedReservation.clientPhone && (
+                  <View style={styles.contactSection}>
+                    <Text style={styles.sectionTitle}>Contacto</Text>
+                    
+                    <View style={styles.contactButtonsRow}>
+                      <TouchableOpacity 
+                        style={[styles.contactButton, styles.callButton]}
+                        onPress={() => {
+                          const phoneNumber = selectedReservation.clientPhone;
+                          const cleanPhone = phoneNumber.replace(/[^0-9+]/g, '');
+                          const telUrl = `tel:${cleanPhone}`;
+                          
+                          Alert.alert(
+                            'Realizar Llamada',
+                            `¿Deseas llamar a ${phoneNumber}?`,
+                            [
+                              { text: 'Cancelar', style: 'cancel' },
+                              {
+                                text: 'Llamar',
+                                onPress: () => {
+                                  Linking.openURL(telUrl).catch(() => {
+                                    Alert.alert('Error', 'No se pudo realizar la llamada.');
+                                  });
+                                }
+                              }
+                            ]
+                          );
+                        }}
+                      >
+                        <Phone size={18} color="white" />
+                        <Text style={styles.contactButtonText}>Llamar</Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity 
+                        style={[styles.contactButton, styles.whatsappButton]}
+                        onPress={() => {
+                          const phoneNumber = selectedReservation.clientPhone?.replace(/[^0-9]/g, '') || '50688880000';
+                          const message = encodeURIComponent(
+                            `Hola, te contacto desde Kompa2Go sobre tu reserva del ${new Date(selectedReservation.date).toLocaleDateString('es-ES')} a las ${selectedReservation.time} para ${selectedReservation.service}.`
+                          );
+                          const whatsappUrl = `whatsapp://send?phone=${phoneNumber}&text=${message}`;
+                          const whatsappWebUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+                          
+                          Linking.openURL(whatsappUrl).catch(() => {
+                            Linking.openURL(whatsappWebUrl).catch(() => {
+                              Alert.alert('Error', 'No se pudo abrir WhatsApp.');
+                            });
+                          });
+                        }}
+                      >
+                        <MessageCircle size={18} color="white" />
+                        <Text style={styles.contactButtonText}>WhatsApp</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+              </ScrollView>
+            )}
+          </View>
         </View>
       </Modal>
     </View>
@@ -1735,6 +2052,134 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+  statusIndicator: {
+    marginTop: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  statusConfirmed: {
+    backgroundColor: '#4CAF50',
+  },
+  statusPending: {
+    backgroundColor: '#FF9800',
+  },
+  statusCancelled: {
+    backgroundColor: '#F44336',
+  },
+  statusIndicatorText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: 'white',
+  },
+  reservationDetailsModalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 0,
+    width: '95%',
+    maxWidth: 450,
+    maxHeight: '90%',
+    overflow: 'hidden',
+  },
+  reservationDetailsContent: {
+    flex: 1,
+    padding: 20,
+  },
+  reservationInfoSection: {
+    marginBottom: 24,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+    flex: 1,
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '600',
+    flex: 2,
+    textAlign: 'right',
+    textTransform: 'capitalize',
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  statusText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  reservationActionsSection: {
+    marginBottom: 24,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginBottom: 12,
+    gap: 8,
+  },
+  confirmButton: {
+    backgroundColor: '#4CAF50',
+  },
+  rescheduleButton: {
+    backgroundColor: '#2196F3',
+  },
+  cancelButton: {
+    backgroundColor: '#F44336',
+  },
+  actionButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  contactSection: {
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5E5',
+    paddingTop: 20,
+  },
+  contactButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  contactButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  callButton: {
+    backgroundColor: '#4CAF50',
+  },
+  whatsappButton: {
+    backgroundColor: '#25D366',
+  },
+  contactButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
 
 });
