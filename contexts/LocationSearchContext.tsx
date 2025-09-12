@@ -20,6 +20,7 @@ export interface Provider {
   price: string;
   image: string;
   distance?: number;
+  isSpecialProvider?: boolean;
 }
 
 export interface SearchRadius {
@@ -41,6 +42,19 @@ interface LocationSearchState {
 
 const mockProviders: Provider[] = [
   {
+    id: '999',
+    name: 'Sakura Beauty Salon',
+    fullName: 'Sakura Beauty Salon',
+    service: 'Servicios de Belleza',
+    rating: 5.0,
+    reviews: 250,
+    location: 'San José Centro',
+    coordinates: { latitude: 9.9281, longitude: -84.0907 },
+    price: '₡15,000/sesión',
+    image: '🌸',
+    isSpecialProvider: true,
+  },
+  {
     id: '1',
     name: 'María',
     fullName: 'María González',
@@ -51,6 +65,7 @@ const mockProviders: Provider[] = [
     coordinates: { latitude: 9.9281, longitude: -84.0907 },
     price: '₡8,000/hora',
     image: '👩‍💼',
+    isSpecialProvider: false,
   },
   {
     id: '2',
@@ -63,6 +78,7 @@ const mockProviders: Provider[] = [
     coordinates: { latitude: 9.9189, longitude: -84.1400 },
     price: '₡12,000/visita',
     image: '👨‍🔧',
+    isSpecialProvider: false,
   },
   {
     id: '3',
@@ -75,6 +91,7 @@ const mockProviders: Provider[] = [
     coordinates: { latitude: 9.8644, longitude: -83.9194 },
     price: '₡15,000/día',
     image: '👩‍🌾',
+    isSpecialProvider: false,
   },
   {
     id: '4',
@@ -87,6 +104,7 @@ const mockProviders: Provider[] = [
     coordinates: { latitude: 9.9989, longitude: -84.1167 },
     price: '₡10,000/visita',
     image: '👨‍🔧',
+    isSpecialProvider: false,
   },
   {
     id: '5',
@@ -99,6 +117,7 @@ const mockProviders: Provider[] = [
     coordinates: { latitude: 10.0162, longitude: -84.2119 },
     price: '₡20,000/sesión',
     image: '👩‍💄',
+    isSpecialProvider: false,
   },
   {
     id: '6',
@@ -111,6 +130,7 @@ const mockProviders: Provider[] = [
     coordinates: { latitude: 9.9761, longitude: -84.8369 },
     price: '₡25,000/proyecto',
     image: '👨‍🔨',
+    isSpecialProvider: false,
   },
 ];
 
@@ -241,7 +261,12 @@ export const [LocationSearchProvider, useLocationSearch] = createContextHook(() 
         distance
       };
     }).filter(provider => provider.distance <= radius)
-      .sort((a, b) => a.distance - b.distance);
+      .sort((a, b) => {
+        // Always put Sakura Beauty Salon first
+        if (a.isSpecialProvider || a.id === '999') return -1;
+        if (b.isSpecialProvider || b.id === '999') return 1;
+        return a.distance - b.distance;
+      });
     
     console.log(`Found ${providersWithDistance.length} providers within ${radius}km`);
     return providersWithDistance;

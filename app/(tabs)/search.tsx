@@ -33,6 +33,18 @@ const serviceCategories = [
 
 const featuredProviders = [
   {
+    id: 999,
+    name: 'Sakura Beauty Salon',
+    fullName: 'Sakura Beauty Salon',
+    service: 'Servicios de Belleza',
+    rating: 5.0,
+    reviews: 250,
+    location: 'San José Centro',
+    price: '₡15,000/sesión',
+    image: '🌸',
+    isSpecialProvider: true,
+  },
+  {
     id: 1,
     name: 'María',
     fullName: 'María González',
@@ -67,18 +79,6 @@ const featuredProviders = [
     price: '₡15,000/día',
     image: '👩‍🌾',
     isSpecialProvider: false,
-  },
-  {
-    id: 999,
-    name: 'Sakura Beauty Salon',
-    fullName: 'Sakura Beauty Salon',
-    service: 'Servicios de Belleza',
-    rating: 5.0,
-    reviews: 250,
-    location: 'San José Centro',
-    price: '₡15,000/sesión',
-    image: '🌸',
-    isSpecialProvider: true,
   },
 ];
 
@@ -147,7 +147,7 @@ export default function SearchScreen() {
 
   const canViewProviderDetails = (provider: any) => {
     if (!user || user.userType !== 'client') return true;
-    if (provider.isSpecialProvider || provider.id === 999) return true;
+    if (provider.isSpecialProvider || provider.id === '999') return true;
     return hasActiveReservations();
   };
 
@@ -303,7 +303,14 @@ export default function SearchScreen() {
           
           {/* Show search results if available */}
           {foundProviders.length > 0 ? (
-            foundProviders.map((provider) => renderProviderCard(provider))
+            foundProviders
+              .sort((a, b) => {
+                // Always put Sakura Beauty Salon first
+                if (a.isSpecialProvider || a.id === '999') return -1;
+                if (b.isSpecialProvider || b.id === '999') return 1;
+                return 0;
+              })
+              .map((provider) => renderProviderCard(provider))
           ) : (
             /* Show default featured providers */
             featuredProviders.map((provider) => renderProviderCard(provider))
