@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal, TextInput, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal, TextInput, Alert, Image, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWallet } from '@/contexts/WalletContext';
@@ -531,12 +531,15 @@ export default function HomeScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.reservationDetailsModalContent}>
-            <View style={styles.modalHeader}>
+            <View style={[styles.modalHeader, { padding: 20, paddingBottom: 10 }]}>
               <Text style={styles.modalTitle}>Detalles de Reserva</Text>
-              <TouchableOpacity onPress={() => {
-                setShowReservationDetailsModal(false);
-                setSelectedReservation(null);
-              }}>
+              <TouchableOpacity 
+                onPress={() => {
+                  setShowReservationDetailsModal(false);
+                  setSelectedReservation(null);
+                }}
+                style={{ padding: 4 }}
+              >
                 <X size={24} color="#666" />
               </TouchableOpacity>
             </View>
@@ -1334,6 +1337,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 16,
+    flexWrap: 'wrap',
+    ...(Platform.OS === 'web' && {
+      wordWrap: 'break-word',
+      overflowWrap: 'break-word',
+    }),
   },
   emptyState: {
     backgroundColor: 'white',
@@ -1568,6 +1576,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
+    paddingVertical: 40,
   },
   modalContent: {
     backgroundColor: 'white',
@@ -1586,6 +1595,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
+    flexWrap: 'wrap',
+    flex: 1,
+    ...(Platform.OS === 'web' && {
+      wordWrap: 'break-word',
+      overflowWrap: 'break-word',
+    }),
   },
   closeButton: {
     padding: 4,
@@ -2081,11 +2096,14 @@ const styles = StyleSheet.create({
     width: '95%',
     maxWidth: 450,
     maxHeight: '90%',
+    minHeight: 400,
     overflow: 'hidden',
+    alignSelf: 'center',
   },
   reservationDetailsContent: {
     flex: 1,
     padding: 20,
+    minHeight: 300,
   },
   reservationInfoSection: {
     marginBottom: 24,
@@ -2104,6 +2122,11 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: '500',
     flex: 1,
+    flexWrap: 'wrap',
+    ...(Platform.OS === 'web' && {
+      wordWrap: 'break-word',
+      overflowWrap: 'break-word',
+    }),
   },
   detailValue: {
     fontSize: 14,
@@ -2112,6 +2135,11 @@ const styles = StyleSheet.create({
     flex: 2,
     textAlign: 'right',
     textTransform: 'capitalize',
+    flexWrap: 'wrap',
+    ...(Platform.OS === 'web' && {
+      wordWrap: 'break-word',
+      overflowWrap: 'break-word',
+    }),
   },
   statusBadge: {
     paddingHorizontal: 12,
