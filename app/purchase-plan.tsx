@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { useReservationPlans } from '@/contexts/ReservationPlansContext';
 import { usePaymentBackend } from '@/contexts/PaymentBackendContext';
-import { CreditCard, Check, Star, ArrowLeft, Upload, DollarSign, Info } from 'lucide-react-native';
+import { CreditCard, Check, Star, ArrowLeft, Upload, DollarSign, Info, X } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 export default function PurchasePlanScreen() {
@@ -35,7 +35,11 @@ export default function PurchasePlanScreen() {
   
   const plans = getAvailablePlans();
   const selectedPlanData = plans.find(p => p.id === selectedPlan);
-  const fees = selectedPlanData ? calculateFees(selectedPlanData.price, paymentMethod) : null;
+  // No tax charges - total is same as plan price
+  const fees = selectedPlanData ? {
+    ...calculateFees(selectedPlanData.price, paymentMethod),
+    totalAmount: selectedPlanData.price // Override total to remove taxes
+  } : null;
   
   useEffect(() => {
     if (plans.length > 0 && !selectedPlan) {
@@ -436,41 +440,42 @@ export default function PurchasePlanScreen() {
                   <Text style={styles.feeValue}>₡{selectedPlanData.price.toLocaleString()}</Text>
                 </View>
                 
-                {fees.processingFee > 0 && (
-                  <View style={styles.feeRow}>
-                    <Text style={styles.feeLabel}>Comisión de procesamiento</Text>
-                    <Text style={styles.feeValue}>₡{fees.processingFee.toLocaleString()}</Text>
-                  </View>
-                )}
-                
-
-                
                 <View style={[styles.feeRow, styles.totalRow]}>
                   <Text style={styles.totalLabel}>Total a Pagar</Text>
-                  <Text style={styles.totalValue}>₡{fees.totalAmount.toLocaleString()}</Text>
+                  <Text style={styles.totalValue}>₡{selectedPlanData.price.toLocaleString()}</Text>
                 </View>
               </View>
             </View>
           )}
           
-          {/* Purchase Button */}
-          <TouchableOpacity
-            style={[
-              styles.purchaseButton,
-              (isCreatingPayment || !selectedPlanData) && styles.disabledButton
-            ]}
-            onPress={handlePurchase}
-            disabled={isCreatingPayment || !selectedPlanData}
-          >
-            {isCreatingPayment ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <DollarSign size={24} color="white" />
-            )}
-            <Text style={styles.purchaseButtonText}>
-              {isCreatingPayment ? 'Procesando...' : 'Comprar Plan'}
-            </Text>
-          </TouchableOpacity>
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => router.back()}
+            >
+              <X size={20} color="#6B7280" />
+              <Text style={styles.cancelButtonText}>Cancelar</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.purchaseButton,
+                (isCreatingPayment || !selectedPlanData) && styles.disabledButton
+              ]}
+              onPress={handlePurchase}
+              disabled={isCreatingPayment || !selectedPlanData}
+            >
+              {isCreatingPayment ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <DollarSign size={24} color="white" />
+              )}
+              <Text style={styles.purchaseButtonText}>
+                {isCreatingPayment ? 'Procesando...' : 'Comprar Plan'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
         </ScrollView>
       </View>
@@ -794,7 +799,30 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#D81B60',
   },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  cancelButtonText: {
+    color: '#6B7280',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   purchaseButton: {
+    flex: 2,
     backgroundColor: '#D81B60',
     borderRadius: 12,
     padding: 16,
@@ -802,7 +830,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 8,
   },
   disabledButton: {
     backgroundColor: '#9CA3AF',
