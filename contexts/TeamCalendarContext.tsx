@@ -20,7 +20,7 @@ interface TeamEvent {
   time: string;
   duration: number;
   title: string;
-  type: 'kompa2go' | 'manual' | 'blocked' | 'dayoff';
+  type: 'kompa2go' | 'manual' | 'blocked' | 'dayoff' | 'personal';
   collaboratorId?: string;
   collaboratorName?: string;
   status: 'confirmed' | 'pending' | 'cancelled';
@@ -123,9 +123,9 @@ export function TeamCalendarProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     loadAppointments();
     // Refresh appointments periodically to stay in sync
-    const interval = setInterval(loadAppointments, 5000);
+    const interval = setInterval(loadAppointments, 10000); // Increased to 10 seconds to reduce load
     return () => clearInterval(interval);
-  }, []);
+  }, [loadAppointments]);
 
   const loadCollaborators = useCallback(async () => {
     try {
@@ -179,11 +179,23 @@ export function TeamCalendarProvider({ children }: { children: ReactNode }) {
 
   // Highly optimized consolidated data calculation - minimal processing to prevent overload
   const consolidatedData = useMemo((): ConsolidatedCalendarData => {
+    // Early return if no appointments to prevent unnecessary processing
+    if (!appointments || appointments.length === 0) {
+      return {
+        totalEvents: 0,
+        eventsByType: {},
+        eventsByCollaborator: {},
+        upcomingEvents: [],
+        todayEvents: [],
+        weekEvents: [],
+      };
+    }
+    
     const today = new Date().toISOString().split('T')[0];
     const weekFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     
     // Limit appointments processing to prevent data overload
-    const limitedAppointments = appointments.slice(0, 100); // Process max 100 appointments
+    const limitedAppointments = appointments.slice(0, 50); // Reduced to 50 appointments
     const teamEvents = convertToTeamEvents(limitedAppointments);
     
     // Calculate summary statistics efficiently with limits
@@ -194,25 +206,25 @@ export function TeamCalendarProvider({ children }: { children: ReactNode }) {
     const upcomingEvents: TeamEvent[] = [];
     
     // Process only essential data
-    teamEvents.slice(0, 50).forEach(event => { // Limit to 50 events for processing
+    teamEvents.slice(0, 25).forEach(event => { // Reduced to 25 events for processing
       // Count by type
       eventsByType[event.type] = (eventsByType[event.type] || 0) + 1;
       
       // Count by collaborator (limit to prevent overflow)
-      if (event.collaboratorId && Object.keys(eventsByCollaborator).length < 10) {
+      if (event.collaboratorId && Object.keys(eventsByCollaborator).length < 5) {
         eventsByCollaborator[event.collaboratorId] = (eventsByCollaborator[event.collaboratorId] || 0) + 1;
       }
       
       // Categorize by date with limits
-      if (event.date === today && todayEvents.length < 5) {
+      if (event.date === today && todayEvents.length < 3) {
         todayEvents.push(event);
       }
       
-      if (event.date >= today && event.date <= weekFromNow && weekEvents.length < 10) {
+      if (event.date >= today && event.date <= weekFromNow && weekEvents.length < 5) {
         weekEvents.push(event);
       }
       
-      if (event.date > today && event.status === 'confirmed' && upcomingEvents.length < 5) {
+      if (event.date > today && event.status === 'confirmed' && upcomingEvents.length < 3) {
         upcomingEvents.push(event);
       }
     });
@@ -221,12 +233,12 @@ export function TeamCalendarProvider({ children }: { children: ReactNode }) {
     upcomingEvents.sort((a, b) => a.date.localeCompare(b.date));
     
     return {
-      totalEvents: Math.min(teamEvents.length, 50), // Cap at 50 for display
+      totalEvents: Math.min(teamEvents.length, 25), // Cap at 25 for display
       eventsByType,
       eventsByCollaborator,
-      upcomingEvents: upcomingEvents.slice(0, 3), // Limit to 3 to prevent overload
-      todayEvents: todayEvents.slice(0, 5).sort((a, b) => a.time.localeCompare(b.time)),
-      weekEvents: weekEvents.slice(0, 10),
+      upcomingEvents: upcomingEvents.slice(0, 2), // Limit to 2 to prevent overload
+      todayEvents: todayEvents.slice(0, 3).sort((a, b) => a.time.localeCompare(b.time)),
+      weekEvents: weekEvents.slice(0, 5),
     };
   }, [appointments, convertToTeamEvents]);
 

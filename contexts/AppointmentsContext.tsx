@@ -291,16 +291,17 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error loading appointments:', error);
       // Fallback to appropriate mock data
-      const mockData = getMockDataForUser(userType);
+      const mockData = getMockDataForUser(currentUserType || userType);
       setAppointments(mockData);
     } finally {
       setLoading(false);
     }
-  }, [userType]);
+  }, []);
 
-  const saveAppointments = useCallback(async (newAppointments: Appointment[]) => {
+  const saveAppointments = useCallback(async (newAppointments: Appointment[], currentUserType?: string) => {
     try {
-      const storageKey = userType === 'client' ? 'client_appointments' : 'appointments';
+      const userTypeToUse = currentUserType || userType;
+      const storageKey = userTypeToUse === 'client' ? 'client_appointments' : 'appointments';
       await AsyncStorage.setItem(storageKey, JSON.stringify(newAppointments));
     } catch (error) {
       console.error('Error saving appointments:', error);
@@ -309,15 +310,17 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     loadAppointments();
-  }, [loadAppointments]);
+  }, []);
 
   // Function to set user type and reload appointments
   const setUserTypeAndReload = useCallback(async (newUserType: string) => {
     console.log('Setting user type and reloading appointments:', newUserType);
-    setUserType(newUserType);
-    setLoading(true);
-    await loadAppointments(newUserType);
-  }, [loadAppointments]);
+    if (newUserType !== userType) {
+      setUserType(newUserType);
+      setLoading(true);
+      await loadAppointments(newUserType);
+    }
+  }, [userType]);
 
 
 
@@ -329,34 +332,34 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
     
     const updatedAppointments = [...appointments, newAppointment];
     setAppointments(updatedAppointments);
-    await saveAppointments(updatedAppointments);
+    await saveAppointments(updatedAppointments, userType);
     
     // Trigger real-time update
     setLastRefresh(Date.now());
     console.log('New appointment added - triggering real-time update:', newAppointment);
-  }, [appointments, saveAppointments]);
+  }, [appointments, saveAppointments, userType]);
 
   const updateAppointment = useCallback(async (id: string, updates: Partial<Appointment>) => {
     const updatedAppointments = appointments.map(appointment =>
       appointment.id === id ? { ...appointment, ...updates } : appointment
     );
     setAppointments(updatedAppointments);
-    await saveAppointments(updatedAppointments);
+    await saveAppointments(updatedAppointments, userType);
     
     // Trigger real-time update
     setLastRefresh(Date.now());
     console.log('Appointment updated - triggering real-time update:', id, updates);
-  }, [appointments, saveAppointments]);
+  }, [appointments, saveAppointments, userType]);
 
   const deleteAppointment = useCallback(async (id: string) => {
     const updatedAppointments = appointments.filter(appointment => appointment.id !== id);
     setAppointments(updatedAppointments);
-    await saveAppointments(updatedAppointments);
+    await saveAppointments(updatedAppointments, userType);
     
     // Trigger real-time update
     setLastRefresh(Date.now());
     console.log('Appointment deleted - triggering real-time update:', id);
-  }, [appointments, saveAppointments]);
+  }, [appointments, saveAppointments, userType]);
 
   const getAppointmentsForDate = useCallback((date: string): Appointment[] => {
     return appointments.filter(appointment => appointment.date === date);
@@ -425,9 +428,9 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
   // Manual refresh function for real-time updates
   const refreshAppointments = useCallback(async () => {
     console.log('Manually refreshing appointments...');
-    await loadAppointments();
+    await loadAppointments(userType);
     setLastRefresh(Date.now());
-  }, [loadAppointments]);
+  }, [userType]);
 
   const value = useMemo(() => ({
     appointments,

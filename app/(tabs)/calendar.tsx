@@ -18,13 +18,13 @@ export default function CalendarScreen() {
   const { collaborators, consolidatedData } = useTeamCalendar();
   const { createChat } = useChat();
   
-  // Initialize appointments context with correct user type
+  // Initialize appointments context with correct user type - only once
   useEffect(() => {
     if (user?.userType) {
       console.log('🔄 Setting user type in appointments context:', user.userType);
       setUserTypeAndReload(user.userType);
     }
-  }, [user?.userType, setUserTypeAndReload]);
+  }, [user?.userType]); // Removed setUserTypeAndReload from dependencies to prevent infinite loop
 
   // Simplified state
   const [currentDate, setCurrentDate] = useState(new Date());
