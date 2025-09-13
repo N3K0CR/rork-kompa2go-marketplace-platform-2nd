@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, TextInput, ActivityIndicator, Platform } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { useReservationPlans } from '@/contexts/ReservationPlansContext';
 import { usePaymentBackend } from '@/contexts/PaymentBackendContext';
-import { CreditCard, Check, Star, ArrowLeft, Upload, DollarSign } from 'lucide-react-native';
+import { CreditCard, Check, Star, ArrowLeft, Upload, DollarSign, Info } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 export default function PurchasePlanScreen() {
@@ -31,6 +31,7 @@ export default function PurchasePlanScreen() {
   const [expiryDate, setExpiryDate] = useState('');
   const [cvv, setCvv] = useState('');
   const [cardholderName, setCardholderName] = useState('');
+  const [hoveredMethod, setHoveredMethod] = useState<string | null>(null);
   
   const plans = getAvailablePlans();
   const selectedPlanData = plans.find(p => p.id === selectedPlan);
@@ -163,10 +164,21 @@ export default function PurchasePlanScreen() {
   };
   
   const getPaymentMethods = () => {
-    if (!currentCountryConfig) return ['sinpe', 'kash'];
-    return currentCountryConfig.supportedMethods.filter(method => 
-      ['sinpe', 'kash', 'card', 'bank_transfer'].includes(method)
-    );
+    return ['sinpe', 'kash', 'card', 'bank_transfer'];
+  };
+  
+  const isMethodEnabled = (method: string) => {
+    return ['sinpe', 'kash'].includes(method);
+  };
+  
+  const getMethodTooltip = (method: string) => {
+    if (method === 'card') {
+      return 'Próximamente disponible - Estamos trabajando para traer esta funcionalidad pronto';
+    }
+    if (method === 'bank_transfer') {
+      return 'Próximamente disponible - Estamos trabajando para traer esta funcionalidad pronto';
+    }
+    return null;
   };
   
   return (
@@ -249,34 +261,55 @@ export default function PurchasePlanScreen() {
             <Text style={styles.sectionTitle}>Método de Pago</Text>
             
             <View style={styles.paymentMethods}>
-              {getPaymentMethods().map((method) => (
-                <TouchableOpacity
-                  key={method}
-                  style={[
-                    styles.paymentMethodCard,
-                    paymentMethod === method && styles.selectedPaymentMethod,
-                    !isPaymentMethodSupported(method) && styles.disabledPaymentMethod
-                  ]}
-                  onPress={() => setPaymentMethod(method as any)}
-                  disabled={!isPaymentMethodSupported(method)}
-                >
-                  <View style={styles.paymentMethodIcon}>
-                    {method === 'sinpe' && <Text style={styles.methodEmoji}>📱</Text>}
-                    {method === 'kash' && <Text style={styles.methodEmoji}>💳</Text>}
-                    {method === 'card' && <CreditCard size={24} color={paymentMethod === method ? '#D81B60' : '#666'} />}
-                    {method === 'bank_transfer' && <Text style={styles.methodEmoji}>🏦</Text>}
+              {getPaymentMethods().map((method) => {
+                const isEnabled = isMethodEnabled(method);
+                const tooltip = getMethodTooltip(method);
+                
+                return (
+                  <View key={method} style={styles.paymentMethodContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.paymentMethodCard,
+                        paymentMethod === method && styles.selectedPaymentMethod,
+                        !isEnabled && styles.disabledPaymentMethod
+                      ]}
+                      onPress={() => isEnabled && setPaymentMethod(method as any)}
+                      disabled={!isEnabled}
+                      {...(Platform.OS === 'web' && {
+                        onMouseEnter: () => setHoveredMethod(method),
+                        onMouseLeave: () => setHoveredMethod(null)
+                      })}
+                    >
+                      <View style={styles.paymentMethodIcon}>
+                        {method === 'sinpe' && <Text style={styles.methodEmoji}>📱</Text>}
+                        {method === 'kash' && <Text style={styles.methodEmoji}>💳</Text>}
+                        {method === 'card' && <CreditCard size={24} color={isEnabled && paymentMethod === method ? '#D81B60' : '#999'} />}
+                        {method === 'bank_transfer' && <Text style={styles.methodEmoji}>🏦</Text>}
+                      </View>
+                      <Text style={[
+                        styles.paymentMethodName,
+                        paymentMethod === method && isEnabled && styles.selectedPaymentMethodName,
+                        !isEnabled && styles.disabledPaymentMethodName
+                      ]}>
+                        {method === 'sinpe' && 'SINPE Móvil'}
+                        {method === 'kash' && 'KASH'}
+                        {method === 'card' && 'Tarjeta de Crédito/Débito'}
+                        {method === 'bank_transfer' && 'Transferencia Bancaria'}
+                      </Text>
+                      {!isEnabled && (
+                        <Info size={16} color="#999" style={styles.infoIcon} />
+                      )}
+                    </TouchableOpacity>
+                    
+                    {/* Tooltip for disabled methods */}
+                    {!isEnabled && hoveredMethod === method && tooltip && Platform.OS === 'web' && (
+                      <View style={styles.tooltip}>
+                        <Text style={styles.tooltipText}>{tooltip}</Text>
+                      </View>
+                    )}
                   </View>
-                  <Text style={[
-                    styles.paymentMethodName,
-                    paymentMethod === method && styles.selectedPaymentMethodName
-                  ]}>
-                    {method === 'sinpe' && 'SINPE Móvil'}
-                    {method === 'kash' && 'Kash'}
-                    {method === 'card' && 'Tarjeta de Crédito/Débito'}
-                    {method === 'bank_transfer' && 'Transferencia Bancaria'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                );
+              })}
             </View>
           </View>
           
@@ -348,9 +381,16 @@ export default function PurchasePlanScreen() {
                 <Text style={styles.uploadInstructions}>
                   {paymentMethod === 'sinpe' 
                     ? 'Realiza el pago por SINPE Móvil y sube el comprobante'
-                    : 'Realiza el pago por Kash y sube el comprobante'
+                    : 'Realiza el pago por KASH y sube el comprobante'
                   }
                 </Text>
+                
+                <View style={styles.paymentDetails}>
+                  <Text style={styles.paymentDetailsTitle}>Información de Depósito:</Text>
+                  <Text style={styles.paymentDetailsText}>📱 Número: 8833-2517</Text>
+                  <Text style={styles.paymentDetailsText}>👤 Nombre: Ricardo Narváez Vargas</Text>
+                  <Text style={styles.paymentDetailsText}>🏢 Sakura Beauty Salon TechDev Manager</Text>
+                </View>
                 
                 {selectedPlanData && (
                   <View style={styles.paymentInfo}>
@@ -571,7 +611,59 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF5F8',
   },
   disabledPaymentMethod: {
-    opacity: 0.5,
+    opacity: 0.4,
+    backgroundColor: '#F5F5F5',
+  },
+  paymentMethodContainer: {
+    position: 'relative',
+  },
+  disabledPaymentMethodName: {
+    color: '#999',
+  },
+  infoIcon: {
+    marginLeft: 'auto',
+  },
+  tooltip: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: '#333',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 4,
+    zIndex: 1000,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  tooltipText: {
+    color: 'white',
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  paymentDetails: {
+    backgroundColor: '#E3F2FD',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#2196F3',
+  },
+  paymentDetailsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1565C0',
+    marginBottom: 8,
+  },
+  paymentDetailsText: {
+    fontSize: 14,
+    color: '#1976D2',
+    marginBottom: 4,
+    fontWeight: '500',
   },
   paymentMethodIcon: {
     width: 40,
