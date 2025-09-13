@@ -810,29 +810,51 @@ export default function CalendarScreen() {
         </View>
       )}
       
-      {/* Add Personal Agenda Button for dates without reservations */}
-      {selectedDateAppointments.length === 0 && (
-        <View style={styles.emptyDaySection}>
-          <CalendarIcon size={48} color="#ccc" />
-          <Text style={styles.emptyDayTitle}>Sin Reservas</Text>
-          <Text style={styles.emptyDaySubtitle}>No tienes reservas para este día</Text>
-          <TouchableOpacity 
-            style={styles.addPersonalAgendaButton}
-            onPress={() => {
-              setNewPersonalTask({
-                title: '',
-                time: '',
-                notes: '',
-                date: selectedDate,
-              });
-              setShowPersonalTaskModal(true);
-            }}
-          >
-            <Plus size={20} color="white" />
-            <Text style={styles.addPersonalAgendaText}>Agregar Agenda Personal</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {/* Add Personal Agenda Button - Always available */}
+      <View style={styles.personalAgendaSection}>
+        {selectedDateAppointments.length === 0 ? (
+          <View style={styles.emptyDaySection}>
+            <CalendarIcon size={48} color="#ccc" />
+            <Text style={styles.emptyDayTitle}>Sin Reservas</Text>
+            <Text style={styles.emptyDaySubtitle}>No tienes reservas para este día</Text>
+          </View>
+        ) : (
+          <View style={styles.hasReservationsSection}>
+            <Text style={styles.hasReservationsTitle}>¿Quieres agregar algo más?</Text>
+            <Text style={styles.hasReservationsSubtitle}>Puedes agregar tareas personales a tu agenda</Text>
+          </View>
+        )}
+        
+        <TouchableOpacity 
+          style={styles.addPersonalAgendaButton}
+          onPress={() => {
+            console.log('📝 Adding personal agenda for date:', selectedDate);
+            setNewPersonalTask({
+              title: '',
+              time: '',
+              notes: '',
+              date: selectedDate,
+            });
+            setShowPersonalTaskModal(true);
+            
+            // Auto-scroll to show the modal will appear
+            setTimeout(() => {
+              selectedDateSectionRef.current?.measureLayout(
+                scrollViewRef.current as any,
+                (x, y) => {
+                  scrollViewRef.current?.scrollTo({ y: y - 100, animated: true });
+                },
+                () => {}
+              );
+            }, 100);
+          }}
+          activeOpacity={0.8}
+          testID="add-personal-agenda-button"
+        >
+          <Plus size={20} color="white" />
+          <Text style={styles.addPersonalAgendaText}>Agregar Agenda Personal</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 
@@ -1446,9 +1468,44 @@ export default function CalendarScreen() {
                   style={styles.textInput}
                   value={newPersonalTask.title}
                   onChangeText={(text) => setNewPersonalTask({...newPersonalTask, title: text})}
-                  placeholder="Ej: Reunión, Ejercicio, Compras..."
+                  placeholder="Ej: Reunión, Ejercicio, Compras, Cita médica..."
                   placeholderTextColor="#666"
+                  autoFocus={true}
+                  maxLength={50}
                 />
+              </View>
+              
+              {/* Quick Task Templates */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Plantillas Rápidas</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.templateSelector}>
+                  {[
+                    '🏃‍♂️ Ejercicio',
+                    '🛒 Compras',
+                    '👨‍⚕️ Cita médica',
+                    '💼 Reunión',
+                    '🍽️ Almuerzo',
+                    '📚 Estudio',
+                    '🧘‍♀️ Meditación',
+                    '🚗 Mantenimiento'
+                  ].map((template) => (
+                    <TouchableOpacity
+                      key={template}
+                      style={[
+                        styles.templateOption,
+                        newPersonalTask.title === template.split(' ').slice(1).join(' ') && styles.templateOptionSelected
+                      ]}
+                      onPress={() => setNewPersonalTask({...newPersonalTask, title: template.split(' ').slice(1).join(' ')})}
+                    >
+                      <Text style={[
+                        styles.templateOptionText,
+                        newPersonalTask.title === template.split(' ').slice(1).join(' ') && styles.templateOptionTextSelected
+                      ]}>
+                        {template}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
               </View>
               
               <View style={styles.inputGroup}>
@@ -1465,21 +1522,51 @@ export default function CalendarScreen() {
               </View>
               
               <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Duración Estimada</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.durationSelector}>
+                  {['15 min', '30 min', '1 hora', '2 horas', '3 horas', 'Todo el día'].map((duration) => (
+                    <TouchableOpacity
+                      key={duration}
+                      style={[
+                        styles.durationOption,
+                        newPersonalTask.notes?.includes(`Duración: ${duration}`) && styles.durationOptionSelected
+                      ]}
+                      onPress={() => {
+                        const currentNotes = newPersonalTask.notes || '';
+                        const notesWithoutDuration = currentNotes.replace(/Duración: [^\n]*/g, '').trim();
+                        const newNotes = notesWithoutDuration ? `${notesWithoutDuration}\nDuración: ${duration}` : `Duración: ${duration}`;
+                        setNewPersonalTask({...newPersonalTask, notes: newNotes});
+                      }}
+                    >
+                      <Text style={[
+                        styles.durationOptionText,
+                        newPersonalTask.notes?.includes(`Duración: ${duration}`) && styles.durationOptionTextSelected
+                      ]}>
+                        {duration}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+              
+              <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Notas (Opcional)</Text>
                 <TextInput
                   style={[styles.textInput, { height: 80, textAlignVertical: 'top' }]}
                   value={newPersonalTask.notes}
                   onChangeText={(text) => setNewPersonalTask({...newPersonalTask, notes: text})}
-                  placeholder="Agregar detalles adicionales..."
+                  placeholder="Agregar detalles adicionales, ubicación, recordatorios..."
                   placeholderTextColor="#666"
                   multiline
                   numberOfLines={3}
+                  maxLength={200}
                 />
               </View>
               
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Fecha</Text>
                 <View style={styles.dateDisplay}>
+                  <CalendarIcon size={20} color="#9C27B0" />
                   <Text style={styles.dateDisplayText}>
                     {new Date(newPersonalTask.date).toLocaleDateString('es-ES', {
                       weekday: 'long',
@@ -2242,12 +2329,64 @@ const styles = StyleSheet.create({
     padding: 12,
     borderWidth: 1,
     borderColor: '#E5E5E5',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   dateDisplayText: {
     fontSize: 16,
     color: '#333',
     fontWeight: '500',
     textTransform: 'capitalize',
+    flex: 1,
+  },
+  templateSelector: {
+    flexDirection: 'row',
+  },
+  templateOption: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+  },
+  templateOptionSelected: {
+    backgroundColor: '#9C27B0',
+    borderColor: '#9C27B0',
+  },
+  templateOptionText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  templateOptionTextSelected: {
+    color: 'white',
+  },
+  durationSelector: {
+    flexDirection: 'row',
+  },
+  durationOption: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+  },
+  durationOptionSelected: {
+    backgroundColor: '#9C27B0',
+    borderColor: '#9C27B0',
+  },
+  durationOptionText: {
+    fontSize: 11,
+    color: '#666',
+    fontWeight: '500',
+  },
+  durationOptionTextSelected: {
+    color: 'white',
   },
   // Date Detail Modal Styles
   dateDetailModalContent: {
@@ -2452,6 +2591,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  personalAgendaSection: {
+    backgroundColor: 'white',
+    marginHorizontal: 16,
+    marginVertical: 16,
+    borderRadius: 12,
+    padding: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  hasReservationsSection: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  hasReservationsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  hasReservationsSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
   addPersonalAgendaButton: {
     backgroundColor: '#9C27B0',
     borderRadius: 12,
@@ -2460,7 +2628,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 16,
+    shadowColor: '#9C27B0',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   addPersonalAgendaText: {
     color: 'white',
