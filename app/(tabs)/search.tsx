@@ -45,6 +45,18 @@ const featuredProviders = [
     isSpecialProvider: true,
   },
   {
+    id: 998,
+    name: 'Neko Studios',
+    fullName: 'Neko Studios',
+    service: 'Fotografía y Video',
+    rating: 4.9,
+    reviews: 189,
+    location: 'Escazú',
+    price: '₡25,000/sesión',
+    image: '📸',
+    isSpecialProvider: true,
+  },
+  {
     id: 1,
     name: 'María',
     fullName: 'María González',
@@ -147,7 +159,8 @@ export default function SearchScreen() {
 
   const canViewProviderDetails = (provider: any) => {
     if (!user || user.userType !== 'client') return true;
-    if (provider.isSpecialProvider || provider.id === '999') return true;
+    // Sakura Beauty Salon and Neko Studios don't require reservation pass
+    if (provider.isSpecialProvider || provider.id === 999 || provider.id === 998 || provider.id === '999' || provider.id === '998') return true;
     return hasActiveReservations();
   };
 
@@ -323,9 +336,9 @@ export default function SearchScreen() {
           {foundProviders.length > 0 ? (
             foundProviders
               .sort((a, b) => {
-                // Always put Sakura Beauty Salon first
-                if (a.isSpecialProvider || a.id === '999') return -1;
-                if (b.isSpecialProvider || b.id === '999') return 1;
+                // Always put special providers first (Sakura Beauty Salon and Neko Studios)
+                if (a.isSpecialProvider || a.id === 999 || a.id === 998 || a.id === '999' || a.id === '998') return -1;
+                if (b.isSpecialProvider || b.id === 999 || b.id === 998 || b.id === '999' || b.id === '998') return 1;
                 return 0;
               })
               .map((provider) => renderProviderCard(provider))

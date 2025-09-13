@@ -33,7 +33,8 @@ const getProviderData = (id: string) => {
         'Domingos: No disponible'
       ],
       gallery: ['🏠', '🧹', '✨', '🪟', '🛋️', '🧽'],
-      isSpecialProvider: false
+      isSpecialProvider: false,
+      phone: undefined
     },
     '2': {
       id: 2,
@@ -56,7 +57,8 @@ const getProviderData = (id: string) => {
         'Domingos: Emergencias únicamente'
       ],
       gallery: ['🔧', '🚿', '🚽', '🔩', '⚒️', '🛠️'],
-      isSpecialProvider: false
+      isSpecialProvider: false,
+      phone: undefined
     },
     '3': {
       id: 3,
@@ -79,7 +81,8 @@ const getProviderData = (id: string) => {
         'Sábados: 6:00 AM - 12:00 PM'
       ],
       gallery: ['🌱', '🌸', '🌳', '🌿', '🌺', '🍃'],
-      isSpecialProvider: false
+      isSpecialProvider: false,
+      phone: undefined
     },
     '999': {
       id: 999,
@@ -105,7 +108,35 @@ const getProviderData = (id: string) => {
         'Domingos: 10:00 AM - 4:00 PM'
       ],
       gallery: ['💅', '💆‍♀️', '💄', '✨', '🌸', '💖'],
-      isSpecialProvider: true
+      isSpecialProvider: true,
+      phone: '+506 2222-3333'
+    },
+    '998': {
+      id: 998,
+      name: 'Neko Studios',
+      service: 'Fotografía y Video',
+      rating: 4.9,
+      reviews: 189,
+      location: 'Escazú',
+      price: '₡25,000/sesión',
+      image: '📸',
+      description: 'Estudio profesional de fotografía y video especializado en eventos, retratos, productos y contenido comercial. Equipos de última generación y creatividad sin límites.',
+      services: [
+        'Fotografía de eventos',
+        'Sesiones de retrato',
+        'Fotografía de productos',
+        'Videos corporativos',
+        'Edición profesional',
+        'Fotografía aérea con drones'
+      ],
+      availability: [
+        'Lunes a Viernes: 8:00 AM - 8:00 PM',
+        'Sábados: 9:00 AM - 6:00 PM',
+        'Domingos: Por cita previa'
+      ],
+      gallery: ['📷', '🎬', '🎥', '📸', '🎞️', '✨'],
+      isSpecialProvider: true,
+      phone: '+506 2222-4444'
     }
   };
   
@@ -122,7 +153,8 @@ export default function ProviderDetailScreen() {
   
   const canViewContactInfo = () => {
     if (!user || user.userType !== 'client') return true;
-    if (provider.isSpecialProvider) return true;
+    // Sakura Beauty Salon and Neko Studios don't require reservation pass
+    if (provider.isSpecialProvider || provider.id === 999 || provider.id === 998) return true;
     return hasActiveReservations();
   };
 
@@ -243,6 +275,15 @@ export default function ProviderDetailScreen() {
                 ))}
               </View>
             </View>
+            
+            {provider.phone && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Contacto</Text>
+                <View style={styles.contactInfo}>
+                  <Text style={styles.phoneText}>📞 {provider.phone}</Text>
+                </View>
+              </View>
+            )}
           </>
         )}
 
@@ -562,5 +603,13 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  contactInfo: {
+    gap: 8,
+  },
+  phoneText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
   },
 });
