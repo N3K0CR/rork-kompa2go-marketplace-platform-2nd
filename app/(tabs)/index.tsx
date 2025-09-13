@@ -2198,9 +2198,7 @@ const styles = StyleSheet.create({
   callButton: {
     backgroundColor: '#4CAF50',
   },
-  whatsappButton: {
-    backgroundColor: '#25D366',
-  },
+
   kompa2goButton: {
     backgroundColor: '#D81B60',
   },

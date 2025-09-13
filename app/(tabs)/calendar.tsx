@@ -16,7 +16,7 @@ export default function CalendarScreen() {
   const { t } = useLanguage();
   const { addAppointment, updateAppointment, getAppointmentsForDate, getTodayAppointments, refreshAppointments, setUserTypeAndReload } = useAppointments();
   const { collaborators, consolidatedData } = useTeamCalendar();
-  const { createChat } = useChat();
+  const { createChat, sendMessage } = useChat();
   const scrollViewRef = useRef<ScrollView>(null);
   const selectedDateSectionRef = useRef<View>(null);
   
@@ -84,32 +84,8 @@ export default function CalendarScreen() {
       router.push(`/chat/${chatId}`);
     } catch (error) {
       console.error('Error opening chat:', error);
-      // Fallback to WhatsApp
-      Alert.alert(
-        'Opciones de Chat',
-        `Selecciona cómo deseas contactar a ${appointment.clientName}:`,
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          {
-            text: 'WhatsApp',
-            onPress: () => {
-              const phoneNumber = appointment.clientPhone?.replace(/[^0-9]/g, '') || '50688880000';
-              const message = encodeURIComponent(
-                `Hola ${appointment.clientName}, te contacto desde Kompa2Go sobre tu reserva del ${new Date(appointment.date).toLocaleDateString('es-ES')} a las ${appointment.time} para ${appointment.service}.`
-              );
-              const whatsappUrl = `whatsapp://send?phone=${phoneNumber}&text=${message}`;
-              const whatsappWebUrl = `https://wa.me/${phoneNumber}?text=${message}`;
-              
-              Linking.openURL(whatsappUrl).catch(() => {
-                // Fallback to WhatsApp Web
-                Linking.openURL(whatsappWebUrl).catch(() => {
-                  Alert.alert('Error', 'No se pudo abrir WhatsApp. Verifica que esté instalado.');
-                });
-              });
-            }
-          }
-        ]
-      );
+      // Show error message
+      Alert.alert('Error', 'No se pudo abrir el chat. Por favor intenta de nuevo.');
     }
   }, [createChat]);
   
@@ -1144,9 +1120,29 @@ export default function CalendarScreen() {
                           onPress: () => handlePhoneCall(selectedReservation.clientPhone || '+506 8888-0000')
                         },
                         {
-                          text: '💬 WhatsApp',
+                          text: '💬 Chat Kompa2Go',
                           style: 'default',
-                          onPress: () => handleChatOptions(selectedReservation)
+                          onPress: async () => {
+                            try {
+                              // Get provider info from reservation
+                              const providerId = selectedReservation.providerId || 'provider_' + selectedReservation.id;
+                              const providerName = selectedReservation.providerName || selectedReservation.clientName;
+                              
+                              // Create or get existing chat
+                              const chatId = await createChat(providerId, providerName);
+                              
+                              // Send initial message about rescheduling
+                              await sendMessage(chatId, `Hola, necesito reprogramar nuestra cita del ${new Date(selectedReservation.date).toLocaleDateString('es-ES')} a las ${selectedReservation.time} para ${selectedReservation.service}. ¿Cuándo tienes disponibilidad?`);
+                              
+                              // Close modal and navigate to chat
+                              setShowReservationModal(false);
+                              setSelectedReservation(null);
+                              router.push(`/chat/${chatId}`);
+                            } catch (error) {
+                              console.error('Error opening chat:', error);
+                              Alert.alert('Error', 'No se pudo abrir el chat. Por favor intenta de nuevo.');
+                            }
+                          }
                         }
                       ]
                     );
@@ -2576,7 +2572,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4CAF50',
   },
   chatContactButton: {
-    backgroundColor: '#25D366', // WhatsApp green
+    backgroundColor: '#D81B60', // Kompa2Go pink
   },
   contactActionText: {
     color: 'white',
