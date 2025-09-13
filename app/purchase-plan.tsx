@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, TextInput, ActivityIndicator, Platform } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -33,19 +33,19 @@ export default function PurchasePlanScreen() {
   const [cardholderName, setCardholderName] = useState('');
   const [hoveredMethod, setHoveredMethod] = useState<string | null>(null);
   
-  const plans = getAvailablePlans();
-  const selectedPlanData = plans.find(p => p.id === selectedPlan);
+  const plans = useMemo(() => getAvailablePlans(), [getAvailablePlans]);
+  const selectedPlanData = useMemo(() => plans.find(p => p.id === selectedPlan), [plans, selectedPlan]);
   // No tax charges - total is same as plan price
-  const fees = selectedPlanData ? {
+  const fees = useMemo(() => selectedPlanData ? {
     ...calculateFees(selectedPlanData.price, paymentMethod),
     totalAmount: selectedPlanData.price // Override total to remove taxes
-  } : null;
+  } : null, [selectedPlanData, calculateFees, paymentMethod]);
   
   useEffect(() => {
     if (plans.length > 0 && !selectedPlan) {
       setSelectedPlan(plans.find(p => p.popular)?.id || plans[0].id);
     }
-  }, [plans]);
+  }, [plans, selectedPlan]);
   
   const handleImagePicker = async () => {
     try {

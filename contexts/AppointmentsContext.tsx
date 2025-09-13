@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface Appointment {
@@ -432,7 +432,7 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
     setLastRefresh(Date.now());
   }, [userType, loadAppointments]);
 
-  const value = useMemo(() => ({
+  const value = {
     appointments,
     loading,
     addAppointment,
@@ -445,7 +445,7 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
     getClientVisibleAppointments,
     refreshAppointments,
     setUserTypeAndReload,
-  }), [appointments, loading, addAppointment, updateAppointment, deleteAppointment, getAppointmentsForDate, getTodayAppointments, getUpcomingAppointments, getAvailableTimeSlotsForDate, getClientVisibleAppointments, refreshAppointments, setUserTypeAndReload]);
+  };
 
   return (
     <AppointmentsContext.Provider value={value}>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthContext';
@@ -103,13 +103,13 @@ export const [ReservationPlansProvider, useReservationPlans] = createContextHook
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (user) {
       loadPurchasedPlans();
     }
-  }, [user]);
+  }, [user, loadPurchasedPlans]);
 
   const savePurchasedPlans = useCallback(async (plansToSave: PurchasedPlan[]) => {
     if (!user || !plansToSave || plansToSave.length === 0) return;
@@ -223,9 +223,9 @@ export const [ReservationPlansProvider, useReservationPlans] = createContextHook
 
   const refreshPlans = useCallback(async () => {
     await loadPurchasedPlans();
-  }, []);
+  }, [loadPurchasedPlans]);
 
-  return useMemo(() => ({
+  return {
     plans,
     purchasedPlans,
     loading,
@@ -236,7 +236,7 @@ export const [ReservationPlansProvider, useReservationPlans] = createContextHook
     getActivePlan,
     hasActiveReservations,
     refreshPlans
-  }), [plans, purchasedPlans, loading, getAvailablePlans, getPurchasedPlans, purchasePlan, useReservation, getActivePlan, hasActiveReservations, refreshPlans]);
+  };
 });
 
 export type { ReservationPlan, PurchasedPlan };

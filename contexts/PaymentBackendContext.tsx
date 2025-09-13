@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import createContextHook from '@nkzw/create-context-hook';
 import { useAuth } from './AuthContext';
 import { trpc } from '@/lib/trpc';
@@ -120,6 +120,16 @@ export const [PaymentBackendProvider, usePaymentBackend] = createContextHook(() 
 
   // Create a new payment
   const createPayment = useCallback(async (request: CreatePaymentRequest) => {
+    if (!request || typeof request !== 'object') {
+      throw new Error('Invalid payment request');
+    }
+    if (!request.description?.trim() || request.description.length > 500) {
+      throw new Error('Invalid description');
+    }
+    if (!request.paymentMethod?.trim()) {
+      throw new Error('Invalid payment method');
+    }
+    
     console.log('🔄 Creating payment via backend:', request);
     
     try {
@@ -208,6 +218,9 @@ export const [PaymentBackendProvider, usePaymentBackend] = createContextHook(() 
 
   // Check if payment method is supported
   const isPaymentMethodSupported = useCallback((method: string) => {
+    if (!method?.trim() || method.length > 50) {
+      return false;
+    }
     return currentCountryConfig?.supportedMethods.includes(method) || false;
   }, [currentCountryConfig]);
 
@@ -231,7 +244,7 @@ export const [PaymentBackendProvider, usePaymentBackend] = createContextHook(() 
     return `${currentCountryConfig.symbol}${amount.toLocaleString()}`;
   }, [currentCountryConfig]);
 
-  return useMemo(() => ({
+  return {
     // State
     selectedCountry,
     setSelectedCountry,
@@ -263,27 +276,7 @@ export const [PaymentBackendProvider, usePaymentBackend] = createContextHook(() 
     // Refresh functions
     refreshPayments: userPaymentsQuery.refetch,
     refreshStats: paymentStatsQuery.refetch,
-  }), [
-    selectedCountry,
-    supportedCountries,
-    currentCountryConfig,
-    countriesQuery.isLoading,
-    countryConfigQuery.isLoading,
-    userPaymentsQuery.isLoading,
-    createPaymentMutation.isPending,
-    updatePaymentStatusMutation.isPending,
-    refundPaymentMutation.isPending,
-    createPayment,
-    updatePaymentStatus,
-    refundPayment,
-    calculateFees,
-    isPaymentMethodSupported,
-    formatAmount,
-    getUserPayments,
-    getPaymentStats,
-    userPaymentsQuery.refetch,
-    paymentStatsQuery.refetch,
-  ]);
+  };
 });
 
 export type { PaymentTransaction, CountryConfig, CreatePaymentRequest };
