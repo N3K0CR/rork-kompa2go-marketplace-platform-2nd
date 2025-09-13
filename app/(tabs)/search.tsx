@@ -203,13 +203,17 @@ export default function SearchScreen() {
             <View style={styles.restrictedActions}>
               <TouchableOpacity 
                 style={styles.restrictedButton}
-                onPress={() => router.push('/purchase-plan')}
+                onPress={() => {
+                  router.push('/(tabs)/?modal=plans');
+                }}
               >
                 <Text style={styles.restrictedButtonText}>Ver Planes</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.restrictedButton, styles.primaryRestrictedButton]}
-                onPress={() => router.push('/purchase-plan')}
+                onPress={() => {
+                  router.push('/(tabs)/?modal=purchase');
+                }}
               >
                 <Text style={[styles.restrictedButtonText, styles.primaryRestrictedButtonText]}>Comprar pase de reserva</Text>
               </TouchableOpacity>

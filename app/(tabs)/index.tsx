@@ -10,7 +10,7 @@ import { useReservationPlans } from '@/contexts/ReservationPlansContext';
 import { usePendingPayments } from '@/contexts/PendingPaymentsContext';
 import { Search, Calendar, Star, TrendingUp, Users, DollarSign, RefreshCw, X, Mail, Lock, Award, Bell, CreditCard, Camera, Upload, Package, Check, Phone, MessageCircle, Settings, CheckCircle, XCircle, RotateCcw } from 'lucide-react-native';
 import FloatingKompi from '@/components/FloatingKompi';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Linking } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -23,6 +23,7 @@ export default function HomeScreen() {
   const { getTodayAppointments, getUpcomingAppointments, updateAppointment } = useAppointments();
   const { simulateNewReservation, pendingReservations, isAlertActive } = useReservationAlert();
   const userType = user?.userType || 'client';
+  const { modal } = useLocalSearchParams<{ modal?: string }>();
   
   const todayAppointments = getTodayAppointments();
   const upcomingAppointments = getUpcomingAppointments();
@@ -49,6 +50,20 @@ export default function HomeScreen() {
       router.replace('/onboarding');
     }
   }, [user, loading]);
+  
+  // Handle modal parameter from search page
+  useEffect(() => {
+    if (modal && user && userType === 'client') {
+      console.log('Opening modal from search:', modal);
+      if (modal === 'purchase') {
+        setShowPurchaseModal(true);
+      } else if (modal === 'plans') {
+        setShowPlansModal(true);
+      }
+      // Clear the parameter to avoid reopening modal on re-renders
+      router.replace('/(tabs)');
+    }
+  }, [modal, user, userType]);
 
   if (loading) {
     return (
