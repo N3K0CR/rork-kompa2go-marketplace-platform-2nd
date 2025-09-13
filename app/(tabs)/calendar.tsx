@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAppointments } from '@/contexts/AppointmentsContext';
 import { useTeamCalendar } from '@/contexts/TeamCalendarContext';
+import { useChat } from '@/contexts/ChatContext';
+import { router } from 'expo-router';
 import FloatingKompi from '@/components/FloatingKompi';
 
 export default function CalendarScreen() {
@@ -14,6 +16,7 @@ export default function CalendarScreen() {
   const { t } = useLanguage();
   const { addAppointment, updateAppointment, getAppointmentsForDate, getTodayAppointments, refreshAppointments, setUserTypeAndReload } = useAppointments();
   const { collaborators, consolidatedData } = useTeamCalendar();
+  const { createChat } = useChat();
   
   // Initialize appointments context with correct user type
   useEffect(() => {
@@ -69,45 +72,44 @@ export default function CalendarScreen() {
     );
   }, []);
   
-  // Chat options handler
-  const handleChatOptions = useCallback((appointment: any) => {
-    Alert.alert(
-      'Opciones de Chat',
-      `Selecciona cómo deseas contactar a ${appointment.clientName}:`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Chat Kompa2Go',
-          onPress: () => {
-            // Navigate to in-app chat
-            Alert.alert(
-              'Chat Kompa2Go',
-              'Función de chat interno en desarrollo. Por ahora usa WhatsApp.',
-              [{ text: 'Entendido', style: 'default' }]
-            );
-          }
-        },
-        {
-          text: 'WhatsApp',
-          onPress: () => {
-            const phoneNumber = appointment.clientPhone?.replace(/[^0-9]/g, '') || '50688880000';
-            const message = encodeURIComponent(
-              `Hola ${appointment.clientName}, te contacto desde Kompa2Go sobre tu reserva del ${new Date(appointment.date).toLocaleDateString('es-ES')} a las ${appointment.time} para ${appointment.service}.`
-            );
-            const whatsappUrl = `whatsapp://send?phone=${phoneNumber}&text=${message}`;
-            const whatsappWebUrl = `https://wa.me/${phoneNumber}?text=${message}`;
-            
-            Linking.openURL(whatsappUrl).catch(() => {
-              // Fallback to WhatsApp Web
-              Linking.openURL(whatsappWebUrl).catch(() => {
-                Alert.alert('Error', 'No se pudo abrir WhatsApp. Verifica que esté instalado.');
+  // Chat options handler - Updated to use in-app chat system
+  const handleChatOptions = useCallback(async (appointment: any) => {
+    try {
+      // Create or get existing chat
+      const chatId = await createChat(appointment.clientName, appointment.clientName);
+      
+      // Navigate to chat screen
+      router.push(`/chat/${chatId}`);
+    } catch (error) {
+      console.error('Error opening chat:', error);
+      // Fallback to WhatsApp
+      Alert.alert(
+        'Opciones de Chat',
+        `Selecciona cómo deseas contactar a ${appointment.clientName}:`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'WhatsApp',
+            onPress: () => {
+              const phoneNumber = appointment.clientPhone?.replace(/[^0-9]/g, '') || '50688880000';
+              const message = encodeURIComponent(
+                `Hola ${appointment.clientName}, te contacto desde Kompa2Go sobre tu reserva del ${new Date(appointment.date).toLocaleDateString('es-ES')} a las ${appointment.time} para ${appointment.service}.`
+              );
+              const whatsappUrl = `whatsapp://send?phone=${phoneNumber}&text=${message}`;
+              const whatsappWebUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+              
+              Linking.openURL(whatsappUrl).catch(() => {
+                // Fallback to WhatsApp Web
+                Linking.openURL(whatsappWebUrl).catch(() => {
+                  Alert.alert('Error', 'No se pudo abrir WhatsApp. Verifica que esté instalado.');
+                });
               });
-            });
+            }
           }
-        }
-      ]
-    );
-  }, []);
+        ]
+      );
+    }
+  }, [createChat]);
   
   // Handle reservation options button press - SIMPLIFIED VERSION
   const handleReservationOptions = useCallback((appointment: any) => {
@@ -172,7 +174,7 @@ export default function CalendarScreen() {
         }
       ]
     );
-  }, [updateAppointment, handlePhoneCall, handleChatOptions]);
+  }, [updateAppointment, handlePhoneCall]);
   const [showPersonalTaskModal, setShowPersonalTaskModal] = useState(false);
   const [newPersonalTask, setNewPersonalTask] = useState({
     title: '',
@@ -718,7 +720,9 @@ export default function CalendarScreen() {
                 <Text style={styles.appointmentDetailService}>{appointment.service}</Text>
                 
                 {appointment.clientPhone && (
-                  <Text style={styles.appointmentDetailPhone}>📞 {appointment.clientPhone}</Text>
+                  <View style={styles.contactInfoContainer}>
+                    <Text style={styles.appointmentDetailPhone}>📞 {appointment.clientPhone}</Text>
+                  </View>
                 )}
                 
                 {appointment.notes && (
@@ -742,17 +746,6 @@ export default function CalendarScreen() {
                     </TouchableOpacity>
                     
                     <TouchableOpacity 
-                      style={[styles.clientActionButton, styles.callButton]}
-                      onPress={() => {
-                        console.log('Call button pressed for:', appointment.clientPhone);
-                        handlePhoneCall(appointment.clientPhone || '+506 8888-0000');
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Phone size={16} color="white" />
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity 
                       style={[styles.clientActionButton, styles.chatButton]}
                       onPress={() => {
                         console.log('Chat button pressed for appointment:', appointment.id);
@@ -761,6 +754,7 @@ export default function CalendarScreen() {
                       activeOpacity={0.7}
                     >
                       <MessageCircle size={16} color="white" />
+                      <Text style={styles.clientActionText}>Chat</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -2379,6 +2373,9 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
+  },
+  contactInfoContainer: {
+    marginBottom: 8,
   },
   modalContentContainer: {
     flex: 1,
