@@ -73,7 +73,7 @@ export const [ChatProvider, useChat] = createContextHook(() => {
     if (user) {
       loadChats();
     }
-  }, [user, loadChats]);
+  }, [user?.id]);
 
   const saveChats = useCallback(async (newChats: Chat[]) => {
     if (!user?.id || !Array.isArray(newChats)) return;

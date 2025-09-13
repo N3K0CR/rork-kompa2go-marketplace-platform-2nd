@@ -60,7 +60,7 @@ export const [ReservationAlertProvider, useReservationAlert] = createContextHook
         webAudio.currentTime = 0;
       }
     };
-  }, []); // Remove loadSound from dependencies to prevent infinite loop
+  }, []); // Empty dependency array to run only once
 
   const playAlertSound = useCallback(async () => {
     try {
@@ -146,13 +146,18 @@ export const [ReservationAlertProvider, useReservationAlert] = createContextHook
     const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
         // App has come to foreground
-        checkForMissedReservations();
+        if (pendingReservations.length > 0) {
+          showNotification(
+            'Reservas Pendientes',
+            `Tienes ${pendingReservations.length} reserva(s) pendiente(s) de respuesta.`
+          );
+        }
       }
       appState.current = nextAppState;
     });
 
     return () => subscription?.remove();
-  }, []); // Remove checkForMissedReservations from dependencies to prevent infinite loop
+  }, [pendingReservations.length, showNotification]);
 
   // Auto-accept reservations after 20 seconds
   useEffect(() => {
@@ -179,7 +184,7 @@ export const [ReservationAlertProvider, useReservationAlert] = createContextHook
     }, 5000); // Increased to 5 seconds to reduce load
 
     return () => clearInterval(interval);
-  }, []); // Remove dependencies to prevent infinite loop - functions are stable
+  }, [addAppointment, showNotification, stopAlert]);
 
   const addNewReservation = useCallback((appointment: Omit<Appointment, 'id'>) => {
     const now = Date.now();

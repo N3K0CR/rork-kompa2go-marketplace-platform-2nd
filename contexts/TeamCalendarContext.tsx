@@ -127,7 +127,7 @@ export function TeamCalendarProvider({ children }: { children: ReactNode }) {
       loadAppointments();
     }, 30000); // Increased to 30 seconds to reduce load and prevent loops
     return () => clearInterval(interval);
-  }, []);
+  }, [loadAppointments]);
 
   const loadCollaborators = useCallback(async () => {
     try {
@@ -156,7 +156,7 @@ export function TeamCalendarProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     loadCollaborators();
-  }, []);
+  }, [loadCollaborators]);
 
   // Convert appointments to team events with optimized data structure
   const convertToTeamEvents = useCallback((appointmentsList: Appointment[]): TeamEvent[] => {
