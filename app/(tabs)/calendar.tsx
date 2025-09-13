@@ -24,7 +24,7 @@ export default function CalendarScreen() {
       console.log('🔄 Setting user type in appointments context:', user.userType);
       setUserTypeAndReload(user.userType);
     }
-  }, [user?.userType]); // Removed setUserTypeAndReload from dependencies to prevent infinite loop
+  }, [user?.userType, setUserTypeAndReload]);
 
   // Simplified state
   const [currentDate, setCurrentDate] = useState(new Date());

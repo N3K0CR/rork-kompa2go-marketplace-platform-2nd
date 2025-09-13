@@ -127,7 +127,7 @@ export function TeamCalendarProvider({ children }: { children: ReactNode }) {
       loadAppointments();
     }, 30000); // Increased to 30 seconds to reduce load and prevent loops
     return () => clearInterval(interval);
-  }, []); // Remove loadAppointments from dependencies to prevent infinite loop
+  }, []);
 
   const loadCollaborators = useCallback(async () => {
     try {
@@ -156,7 +156,7 @@ export function TeamCalendarProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     loadCollaborators();
-  }, []); // Remove loadCollaborators from dependencies to prevent infinite loop
+  }, []);
 
   // Convert appointments to team events with optimized data structure
   const convertToTeamEvents = useCallback((appointmentsList: Appointment[]): TeamEvent[] => {
@@ -302,7 +302,7 @@ export function TeamCalendarProvider({ children }: { children: ReactNode }) {
   const refreshTeamCalendar = useCallback(async () => {
     console.log('Refreshing team calendar data...');
     await loadCollaborators();
-  }, []); // Remove loadCollaborators from dependencies to prevent infinite loop
+  }, []);
 
   // Highly optimized event summary to prevent data overload
   const getOptimizedEventSummary = useCallback((limit: number = 5): TeamEvent[] => {

@@ -296,7 +296,7 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [userType]);
+  }, []);
 
   const saveAppointments = useCallback(async (newAppointments: Appointment[], currentUserType?: string) => {
     try {
@@ -310,7 +310,7 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     loadAppointments();
-  }, []);
+  }, [loadAppointments]);
 
   // Function to set user type and reload appointments
   const setUserTypeAndReload = useCallback(async (newUserType: string) => {
@@ -320,7 +320,7 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       await loadAppointments(newUserType);
     }
-  }, [userType, loadAppointments]);
+  }, [userType]);
 
 
 
@@ -430,7 +430,7 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
     console.log('Manually refreshing appointments...');
     await loadAppointments(userType);
     setLastRefresh(Date.now());
-  }, [userType, loadAppointments]);
+  }, [userType]);
 
   const value = useMemo(() => ({
     appointments,
