@@ -73,7 +73,7 @@ export const [ChatProvider, useChat] = createContextHook(() => {
     if (user) {
       loadChats();
     }
-  }, [user?.id]);
+  }, [user, loadChats]);
 
   const saveChats = useCallback(async (newChats: Chat[]) => {
     if (!user?.id || !Array.isArray(newChats)) return;
@@ -129,9 +129,11 @@ export const [ChatProvider, useChat] = createContextHook(() => {
       isActive: true
     };
     
-    const updatedChats = [newChat, ...chats];
-    setChats(updatedChats);
-    await saveChats(updatedChats);
+    setChats(prevChats => {
+      const updatedChats = [newChat, ...prevChats];
+      saveChats(updatedChats);
+      return updatedChats;
+    });
     
     return chatId;
   }, [user, chats, saveChats]);
@@ -154,57 +156,65 @@ export const [ChatProvider, useChat] = createContextHook(() => {
     };
     
     // Update messages
-    const updatedMessages = {
-      ...messages,
-      [chatId]: [...(messages[chatId] || []), message]
-    };
-    setMessages(updatedMessages);
-    await saveMessages(updatedMessages);
-    
-    // Update chat with last message info
-    const updatedChats = chats.map(chat => {
-      if (chat.id === chatId) {
-        return {
-          ...chat,
-          lastMessage: sanitizedMessage,
-          lastMessageTime: new Date(),
-          unreadCount: user.userType === 'client' ? chat.unreadCount : chat.unreadCount + 1
-        };
-      }
-      return chat;
+    setMessages(prevMessages => {
+      const updatedMessages = {
+        ...prevMessages,
+        [chatId]: [...(prevMessages[chatId] || []), message]
+      };
+      saveMessages(updatedMessages);
+      return updatedMessages;
     });
     
-    // Move chat to top
-    const chatIndex = updatedChats.findIndex(chat => chat.id === chatId);
-    if (chatIndex > 0) {
-      const [movedChat] = updatedChats.splice(chatIndex, 1);
-      updatedChats.unshift(movedChat);
-    }
-    
-    setChats(updatedChats);
-    await saveChats(updatedChats);
-  }, [user, messages, chats, saveMessages, saveChats]);
+    // Update chat with last message info
+    setChats(prevChats => {
+      const updatedChats = prevChats.map(chat => {
+        if (chat.id === chatId) {
+          return {
+            ...chat,
+            lastMessage: sanitizedMessage,
+            lastMessageTime: new Date(),
+            unreadCount: user.userType === 'client' ? chat.unreadCount : chat.unreadCount + 1
+          };
+        }
+        return chat;
+      });
+      
+      // Move chat to top
+      const chatIndex = updatedChats.findIndex(chat => chat.id === chatId);
+      if (chatIndex > 0) {
+        const [movedChat] = updatedChats.splice(chatIndex, 1);
+        updatedChats.unshift(movedChat);
+      }
+      
+      saveChats(updatedChats);
+      return updatedChats;
+    });
+  }, [user, saveMessages, saveChats]);
 
   const markAsRead = useCallback(async (chatId: string) => {
     if (!user || !chatId?.trim()) return;
     
     // Mark messages as read
-    const updatedMessages = {
-      ...messages,
-      [chatId]: (messages[chatId] || []).map(msg => 
-        msg.senderId !== user.id ? { ...msg, isRead: true } : msg
-      )
-    };
-    setMessages(updatedMessages);
-    await saveMessages(updatedMessages);
+    setMessages(prevMessages => {
+      const updatedMessages = {
+        ...prevMessages,
+        [chatId]: (prevMessages[chatId] || []).map(msg => 
+          msg.senderId !== user.id ? { ...msg, isRead: true } : msg
+        )
+      };
+      saveMessages(updatedMessages);
+      return updatedMessages;
+    });
     
     // Reset unread count
-    const updatedChats = chats.map(chat => 
-      chat.id === chatId ? { ...chat, unreadCount: 0 } : chat
-    );
-    setChats(updatedChats);
-    await saveChats(updatedChats);
-  }, [user, messages, chats, saveMessages, saveChats]);
+    setChats(prevChats => {
+      const updatedChats = prevChats.map(chat => 
+        chat.id === chatId ? { ...chat, unreadCount: 0 } : chat
+      );
+      saveChats(updatedChats);
+      return updatedChats;
+    });
+  }, [user, saveMessages, saveChats]);
 
   const getChatMessages = useCallback((chatId: string): ChatMessage[] => {
     if (!chatId?.trim()) return [];
