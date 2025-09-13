@@ -8,6 +8,7 @@ import { useAppointments } from '@/contexts/AppointmentsContext';
 import { useReservationAlert } from '@/contexts/ReservationAlertContext';
 import { useReservationPlans } from '@/contexts/ReservationPlansContext';
 import { usePendingPayments } from '@/contexts/PendingPaymentsContext';
+import { useChat } from '@/contexts/ChatContext';
 import { Search, Calendar, Star, TrendingUp, Users, DollarSign, RefreshCw, X, Mail, Lock, Award, Bell, CreditCard, Camera, Upload, Package, Check, Phone, MessageCircle, Settings, CheckCircle, XCircle, RotateCcw } from 'lucide-react-native';
 import FloatingKompi from '@/components/FloatingKompi';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -42,6 +43,7 @@ export default function HomeScreen() {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const { getAvailablePlans, purchasePlan } = useReservationPlans();
   const { addPaymentProof, getPendingCount } = usePendingPayments();
+  const { createChat, sendMessage } = useChat();
   const [showReservationDetailsModal, setShowReservationDetailsModal] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<any>(null);
 
@@ -668,12 +670,36 @@ export default function HomeScreen() {
                   <TouchableOpacity 
                     style={[styles.actionButton, styles.rescheduleButton]}
                     onPress={() => {
-                      setShowReservationDetailsModal(false);
                       Alert.alert(
                         'Reprogramar Cita',
                         `Para reprogramar tu reserva del ${new Date(selectedReservation.date).toLocaleDateString('es-ES')} necesitas coordinar directamente con ${userType === 'client' ? 'el proveedor' : 'el cliente'}.\n\n¿Cómo prefieres contactarlos?`,
                         [
                           { text: 'Cancelar', style: 'cancel' },
+                          {
+                            text: '💬 Chat Kompa2Go',
+                            style: 'default',
+                            onPress: async () => {
+                              try {
+                                // Get provider info from reservation
+                                const providerId = selectedReservation.providerId || 'provider_' + selectedReservation.id;
+                                const providerName = selectedReservation.providerName || selectedReservation.clientName;
+                                
+                                // Create or get existing chat
+                                const chatId = await createChat(providerId, providerName);
+                                
+                                // Send initial message about rescheduling
+                                await sendMessage(chatId, `Hola, necesito reprogramar nuestra cita del ${new Date(selectedReservation.date).toLocaleDateString('es-ES')} a las ${selectedReservation.time} para ${selectedReservation.service}. ¿Cuándo tienes disponibilidad?`);
+                                
+                                // Close modal and navigate to chat
+                                setShowReservationDetailsModal(false);
+                                setSelectedReservation(null);
+                                router.push(`/chat/${chatId}`);
+                              } catch (error) {
+                                console.error('Error opening chat:', error);
+                                Alert.alert('Error', 'No se pudo abrir el chat. Por favor intenta de nuevo.');
+                              }
+                            }
+                          },
                           {
                             text: '📞 Llamar',
                             style: 'default',
@@ -697,24 +723,6 @@ export default function HomeScreen() {
                                   }
                                 ]
                               );
-                            }
-                          },
-                          {
-                            text: '💬 WhatsApp',
-                            style: 'default',
-                            onPress: () => {
-                              const phoneNumber = selectedReservation.clientPhone?.replace(/[^0-9]/g, '') || '50688880000';
-                              const message = encodeURIComponent(
-                                `Hola, te contacto desde Kompa2Go sobre la reserva del ${new Date(selectedReservation.date).toLocaleDateString('es-ES')} a las ${selectedReservation.time} para ${selectedReservation.service}. Necesito reprogramar la cita.`
-                              );
-                              const whatsappUrl = `whatsapp://send?phone=${phoneNumber}&text=${message}`;
-                              const whatsappWebUrl = `https://wa.me/${phoneNumber}?text=${message}`;
-                              
-                              Linking.openURL(whatsappUrl).catch(() => {
-                                Linking.openURL(whatsappWebUrl).catch(() => {
-                                  Alert.alert('Error', 'No se pudo abrir WhatsApp.');
-                                });
-                              });
                             }
                           }
                         ]
@@ -765,34 +773,36 @@ export default function HomeScreen() {
                 </View>
                 
                 {/* Contact Section */}
-                {selectedReservation.clientPhone && (
-                  <View style={styles.contactSection}>
-                    <Text style={styles.sectionTitle}>Contacto</Text>
-                    
-                    <View style={styles.contactButtonsRow}>
-                      <TouchableOpacity 
-                        style={[styles.contactButton, styles.whatsappButton, { flex: 1 }]}
-                        onPress={() => {
-                          const phoneNumber = selectedReservation.clientPhone?.replace(/[^0-9]/g, '') || '50688880000';
-                          const message = encodeURIComponent(
-                            `Hola, te contacto desde Kompa2Go sobre tu reserva del ${new Date(selectedReservation.date).toLocaleDateString('es-ES')} a las ${selectedReservation.time} para ${selectedReservation.service}.`
-                          );
-                          const whatsappUrl = `whatsapp://send?phone=${phoneNumber}&text=${message}`;
-                          const whatsappWebUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+                <View style={styles.contactSection}>
+                  <Text style={styles.sectionTitle}>Contacto</Text>
+                  
+                  <View style={styles.contactButtonsRow}>
+                    <TouchableOpacity 
+                      style={[styles.contactButton, styles.kompa2goButton, { flex: 1 }]}
+                      onPress={async () => {
+                        try {
+                          // Get provider info from reservation
+                          const providerId = selectedReservation.providerId || 'provider_' + selectedReservation.id;
+                          const providerName = selectedReservation.providerName || selectedReservation.clientName;
                           
-                          Linking.openURL(whatsappUrl).catch(() => {
-                            Linking.openURL(whatsappWebUrl).catch(() => {
-                              Alert.alert('Error', 'No se pudo abrir WhatsApp.');
-                            });
-                          });
-                        }}
-                      >
-                        <MessageCircle size={18} color="white" />
-                        <Text style={styles.contactButtonText}>Chat con Proveedor</Text>
-                      </TouchableOpacity>
-                    </View>
+                          // Create or get existing chat
+                          const chatId = await createChat(providerId, providerName);
+                          
+                          // Close modal and navigate to chat
+                          setShowReservationDetailsModal(false);
+                          setSelectedReservation(null);
+                          router.push(`/chat/${chatId}`);
+                        } catch (error) {
+                          console.error('Error opening chat:', error);
+                          Alert.alert('Error', 'No se pudo abrir el chat. Por favor intenta de nuevo.');
+                        }
+                      }}
+                    >
+                      <MessageCircle size={18} color="white" />
+                      <Text style={styles.contactButtonText}>Chat Kompa2Go</Text>
+                    </TouchableOpacity>
                   </View>
-                )}
+                </View>
               </ScrollView>
             )}
           </View>
@@ -2190,6 +2200,9 @@ const styles = StyleSheet.create({
   },
   whatsappButton: {
     backgroundColor: '#25D366',
+  },
+  kompa2goButton: {
+    backgroundColor: '#D81B60',
   },
   contactButtonText: {
     color: 'white',
