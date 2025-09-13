@@ -7,28 +7,29 @@ import ExtendRadiusDialog from '@/components/ExtendRadiusDialog';
 import { router } from 'expo-router';
 import { useReservationPlans } from '@/contexts/ReservationPlansContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useK2GProducts } from '@/contexts/K2GProductsContext';
 
 const { width } = Dimensions.get('window');
 
-const serviceCategories = [
-  { id: 1, name: 'Limpieza', icon: '🧹', providers: 45 },
-  { id: 2, name: 'Plomería', icon: '🔧', providers: 32 },
-  { id: 3, name: 'Electricidad', icon: '⚡', providers: 28 },
-  { id: 4, name: 'Jardinería', icon: '🌱', providers: 23 },
-  { id: 5, name: 'Pintura', icon: '🎨', providers: 19 },
-  { id: 6, name: 'Carpintería', icon: '🔨', providers: 15 },
-  { id: 7, name: 'Mecánica', icon: '🔧', providers: 18 },
-  { id: 8, name: 'Belleza', icon: '💄', providers: 35 },
-  { id: 9, name: 'Masajes', icon: '💆', providers: 22 },
-  { id: 10, name: 'Veterinaria', icon: '🐕', providers: 12 },
-  { id: 11, name: 'Tecnología', icon: '💻', providers: 25 },
-  { id: 12, name: 'Educación', icon: '📚', providers: 30 },
-  { id: 13, name: 'Transporte', icon: '🚗', providers: 20 },
-  { id: 14, name: 'Catering', icon: '🍽️', providers: 16 },
-  { id: 15, name: 'Fotografía', icon: '📸', providers: 14 },
-  { id: 16, name: 'Música', icon: '🎵', providers: 8 },
-  { id: 17, name: 'Fitness', icon: '💪', providers: 26 },
-  { id: 18, name: 'Consultoría', icon: '💼', providers: 11 },
+const baseServiceCategories = [
+  { id: 2, name: 'Limpieza', icon: '🧹', providers: 45 },
+  { id: 3, name: 'Plomería', icon: '🔧', providers: 32 },
+  { id: 4, name: 'Electricidad', icon: '⚡', providers: 28 },
+  { id: 5, name: 'Jardinería', icon: '🌱', providers: 23 },
+  { id: 6, name: 'Pintura', icon: '🎨', providers: 19 },
+  { id: 7, name: 'Carpintería', icon: '🔨', providers: 15 },
+  { id: 8, name: 'Mecánica', icon: '🔧', providers: 18 },
+  { id: 9, name: 'Belleza', icon: '💄', providers: 35 },
+  { id: 10, name: 'Masajes', icon: '💆', providers: 22 },
+  { id: 11, name: 'Veterinaria', icon: '🐕', providers: 12 },
+  { id: 12, name: 'Tecnología', icon: '💻', providers: 25 },
+  { id: 13, name: 'Educación', icon: '📚', providers: 30 },
+  { id: 14, name: 'Transporte', icon: '🚗', providers: 20 },
+  { id: 15, name: 'Catering', icon: '🍽️', providers: 16 },
+  { id: 16, name: 'Fotografía', icon: '📸', providers: 14 },
+  { id: 17, name: 'Música', icon: '🎵', providers: 8 },
+  { id: 18, name: 'Fitness', icon: '💪', providers: 26 },
+  { id: 19, name: 'Consultoría', icon: '💼', providers: 11 },
 ];
 
 const featuredProviders = [
@@ -98,8 +99,17 @@ export default function SearchScreen() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const { hasActiveReservations } = useReservationPlans();
+  const { getActiveProducts } = useK2GProducts();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [showK2GProducts, setShowK2GProducts] = useState(false);
+  
+  const k2gProducts = getActiveProducts();
+  
+  const serviceCategories = [
+    { id: 1, name: 'K2G Products', icon: '🚀', providers: k2gProducts.length, isK2G: true },
+    ...baseServiceCategories,
+  ];
   
   const {
     userLocation,
@@ -124,11 +134,18 @@ export default function SearchScreen() {
     await requestLocationPermission();
   };
   
-  const handleCategorySearch = async (categoryName: string) => {
+  const handleCategorySearch = async (categoryName: string, categoryId: number) => {
     if (!categoryName?.trim() || categoryName.length > 50) return;
     const sanitizedName = categoryName.trim();
-    setSelectedCategory(selectedCategory === null ? 1 : null);
-    await searchProviders(sanitizedName);
+    setSelectedCategory(selectedCategory === categoryId ? null : categoryId);
+    
+    if (categoryId === 1) {
+      // K2G Products category
+      setShowK2GProducts(true);
+    } else {
+      setShowK2GProducts(false);
+      await searchProviders(sanitizedName);
+    }
   };
   
   const handleTextSearch = async () => {
@@ -217,7 +234,7 @@ export default function SearchScreen() {
               <TouchableOpacity 
                 style={styles.restrictedButton}
                 onPress={() => {
-                  router.push('/(tabs)/?modal=plans');
+                  router.push('/(tabs)');
                 }}
               >
                 <Text style={styles.restrictedButtonText}>Ver Planes</Text>
@@ -225,7 +242,7 @@ export default function SearchScreen() {
               <TouchableOpacity 
                 style={[styles.restrictedButton, styles.primaryRestrictedButton]}
                 onPress={() => {
-                  router.push('/(tabs)/?modal=purchase');
+                  router.push('/purchase-plan');
                 }}
               >
                 <Text style={[styles.restrictedButtonText, styles.primaryRestrictedButtonText]}>Comprar pase de reserva</Text>
@@ -317,7 +334,7 @@ export default function SearchScreen() {
                   styles.categoryCard,
                   selectedCategory === category.id && styles.categoryCardSelected,
                 ]}
-                onPress={() => handleCategorySearch(category.name)}
+                onPress={() => handleCategorySearch(category.name, category.id)}
               >
                 <Text style={styles.categoryIcon}>{category.icon}</Text>
                 <Text style={styles.categoryName}>{category.name}</Text>
@@ -329,30 +346,66 @@ export default function SearchScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            {foundProviders.length > 0 ? 'Proveedores Encontrados' : t('featured_providers')}
+            {showK2GProducts ? 'K2G Products' : foundProviders.length > 0 ? 'Proveedores Encontrados' : t('featured_providers')}
           </Text>
           
-          {/* Show search results if available */}
-          {foundProviders.length > 0 ? (
-            foundProviders
-              .sort((a, b) => {
-                // Always put special providers first (Sakura Beauty Salon and Neko Studios)
-                if (a.isSpecialProvider || a.id === '999' || a.id === '998') return -1;
-                if (b.isSpecialProvider || b.id === '999' || b.id === '998') return 1;
-                return 0;
-              })
-              .map((provider) => renderProviderCard(provider))
+          {/* Show K2G Products if selected */}
+          {showK2GProducts ? (
+            k2gProducts.length > 0 ? (
+              k2gProducts.map((product) => (
+                <TouchableOpacity
+                  key={product.id}
+                  style={styles.productCard}
+                  onPress={() => {
+                    // Navigate to product details or contact
+                    console.log('K2G Product selected:', product.name);
+                  }}
+                >
+                  <View style={styles.productHeader}>
+                    <Text style={styles.productIcon}>🚀</Text>
+                    <View style={styles.productInfo}>
+                      <Text style={styles.productName}>{product.name}</Text>
+                      <Text style={styles.productDescription}>{product.description}</Text>
+                      <Text style={styles.productPrice}>{product.price}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.k2gBadge}>
+                    <Text style={styles.k2gBadgeText}>K2G Official</Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>No hay productos K2G disponibles</Text>
+              </View>
+            )
           ) : (
-            /* Show default featured providers */
-            featuredProviders.map((provider) => renderProviderCard(provider))
+            /* Show search results or featured providers */
+            foundProviders.length > 0 ? (
+              foundProviders
+                .sort((a, b) => {
+                  // Always put special providers first (Sakura Beauty Salon and Neko Studios)
+                  if (a.isSpecialProvider || a.id === '999' || a.id === '998') return -1;
+                  if (b.isSpecialProvider || b.id === '999' || b.id === '998') return 1;
+                  return 0;
+                })
+                .map((provider) => renderProviderCard(provider))
+            ) : (
+              /* Show default featured providers */
+              featuredProviders.map((provider) => renderProviderCard(provider))
+            )
           )}
         </View>
 
         {/* Reset Search Button */}
-        {foundProviders.length > 0 && (
+        {(foundProviders.length > 0 || showK2GProducts) && (
           <TouchableOpacity 
             style={styles.resetButton}
-            onPress={resetSearch}
+            onPress={() => {
+              resetSearch();
+              setShowK2GProducts(false);
+              setSelectedCategory(null);
+            }}
           >
             <Text style={styles.resetButtonText}>🔄 Nueva Búsqueda</Text>
           </TouchableOpacity>
@@ -667,5 +720,77 @@ const styles = StyleSheet.create({
   },
   primaryRestrictedButtonText: {
     color: 'white',
+  },
+  productCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#D81B60',
+  },
+  productHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 12,
+  },
+  productIcon: {
+    fontSize: 40,
+    width: 60,
+    height: 60,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    backgroundColor: 'rgba(216, 27, 96, 0.1)',
+    borderRadius: 30,
+  },
+  productInfo: {
+    flex: 1,
+  },
+  productName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  productDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  productPrice: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#D81B60',
+  },
+  k2gBadge: {
+    backgroundColor: '#D81B60',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  k2gBadgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  emptyState: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 });

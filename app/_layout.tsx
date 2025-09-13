@@ -17,6 +17,7 @@ import { PendingPaymentsProvider } from "@/contexts/PendingPaymentsContext";
 import { LocationSearchProvider } from "@/contexts/LocationSearchContext";
 import { PaymentBackendProvider } from "@/contexts/PaymentBackendContext";
 import { ChatProvider } from "@/contexts/ChatContext";
+import { K2GProductsProvider } from "@/contexts/K2GProductsContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ReservationAlertModal } from "@/components/ReservationAlertModal";
 import { trpc, trpcClient } from "@/lib/trpc";
@@ -54,6 +55,7 @@ function RootLayoutNav() {
       <Stack.Screen name="chat/[chatId]" options={{ headerShown: false }} />
       <Stack.Screen name="provider/[id]" options={{ title: "Detalles del Proveedor" }} />
       <Stack.Screen name="purchase-plan" options={{ headerShown: false }} />
+      <Stack.Screen name="admin-products" options={{ title: "Administrar Productos K2G" }} />
     </Stack>
   );
 }
@@ -79,10 +81,12 @@ export default function RootLayout() {
                           <LocationSearchProvider>
                             <PaymentBackendProvider>
                               <ChatProvider>
-                                <GestureHandlerRootView style={styles.container}>
-                                  <RootLayoutNav />
-                                  <ReservationAlertModal />
-                                </GestureHandlerRootView>
+                                <K2GProductsProvider>
+                                  <GestureHandlerRootView style={styles.container}>
+                                    <RootLayoutNav />
+                                    <ReservationAlertModal />
+                                  </GestureHandlerRootView>
+                                </K2GProductsProvider>
                               </ChatProvider>
                             </PaymentBackendProvider>
                           </LocationSearchProvider>

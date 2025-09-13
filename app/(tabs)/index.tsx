@@ -1030,6 +1030,15 @@ export default function HomeScreen() {
                 <Text style={styles.adminActionText}>{t('view_transactions')}</Text>
               </View>
             </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.adminActionCard}
+              onPress={() => router.push('/admin-products')}
+            >
+              <View style={styles.adminActionContent}>
+                <Package size={20} color="#D81B60" />
+                <Text style={styles.adminActionText}>Productos K2G</Text>
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
 
