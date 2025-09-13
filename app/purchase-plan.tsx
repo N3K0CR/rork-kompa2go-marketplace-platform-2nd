@@ -443,12 +443,7 @@ export default function PurchasePlanScreen() {
                   </View>
                 )}
                 
-                {fees.taxAmount > 0 && (
-                  <View style={styles.feeRow}>
-                    <Text style={styles.feeLabel}>Impuestos</Text>
-                    <Text style={styles.feeValue}>₡{fees.taxAmount.toLocaleString()}</Text>
-                  </View>
-                )}
+
                 
                 <View style={[styles.feeRow, styles.totalRow]}>
                   <Text style={styles.totalLabel}>Total a Pagar</Text>

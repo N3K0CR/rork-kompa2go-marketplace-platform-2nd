@@ -7,7 +7,7 @@ export const COSTA_RICA_CONFIG: CountryConfig = {
   currency: 'CRC',
   symbol: '₡',
   supportedMethods: ['sinpe', 'kash', 'bank_transfer', 'card'],
-  taxRate: 0.13, // 13% IVA
+  taxRate: 0, // No tax charge
   processingFees: {
     sinpe: 0, // No fee for SINPE
     kash: 0, // No fee for Kash
