@@ -60,7 +60,7 @@ export const [ReservationAlertProvider, useReservationAlert] = createContextHook
         webAudio.currentTime = 0;
       }
     };
-  }, [loadSound]);
+  }, []); // Remove loadSound from dependencies to prevent infinite loop
 
   const playAlertSound = useCallback(async () => {
     try {
@@ -152,7 +152,7 @@ export const [ReservationAlertProvider, useReservationAlert] = createContextHook
     });
 
     return () => subscription?.remove();
-  }, [checkForMissedReservations]);
+  }, []); // Remove checkForMissedReservations from dependencies to prevent infinite loop
 
   // Auto-accept reservations after 20 seconds
   useEffect(() => {
@@ -176,10 +176,10 @@ export const [ReservationAlertProvider, useReservationAlert] = createContextHook
         
         return remaining;
       });
-    }, 1000);
+    }, 5000); // Increased to 5 seconds to reduce load
 
     return () => clearInterval(interval);
-  }, [addAppointment, stopAlert, showNotification]);
+  }, []); // Remove dependencies to prevent infinite loop - functions are stable
 
   const addNewReservation = useCallback((appointment: Omit<Appointment, 'id'>) => {
     const now = Date.now();

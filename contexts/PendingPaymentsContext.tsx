@@ -113,13 +113,13 @@ export const [PendingPaymentsProvider, usePendingPayments] = createContextHook((
       
       const interval = setInterval(() => {
         loadPendingPayments();
-      }, 10000); // Check every 10 seconds for new payments
+      }, 30000); // Increased to 30 seconds to reduce load and prevent loops
       
       return () => clearInterval(interval);
     } else {
       loadPendingPayments();
     }
-  }, [user, loadPendingPayments]);
+  }, [user]); // Remove loadPendingPayments from dependencies to prevent infinite loop
 
   return useMemo(() => ({
     pendingPayments,
