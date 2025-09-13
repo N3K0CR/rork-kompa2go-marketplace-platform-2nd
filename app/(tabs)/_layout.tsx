@@ -1,15 +1,18 @@
 import { Tabs } from "expo-router";
-import { Home, Search, Calendar, BarChart3, Bell, LayoutGrid, UserCircle } from "lucide-react-native";
+import { Home, Search, Calendar, BarChart3, Bell, LayoutGrid, UserCircle, MessageCircle } from "lucide-react-native";
 import React from "react";
-import { View } from "react-native";
+import { View, Text } from "react-native";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useChat } from "@/contexts/ChatContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function TabLayout() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { getUnreadCount } = useChat();
   const userType = user?.userType || 'client';
+  const unreadCount = getUnreadCount();
   
   console.log('📱 TabLayout - Current user:', user);
   console.log('📱 TabLayout - UserType:', userType);
@@ -157,13 +160,52 @@ export default function TabLayout() {
         />
       )}
 
-      {/* Hide chat tab for all users since Kompi is now floating */}
-      <Tabs.Screen
-        name="chat"
-        options={{
-          href: null,
-        }}
-      />
+      {/* Chat tab for clients and providers */}
+      {(userType === 'client' || userType === 'provider') && (
+        <Tabs.Screen
+          name="chat"
+          options={{
+            title: 'Chats',
+            href: '/chats',
+            tabBarIcon: ({ color, size }) => (
+              <View style={{ position: 'relative' }}>
+                <MessageCircle color={color} size={size} />
+                {unreadCount > 0 && (
+                  <View style={{
+                    position: 'absolute',
+                    top: -4,
+                    right: -4,
+                    backgroundColor: '#FF3B30',
+                    borderRadius: 8,
+                    paddingHorizontal: 4,
+                    paddingVertical: 1,
+                    minWidth: 16,
+                    alignItems: 'center',
+                  }}>
+                    <Text style={{
+                      color: 'white',
+                      fontSize: 10,
+                      fontWeight: 'bold',
+                    }}>
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            ),
+          }}
+        />
+      )}
+      
+      {/* Hide chat tab for admin users */}
+      {userType === 'admin' && (
+        <Tabs.Screen
+          name="chat"
+          options={{
+            href: null,
+          }}
+        />
+      )}
     </Tabs>
   );
 }

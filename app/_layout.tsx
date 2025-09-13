@@ -16,6 +16,7 @@ import { ReservationPlansProvider } from "@/contexts/ReservationPlansContext";
 import { PendingPaymentsProvider } from "@/contexts/PendingPaymentsContext";
 import { LocationSearchProvider } from "@/contexts/LocationSearchContext";
 import { PaymentBackendProvider } from "@/contexts/PaymentBackendContext";
+import { ChatProvider } from "@/contexts/ChatContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ReservationAlertModal } from "@/components/ReservationAlertModal";
 import { trpc, trpcClient } from "@/lib/trpc";
@@ -49,6 +50,8 @@ function RootLayoutNav() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="booking/[providerId]" options={{ title: "Reservar Servicio" }} />
       <Stack.Screen name="chat" options={{ title: "Kompi - Asistente" }} />
+      <Stack.Screen name="chats" options={{ title: "Mensajes" }} />
+      <Stack.Screen name="chat/[chatId]" options={{ headerShown: false }} />
       <Stack.Screen name="provider/[id]" options={{ title: "Detalles del Proveedor" }} />
       <Stack.Screen name="purchase-plan" options={{ headerShown: false }} />
     </Stack>
@@ -75,10 +78,12 @@ export default function RootLayout() {
                         <PendingPaymentsProvider>
                           <LocationSearchProvider>
                             <PaymentBackendProvider>
-                              <GestureHandlerRootView style={styles.container}>
-                                <RootLayoutNav />
-                                <ReservationAlertModal />
-                              </GestureHandlerRootView>
+                              <ChatProvider>
+                                <GestureHandlerRootView style={styles.container}>
+                                  <RootLayoutNav />
+                                  <ReservationAlertModal />
+                                </GestureHandlerRootView>
+                              </ChatProvider>
                             </PaymentBackendProvider>
                           </LocationSearchProvider>
                         </PendingPaymentsProvider>

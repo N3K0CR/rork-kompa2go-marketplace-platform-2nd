@@ -4,6 +4,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Star, MapPin, MessageCircle, Calendar, Clock, Shield, Lock } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useReservationPlans } from '@/contexts/ReservationPlansContext';
+import { useChat } from '@/contexts/ChatContext';
 
 const { width } = Dimensions.get('window');
 
@@ -115,6 +116,7 @@ export default function ProviderDetailScreen() {
   const { id } = useLocalSearchParams();
   const { user } = useAuth();
   const { hasActiveReservations } = useReservationPlans();
+  const { createChat } = useChat();
   
   const provider = getProviderData(id as string);
   
@@ -133,12 +135,22 @@ export default function ProviderDetailScreen() {
     }
   };
 
-  const handleChat = () => {
+  const handleChat = async () => {
+    if (!user || user.userType !== 'client') {
+      router.push('/auth');
+      return;
+    }
+    
     if (canViewContactInfo()) {
-      router.push('/chat');
+      try {
+        const chatId = await createChat(provider.id.toString(), provider.name);
+        router.push(`/chat/${chatId}`);
+      } catch (error) {
+        console.error('Error creating chat:', error);
+      }
     } else {
       // Redirect to plans page
-      router.push('/pending-payments');
+      router.push('/purchase-plan');
     }
   };
   
@@ -282,7 +294,7 @@ export default function ProviderDetailScreen() {
             onPress={() => router.push('/pending-payments')}
           >
             <Lock size={20} color="white" />
-            <Text style={styles.upgradeButtonText}>Adquirir Plan para Contactar</Text>
+            <Text style={styles.upgradeButtonText}>Comprar pase de reserva</Text>
           </TouchableOpacity>
         )}
       </View>

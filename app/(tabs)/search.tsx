@@ -211,7 +211,7 @@ export default function SearchScreen() {
                 style={[styles.restrictedButton, styles.primaryRestrictedButton]}
                 onPress={() => router.push('/purchase-plan')}
               >
-                <Text style={[styles.restrictedButtonText, styles.primaryRestrictedButtonText]}>Adquirir Plan para contactar</Text>
+                <Text style={[styles.restrictedButtonText, styles.primaryRestrictedButtonText]}>Comprar pase de reserva</Text>
               </TouchableOpacity>
             </View>
           </View>
