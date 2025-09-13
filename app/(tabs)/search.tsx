@@ -33,7 +33,7 @@ const serviceCategories = [
 
 const featuredProviders = [
   {
-    id: 999,
+    id: '999',
     name: 'Sakura Beauty Salon',
     fullName: 'Sakura Beauty Salon',
     service: 'Servicios de Belleza',
@@ -45,7 +45,7 @@ const featuredProviders = [
     isSpecialProvider: true,
   },
   {
-    id: 998,
+    id: '998',
     name: 'Neko Studios',
     fullName: 'Neko Studios',
     service: 'Fotografía y Video',
@@ -57,7 +57,7 @@ const featuredProviders = [
     isSpecialProvider: true,
   },
   {
-    id: 1,
+    id: '1',
     name: 'María',
     fullName: 'María González',
     service: 'Limpieza Residencial',
@@ -69,7 +69,7 @@ const featuredProviders = [
     isSpecialProvider: false,
   },
   {
-    id: 2,
+    id: '2',
     name: 'Carlos',
     fullName: 'Carlos Rodríguez',
     service: 'Plomería',
@@ -81,7 +81,7 @@ const featuredProviders = [
     isSpecialProvider: false,
   },
   {
-    id: 3,
+    id: '3',
     name: 'Ana',
     fullName: 'Ana Jiménez',
     service: 'Jardinería',
@@ -160,7 +160,7 @@ export default function SearchScreen() {
   const canViewProviderDetails = (provider: any) => {
     if (!user || user.userType !== 'client') return true;
     // Sakura Beauty Salon and Neko Studios don't require reservation pass
-    if (provider.isSpecialProvider || provider.id === 999 || provider.id === 998 || provider.id === '999' || provider.id === '998') return true;
+    if (provider.isSpecialProvider || provider.id === '999' || provider.id === '998') return true;
     return hasActiveReservations();
   };
 
@@ -337,8 +337,8 @@ export default function SearchScreen() {
             foundProviders
               .sort((a, b) => {
                 // Always put special providers first (Sakura Beauty Salon and Neko Studios)
-                if (a.isSpecialProvider || a.id === 999 || a.id === 998 || a.id === '999' || a.id === '998') return -1;
-                if (b.isSpecialProvider || b.id === 999 || b.id === 998 || b.id === '999' || b.id === '998') return 1;
+                if (a.isSpecialProvider || a.id === '999' || a.id === '998') return -1;
+                if (b.isSpecialProvider || b.id === '999' || b.id === '998') return 1;
                 return 0;
               })
               .map((provider) => renderProviderCard(provider))
