@@ -327,6 +327,18 @@ export default function CalendarScreen() {
         notes: '', 
         date: new Date().toISOString().split('T')[0]
       });
+      
+      // Auto-scroll to show the newly added personal task
+      setTimeout(() => {
+        selectedDateSectionRef.current?.measureLayout(
+          scrollViewRef.current as any,
+          (x, y) => {
+            scrollViewRef.current?.scrollTo({ y, animated: true });
+          },
+          () => {}
+        );
+      }, 100);
+      
       Alert.alert('Éxito', 'Tarea personal agregada correctamente');
     } catch (error) {
       Alert.alert('Error', 'No se pudo agregar la tarea personal');
@@ -431,7 +443,7 @@ export default function CalendarScreen() {
                     );
                   }, 100);
                 } else {
-                  // Show modal to add personal agenda
+                  // Show modal to add personal agenda and scroll after adding
                   setNewPersonalTask({
                     title: '',
                     time: '',
@@ -439,6 +451,17 @@ export default function CalendarScreen() {
                     date: dayData.dateString,
                   });
                   setShowPersonalTaskModal(true);
+                  
+                  // Set up scroll for after the task is added
+                  setTimeout(() => {
+                    selectedDateSectionRef.current?.measureLayout(
+                      scrollViewRef.current as any,
+                      (x, y) => {
+                        scrollViewRef.current?.scrollTo({ y, animated: true });
+                      },
+                      () => {}
+                    );
+                  }, 500); // Longer delay to allow modal to close and task to be added
                 }
               } else {
                 // Provider view - show date detail modal
@@ -814,6 +837,17 @@ export default function CalendarScreen() {
                 date: selectedDate,
               });
               setShowPersonalTaskModal(true);
+              
+              // Auto-scroll after adding personal agenda
+              setTimeout(() => {
+                selectedDateSectionRef.current?.measureLayout(
+                  scrollViewRef.current as any,
+                  (x, y) => {
+                    scrollViewRef.current?.scrollTo({ y, animated: true });
+                  },
+                  () => {}
+                );
+              }, 500);
             }}
           >
             <Plus size={20} color="white" />
@@ -1379,6 +1413,17 @@ export default function CalendarScreen() {
                     });
                     setShowDateDetailModal(false);
                     setShowPersonalTaskModal(true);
+                    
+                    // Auto-scroll after adding personal task from date detail modal
+                    setTimeout(() => {
+                      selectedDateSectionRef.current?.measureLayout(
+                        scrollViewRef.current as any,
+                        (x, y) => {
+                          scrollViewRef.current?.scrollTo({ y, animated: true });
+                        },
+                        () => {}
+                      );
+                    }, 500);
                   }}
                 >
                   <Plus size={20} color="white" />
