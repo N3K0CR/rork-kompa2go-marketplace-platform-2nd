@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, TextInput, Linking, Platform } from 'react-native';
 import { Plus, Clock, X, Calendar as CalendarIcon, Users, Award, ChevronLeft, ChevronRight, RefreshCw, CheckCircle, XCircle, RotateCcw, Phone, MessageCircle, Settings } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +17,8 @@ export default function CalendarScreen() {
   const { addAppointment, updateAppointment, getAppointmentsForDate, getTodayAppointments, refreshAppointments, setUserTypeAndReload } = useAppointments();
   const { collaborators, consolidatedData } = useTeamCalendar();
   const { createChat } = useChat();
+  const scrollViewRef = useRef<ScrollView>(null);
+  const selectedDateSectionRef = useRef<View>(null);
   
   // Initialize appointments context with correct user type - only once
   useEffect(() => {
@@ -411,7 +413,37 @@ export default function CalendarScreen() {
             onPress={() => {
               setSelectedDate(dayData.dateString);
               setSelectedDateForDetail(dayData.dateString);
-              setShowDateDetailModal(true);
+              
+              // Check if date has Kompa2Go reservations for client view
+              if (user?.userType === 'client') {
+                const appointments = getAppointmentsForDate(dayData.dateString);
+                const hasKompa2GoReservations = appointments.some(apt => apt.type === 'kompa2go');
+                
+                if (hasKompa2GoReservations) {
+                  // Auto-scroll to reservation details
+                  setTimeout(() => {
+                    selectedDateSectionRef.current?.measureLayout(
+                      scrollViewRef.current as any,
+                      (x, y) => {
+                        scrollViewRef.current?.scrollTo({ y, animated: true });
+                      },
+                      () => {}
+                    );
+                  }, 100);
+                } else {
+                  // Show modal to add personal agenda
+                  setNewPersonalTask({
+                    title: '',
+                    time: '',
+                    notes: '',
+                    date: dayData.dateString,
+                  });
+                  setShowPersonalTaskModal(true);
+                }
+              } else {
+                // Provider view - show date detail modal
+                setShowDateDetailModal(true);
+              }
             }}
           >
             <Text style={[
@@ -464,7 +496,7 @@ export default function CalendarScreen() {
   );
   
   const renderCalendarView = () => (
-    <ScrollView style={styles.scrollContainer}>
+    <ScrollView ref={scrollViewRef} style={styles.scrollContainer}>
       <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <View style={styles.headerLeft}>
           <Text style={styles.title}>Mi Calendario</Text>
@@ -515,7 +547,7 @@ export default function CalendarScreen() {
 
       {/* Selected Date Events */}
       {selectedDateAppointments.length > 0 && (
-        <View style={styles.selectedDateSection}>
+        <View ref={selectedDateSectionRef} style={styles.selectedDateSection}>
           <Text style={styles.selectedDateTitle}>
             Eventos para {new Date(selectedDate).toLocaleDateString('es-ES', { 
               weekday: 'long', 
@@ -589,7 +621,7 @@ export default function CalendarScreen() {
 
   // Client view - show their appointments and booking history
   const renderClientCalendarView = () => (
-    <ScrollView style={styles.scrollContainer}>
+    <ScrollView ref={scrollViewRef} style={styles.scrollContainer}>
       <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <View style={styles.headerLeft}>
           <Text style={styles.title}>Mi Calendario</Text>
@@ -677,9 +709,9 @@ export default function CalendarScreen() {
 
       {/* Selected Date Events for Client */}
       {selectedDateAppointments.length > 0 && (
-        <View style={styles.selectedDateSection}>
+        <View ref={selectedDateSectionRef} style={styles.selectedDateSection}>
           <Text style={styles.selectedDateTitle}>
-            Mis citas para {new Date(selectedDate).toLocaleDateString('es-ES', { 
+            Mis citas para {new Date(selectedDate + 'T12:00:00').toLocaleDateString('es-ES', { 
               weekday: 'long', 
               year: 'numeric', 
               month: 'long', 
@@ -721,7 +753,7 @@ export default function CalendarScreen() {
                 
                 {appointment.clientPhone && (
                   <View style={styles.contactInfoContainer}>
-                    <Text style={styles.appointmentDetailPhone}>📞 {appointment.clientPhone}</Text>
+                    {/* Removed phone display, only chat available */}
                   </View>
                 )}
                 
@@ -763,6 +795,30 @@ export default function CalendarScreen() {
               </View>
             ))}
           </View>
+        </View>
+      )}
+      
+      {/* Add Personal Agenda Button for dates without reservations */}
+      {selectedDateAppointments.length === 0 && (
+        <View style={styles.emptyDaySection}>
+          <CalendarIcon size={48} color="#ccc" />
+          <Text style={styles.emptyDayTitle}>Sin Reservas</Text>
+          <Text style={styles.emptyDaySubtitle}>No tienes reservas para este día</Text>
+          <TouchableOpacity 
+            style={styles.addPersonalAgendaButton}
+            onPress={() => {
+              setNewPersonalTask({
+                title: '',
+                time: '',
+                notes: '',
+                date: selectedDate,
+              });
+              setShowPersonalTaskModal(true);
+            }}
+          >
+            <Plus size={20} color="white" />
+            <Text style={styles.addPersonalAgendaText}>Agregar Agenda Personal</Text>
+          </TouchableOpacity>
         </View>
       )}
     </ScrollView>
@@ -2381,5 +2437,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  addPersonalAgendaButton: {
+    backgroundColor: '#9C27B0',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 16,
+  },
+  addPersonalAgendaText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
