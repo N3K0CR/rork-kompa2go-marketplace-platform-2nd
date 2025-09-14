@@ -9,10 +9,11 @@ import { useReservationAlert } from '@/contexts/ReservationAlertContext';
 import { useReservationPlans } from '@/contexts/ReservationPlansContext';
 import { usePendingPayments } from '@/contexts/PendingPaymentsContext';
 import { useChat } from '@/contexts/ChatContext';
-import { Search, Calendar, Star, TrendingUp, Users, DollarSign, RefreshCw, X, Mail, Lock, Award, Bell, CreditCard, Camera, Upload, Package, Check, Phone, MessageCircle, Settings, CheckCircle, XCircle, RotateCcw } from 'lucide-react-native';
+import { Search, Calendar, Star, TrendingUp, Users, DollarSign, RefreshCw, X, Mail, Lock, Award, Bell, CreditCard, Camera, Upload, Package, Check } from 'lucide-react-native';
 import FloatingKompi from '@/components/FloatingKompi';
+import ReservationDetailCard from '@/components/ReservationDetailCard';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Linking } from 'react-native';
+
 import * as ImagePicker from 'expo-image-picker';
 
 const { width } = Dimensions.get('window');
@@ -21,7 +22,7 @@ export default function HomeScreen() {
   const { user, loading, switchRole } = useAuth();
   const { walletBalance, okoins, bookingPasses } = useWallet();
   const { t } = useLanguage();
-  const { getTodayAppointments, getUpcomingAppointments, updateAppointment } = useAppointments();
+  const { getTodayAppointments, getUpcomingAppointments } = useAppointments();
   const { simulateNewReservation, pendingReservations, isAlertActive } = useReservationAlert();
   const userType = user?.userType || 'client';
   const { modal } = useLocalSearchParams<{ modal?: string }>();
@@ -43,7 +44,7 @@ export default function HomeScreen() {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const { getAvailablePlans, purchasePlan } = useReservationPlans();
   const { addPaymentProof, getPendingCount } = usePendingPayments();
-  const { createChat, sendMessage } = useChat();
+  const { } = useChat();
   const [showReservationDetailsModal, setShowReservationDetailsModal] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<any>(null);
 
@@ -562,248 +563,14 @@ export default function HomeScreen() {
             </View>
             
             {selectedReservation && (
-              <ScrollView style={styles.reservationDetailsContent}>
-                {/* Reservation Information */}
-                <View style={styles.reservationInfoSection}>
-                  <Text style={styles.sectionTitle}>Información de la Reserva</Text>
-                  
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Fecha:</Text>
-                    <Text style={styles.detailValue}>
-                      {new Date(selectedReservation.date).toLocaleDateString('es-ES', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Hora:</Text>
-                    <Text style={styles.detailValue}>{selectedReservation.time}</Text>
-                  </View>
-                  
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Duración:</Text>
-                    <Text style={styles.detailValue}>{selectedReservation.duration} minutos</Text>
-                  </View>
-                  
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Servicio:</Text>
-                    <Text style={styles.detailValue}>{selectedReservation.service}</Text>
-                  </View>
-                  
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>
-                      {userType === 'client' ? 'Proveedor:' : 'Cliente:'}
-                    </Text>
-                    <Text style={styles.detailValue}>{selectedReservation.clientName}</Text>
-                  </View>
-                  
-                  {selectedReservation.clientPhone && (
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Teléfono:</Text>
-                      <Text style={styles.detailValue}>{selectedReservation.clientPhone}</Text>
-                    </View>
-                  )}
-                  
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Estado:</Text>
-                    <View style={[
-                      styles.statusBadge,
-                      selectedReservation.status === 'confirmed' && styles.statusConfirmed,
-                      selectedReservation.status === 'pending' && styles.statusPending,
-                      selectedReservation.status === 'cancelled' && styles.statusCancelled
-                    ]}>
-                      <Text style={styles.statusText}>
-                        {selectedReservation.status === 'confirmed' ? 'Confirmada' :
-                         selectedReservation.status === 'pending' ? 'Pendiente' : 'Cancelada'}
-                      </Text>
-                    </View>
-                  </View>
-                  
-                  {selectedReservation.notes && (
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Notas:</Text>
-                      <Text style={styles.detailValue}>{selectedReservation.notes}</Text>
-                    </View>
-                  )}
-                </View>
-                
-                {/* Action Buttons */}
-                <View style={styles.reservationActionsSection}>
-                  <Text style={styles.sectionTitle}>Administrar Reserva</Text>
-                  
-                  {/* Confirmation Action */}
-                  {selectedReservation.status === 'pending' && (
-                    <TouchableOpacity 
-                      style={[styles.actionButton, styles.confirmButton]}
-                      onPress={async () => {
-                        Alert.alert(
-                          'Confirmar Reserva',
-                          `¿Confirmas tu reserva para el ${new Date(selectedReservation.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })} a las ${selectedReservation.time}?\n\nServicio: ${selectedReservation.service}\n${userType === 'client' ? `Proveedor: ${selectedReservation.clientName}` : `Cliente: ${selectedReservation.clientName}`}`,
-                          [
-                            { text: 'Cancelar', style: 'cancel' },
-                            {
-                              text: 'Confirmar',
-                              style: 'default',
-                              onPress: async () => {
-                                await updateAppointment(selectedReservation.id, { 
-                                  status: 'confirmed',
-                                  notes: (selectedReservation.notes || '') + ` [Confirmada por ${userType} el ${new Date().toLocaleString('es-ES')}]`
-                                });
-                                setShowReservationDetailsModal(false);
-                                Alert.alert('✅ Confirmada', 'Tu reserva ha sido confirmada exitosamente.');
-                              }
-                            }
-                          ]
-                        );
-                      }}
-                    >
-                      <CheckCircle size={20} color="white" />
-                      <Text style={styles.actionButtonText}>Confirmar Reserva</Text>
-                    </TouchableOpacity>
-                  )}
-                  
-                  {/* Reschedule Action */}
-                  <TouchableOpacity 
-                    style={[styles.actionButton, styles.rescheduleButton]}
-                    onPress={() => {
-                      Alert.alert(
-                        'Reprogramar Cita',
-                        `Para reprogramar tu reserva del ${new Date(selectedReservation.date).toLocaleDateString('es-ES')} necesitas coordinar directamente con ${userType === 'client' ? 'el proveedor' : 'el cliente'}.\n\n¿Cómo prefieres contactarlos?`,
-                        [
-                          { text: 'Cancelar', style: 'cancel' },
-                          {
-                            text: '💬 Chat Kompa2Go',
-                            style: 'default',
-                            onPress: async () => {
-                              try {
-                                // Get provider info from reservation
-                                const providerId = selectedReservation.providerId || 'provider_' + selectedReservation.id;
-                                const providerName = selectedReservation.providerName || selectedReservation.clientName;
-                                
-                                // Create or get existing chat
-                                const chatId = await createChat(providerId, providerName);
-                                
-                                // Send initial message about rescheduling
-                                await sendMessage(chatId, `Hola, necesito reprogramar nuestra cita del ${new Date(selectedReservation.date).toLocaleDateString('es-ES')} a las ${selectedReservation.time} para ${selectedReservation.service}. ¿Cuándo tienes disponibilidad?`);
-                                
-                                // Close modal and navigate to chat
-                                setShowReservationDetailsModal(false);
-                                setSelectedReservation(null);
-                                router.push(`/chat/${chatId}`);
-                              } catch (error) {
-                                console.error('Error opening chat:', error);
-                                Alert.alert('Error', 'No se pudo abrir el chat. Por favor intenta de nuevo.');
-                              }
-                            }
-                          },
-                          {
-                            text: '📞 Llamar',
-                            style: 'default',
-                            onPress: () => {
-                              const phoneNumber = selectedReservation.clientPhone || '+506 8888-0000';
-                              const cleanPhone = phoneNumber.replace(/[^0-9+]/g, '');
-                              const telUrl = `tel:${cleanPhone}`;
-                              
-                              Alert.alert(
-                                'Realizar Llamada',
-                                `¿Deseas llamar a ${phoneNumber}?`,
-                                [
-                                  { text: 'Cancelar', style: 'cancel' },
-                                  {
-                                    text: 'Llamar',
-                                    onPress: () => {
-                                      Linking.openURL(telUrl).catch(() => {
-                                        Alert.alert('Error', 'No se pudo realizar la llamada.');
-                                      });
-                                    }
-                                  }
-                                ]
-                              );
-                            }
-                          }
-                        ]
-                      );
-                    }}
-                  >
-                    <RotateCcw size={20} color="white" />
-                    <Text style={styles.actionButtonText}>Reprogramar</Text>
-                  </TouchableOpacity>
-                  
-                  {/* Cancel Action */}
-                  {selectedReservation.status !== 'cancelled' && (
-                    <TouchableOpacity 
-                      style={[styles.actionButton, styles.cancelButton]}
-                      onPress={() => {
-                        Alert.alert(
-                          '⚠️ Cancelar Reserva',
-                          userType === 'client' ? 
-                            'POLÍTICA DE CANCELACIÓN:\n\n• La comisión pagada NO será reembolsada\n• El proveedor será notificado inmediatamente\n• Esta acción no se puede deshacer\n\n¿Estás completamente seguro?' :
-                            'Esta acción cancelará la reserva y notificará al cliente inmediatamente.\n\n¿Confirmas la cancelación?',
-                          [
-                            { text: 'No, Mantener', style: 'cancel' },
-                            {
-                              text: 'Sí, Cancelar',
-                              style: 'destructive',
-                              onPress: async () => {
-                                await updateAppointment(selectedReservation.id, { 
-                                  status: 'cancelled',
-                                  notes: (selectedReservation.notes || '') + ` [Cancelada por ${userType} el ${new Date().toLocaleString('es-ES')}${userType === 'client' ? ' - Comisión no reembolsable' : ''}]`
-                                });
-                                setShowReservationDetailsModal(false);
-                                Alert.alert(
-                                  '❌ Reserva Cancelada', 
-                                  userType === 'client' ? 
-                                    'Tu reserva ha sido cancelada. La comisión no es reembolsable.' :
-                                    'La reserva ha sido cancelada y el cliente ha sido notificado.'
-                                );
-                              }
-                            }
-                          ]
-                        );
-                      }}
-                    >
-                      <XCircle size={20} color="white" />
-                      <Text style={styles.actionButtonText}>Cancelar Reserva</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-                
-                {/* Contact Section */}
-                <View style={styles.contactSection}>
-                  <Text style={styles.sectionTitle}>Contacto</Text>
-                  
-                  <View style={styles.contactButtonsRow}>
-                    <TouchableOpacity 
-                      style={[styles.contactButton, styles.kompa2goButton, { flex: 1 }]}
-                      onPress={async () => {
-                        try {
-                          // Get provider info from reservation
-                          const providerId = selectedReservation.providerId || 'provider_' + selectedReservation.id;
-                          const providerName = selectedReservation.providerName || selectedReservation.clientName;
-                          
-                          // Create or get existing chat
-                          const chatId = await createChat(providerId, providerName);
-                          
-                          // Close modal and navigate to chat
-                          setShowReservationDetailsModal(false);
-                          setSelectedReservation(null);
-                          router.push(`/chat/${chatId}`);
-                        } catch (error) {
-                          console.error('Error opening chat:', error);
-                          Alert.alert('Error', 'No se pudo abrir el chat. Por favor intenta de nuevo.');
-                        }
-                      }}
-                    >
-                      <MessageCircle size={18} color="white" />
-                      <Text style={styles.contactButtonText}>Chat Kompa2Go</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </ScrollView>
+              <ReservationDetailCard 
+                reservation={selectedReservation}
+                onClose={() => {
+                  setShowReservationDetailsModal(false);
+                  setSelectedReservation(null);
+                }}
+                showHeader={false}
+              />
             )}
           </View>
         </View>
