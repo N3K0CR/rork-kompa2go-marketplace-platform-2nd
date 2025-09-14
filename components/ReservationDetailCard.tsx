@@ -19,6 +19,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
   const userType = user?.userType || 'client';
 
   const handleConfirmReservation = async () => {
+    console.log('🔵 Confirm button pressed for reservation:', reservation.id);
     Alert.alert(
       'Confirmar Reserva',
       `¿Confirmas tu reserva para el ${new Date(reservation.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })} a las ${reservation.time}?\n\nServicio: ${reservation.service}\n${userType === 'client' ? `Proveedor: ${reservation.clientName}` : `Cliente: ${reservation.clientName}`}`,
@@ -28,12 +29,18 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
           text: 'Confirmar',
           style: 'default',
           onPress: async () => {
-            await updateAppointment(reservation.id, { 
-              status: 'confirmed',
-              notes: (reservation.notes || '') + ` [Confirmada por ${userType} el ${new Date().toLocaleString('es-ES')}]`
-            });
-            onClose?.();
-            Alert.alert('✅ Confirmada', 'Tu reserva ha sido confirmada exitosamente.');
+            try {
+              console.log('✅ Confirming reservation:', reservation.id);
+              await updateAppointment(reservation.id, { 
+                status: 'confirmed',
+                notes: (reservation.notes || '') + ` [Confirmada por ${userType} el ${new Date().toLocaleString('es-ES')}]`
+              });
+              Alert.alert('✅ Confirmada', 'Tu reserva ha sido confirmada exitosamente.');
+              onClose?.();
+            } catch (error) {
+              console.error('Error confirming reservation:', error);
+              Alert.alert('Error', 'No se pudo confirmar la reserva. Por favor intenta de nuevo.');
+            }
           }
         }
       ]
@@ -41,6 +48,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
   };
 
   const handleReschedule = () => {
+    console.log('🔄 Reschedule button pressed for reservation:', reservation.id);
     Alert.alert(
       'Reprogramar Cita',
       `Para reprogramar tu reserva del ${new Date(reservation.date).toLocaleDateString('es-ES')} necesitas coordinar directamente con ${userType === 'client' ? 'el proveedor' : 'el cliente'}.\n\n¿Cómo prefieres contactarlos?`,
@@ -51,6 +59,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
           style: 'default',
           onPress: async () => {
             try {
+              console.log('💬 Opening chat for reschedule');
               const providerId = reservation.providerId || 'provider_' + reservation.id;
               const providerName = reservation.providerName || reservation.clientName;
               const chatId = await createChat(providerId, providerName);
@@ -67,6 +76,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
           text: '📞 Llamar',
           style: 'default',
           onPress: () => {
+            console.log('📞 Initiating phone call');
             const phoneNumber = reservation.clientPhone || '+506 8888-0000';
             const cleanPhone = phoneNumber.replace(/[^0-9+]/g, '');
             const telUrl = `tel:${cleanPhone}`;
@@ -93,6 +103,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
   };
 
   const handleCancelReservation = () => {
+    console.log('❌ Cancel button pressed for reservation:', reservation.id);
     Alert.alert(
       '⚠️ Cancelar Reserva',
       userType === 'client' ? 
@@ -104,17 +115,23 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
           text: 'Sí, Cancelar',
           style: 'destructive',
           onPress: async () => {
-            await updateAppointment(reservation.id, { 
-              status: 'cancelled',
-              notes: (reservation.notes || '') + ` [Cancelada por ${userType} el ${new Date().toLocaleString('es-ES')}${userType === 'client' ? ' - Comisión no reembolsable' : ''}]`
-            });
-            onClose?.();
-            Alert.alert(
-              '❌ Reserva Cancelada', 
-              userType === 'client' ? 
-                'Tu reserva ha sido cancelada. La comisión no es reembolsable.' :
-                'La reserva ha sido cancelada y el cliente ha sido notificado.'
-            );
+            try {
+              console.log('🗑️ Cancelling reservation:', reservation.id);
+              await updateAppointment(reservation.id, { 
+                status: 'cancelled',
+                notes: (reservation.notes || '') + ` [Cancelada por ${userType} el ${new Date().toLocaleString('es-ES')}${userType === 'client' ? ' - Comisión no reembolsable' : ''}]`
+              });
+              Alert.alert(
+                '❌ Reserva Cancelada', 
+                userType === 'client' ? 
+                  'Tu reserva ha sido cancelada. La comisión no es reembolsable.' :
+                  'La reserva ha sido cancelada y el cliente ha sido notificado.'
+              );
+              onClose?.();
+            } catch (error) {
+              console.error('Error cancelling reservation:', error);
+              Alert.alert('Error', 'No se pudo cancelar la reserva. Por favor intenta de nuevo.');
+            }
           }
         }
       ]
@@ -122,10 +139,13 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
   };
 
   const handleChatContact = async () => {
+    console.log('💬 Chat button pressed for reservation:', reservation.id);
     try {
       const providerId = reservation.providerId || 'provider_' + reservation.id;
       const providerName = reservation.providerName || reservation.clientName;
+      console.log('Creating chat with:', { providerId, providerName });
       const chatId = await createChat(providerId, providerName);
+      console.log('Chat created with ID:', chatId);
       onClose?.();
       router.push(`/chat/${chatId}`);
     } catch (error) {
@@ -220,6 +240,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
             <TouchableOpacity 
               style={[styles.actionButton, styles.confirmButton]}
               onPress={handleConfirmReservation}
+              activeOpacity={0.7}
             >
               <CheckCircle size={20} color="white" />
               <Text style={styles.actionButtonText}>Confirmar Reserva</Text>
@@ -230,6 +251,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
           <TouchableOpacity 
             style={[styles.actionButton, styles.rescheduleButton]}
             onPress={handleReschedule}
+            activeOpacity={0.7}
           >
             <RotateCcw size={20} color="white" />
             <Text style={styles.actionButtonText}>Reprogramar</Text>
@@ -240,6 +262,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
             <TouchableOpacity 
               style={[styles.actionButton, styles.cancelButton]}
               onPress={handleCancelReservation}
+              activeOpacity={0.7}
             >
               <XCircle size={20} color="white" />
               <Text style={styles.actionButtonText}>Cancelar Reserva</Text>
@@ -255,6 +278,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
             <TouchableOpacity 
               style={[styles.contactButton, styles.kompa2goButton]}
               onPress={handleChatContact}
+              activeOpacity={0.7}
             >
               <MessageCircle size={18} color="white" />
               <Text style={styles.contactButtonText}>Chat Kompa2Go</Text>
