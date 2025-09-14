@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Modal } from 'react-native';
-import { CheckCircle, XCircle, MessageCircle, Calendar, Clock, X } from 'lucide-react-native';
+import { XCircle, MessageCircle, Calendar, Clock, X } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppointments } from '@/contexts/AppointmentsContext';
 import { useChat } from '@/contexts/ChatContext';
@@ -17,56 +17,13 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
   const { user } = useAuth();
   const { updateAppointment } = useAppointments();
   const { createChat, sendMessage } = useChat();
-  const { businessHours, services } = useProvider();
+  const { businessHours } = useProvider();
   const userType = user?.userType || 'client';
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
-  const handleConfirmReservation = async () => {
-    console.log('🔵 Confirm button pressed for reservation:', reservation);
-    console.log('User type:', userType);
-    console.log('UpdateAppointment function available:', !!updateAppointment);
-    
-    if (!reservation?.id) {
-      console.error('❌ No reservation ID found');
-      Alert.alert('Error', 'No se pudo identificar la reserva.');
-      return;
-    }
-    
-    Alert.alert(
-      'Confirmar Reserva',
-      `¿Confirmas tu reserva para el ${new Date(reservation.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })} a las ${reservation.time}?\n\nServicio: ${reservation.service}\n${userType === 'client' ? `Proveedor: ${reservation.clientName}` : `Cliente: ${reservation.clientName}`}`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Confirmar',
-          style: 'default',
-          onPress: async () => {
-            try {
-              console.log('✅ Starting confirmation for reservation:', reservation.id);
-              
-              if (!updateAppointment) {
-                throw new Error('updateAppointment function not available');
-              }
-              
-              await updateAppointment(reservation.id, { 
-                status: 'confirmed',
-                notes: (reservation.notes || '') + ` [Confirmada por ${userType} el ${new Date().toLocaleString('es-ES')}]`
-              });
-              
-              console.log('✅ Reservation confirmed successfully');
-              Alert.alert('✅ Confirmada', 'Tu reserva ha sido confirmada exitosamente.');
-              onClose?.();
-            } catch (error) {
-              console.error('❌ Error confirming reservation:', error);
-              Alert.alert('Error', `No se pudo confirmar la reserva: ${error instanceof Error ? error.message : 'Error desconocido'}`);
-            }
-          }
-        }
-      ]
-    );
-  };
+
 
 
 
@@ -341,17 +298,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
         <View style={styles.actionsSection}>
           <Text style={styles.sectionTitle}>Administrar Reserva</Text>
           
-          {/* Confirmation Action */}
-          {reservation.status === 'pending' && (
-            <TouchableOpacity 
-              style={[styles.actionButton, styles.confirmButton]}
-              onPress={handleConfirmReservation}
-              activeOpacity={0.7}
-            >
-              <CheckCircle size={20} color="white" />
-              <Text style={styles.actionButtonText}>Confirmar Reserva</Text>
-            </TouchableOpacity>
-          )}
+
           
           {/* Reschedule Action */}
           {reservation.status !== 'cancelled' && (
