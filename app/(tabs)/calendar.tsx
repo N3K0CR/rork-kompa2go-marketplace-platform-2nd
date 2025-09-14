@@ -1001,36 +1001,21 @@ export default function CalendarScreen() {
           setShowReservationModal(false);
           setSelectedReservation(null);
         }}
-        key={`reservation-modal-${forceUpdate}`}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => {
-            console.log('🔧 Closing modal via overlay press');
-            setShowReservationModal(false);
-            setSelectedReservation(null);
-          }}
-        >
-          <TouchableOpacity 
-            activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
-            style={styles.modalContentContainer}
-          >
-          {selectedReservation ? (
-            <View style={styles.reservationDetailsModalContent}>
-              <View style={[styles.modalHeader, { padding: 20, paddingBottom: 10 }]}>
-                <Text style={styles.modalTitle}>Detalles de Reserva</Text>
-                <TouchableOpacity 
-                  onPress={() => {
-                    setShowReservationModal(false);
-                    setSelectedReservation(null);
-                  }}
-                  style={{ padding: 4 }}
-                >
-                  <X size={24} color="#666" />
-                </TouchableOpacity>
-              </View>
+        <View style={styles.modalOverlay}>
+          <View style={styles.reservationDetailsModalContent}>
+            <View style={[styles.modalHeader, { padding: 20, paddingBottom: 10 }]}>
+              <Text style={styles.modalTitle}>Detalles de Reserva</Text>
+              <TouchableOpacity 
+                onPress={() => {
+                  setShowReservationModal(false);
+                  setSelectedReservation(null);
+                }}
+                style={{ padding: 4 }}
+              >
+                <X size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
             
             {selectedReservation && (
               <ReservationDetailCard 
@@ -1042,25 +1027,8 @@ export default function CalendarScreen() {
                 showHeader={false}
               />
             )}
-
-            </View>
-          ) : (
-            <View style={styles.reservationModalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Error: No hay datos de reserva</Text>
-                <TouchableOpacity onPress={() => {
-                  console.log('🔧 Closing error modal');
-                  setShowReservationModal(false);
-                  setSelectedReservation(null);
-                }}>
-                  <X size={24} color="#666" />
-                </TouchableOpacity>
-              </View>
-              <Text>No se pudieron cargar los datos de la reserva. Por favor, inténtalo de nuevo.</Text>
-            </View>
-          )}
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
       
       {/* Date Detail Modal */}
