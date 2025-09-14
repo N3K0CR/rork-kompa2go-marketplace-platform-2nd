@@ -1016,214 +1016,31 @@ export default function CalendarScreen() {
             style={styles.modalContentContainer}
           >
           {selectedReservation ? (
-            <View style={styles.reservationModalContent}>
-              <View style={styles.modalHeader}>
+            <View style={styles.reservationDetailsModalContent}>
+              <View style={[styles.modalHeader, { padding: 20, paddingBottom: 10 }]}>
                 <Text style={styles.modalTitle}>Detalles de Reserva</Text>
-                <TouchableOpacity onPress={() => {
-                  console.log('🎯 Closing reservation details modal via X button');
-                  setShowReservationModal(false);
-                  setSelectedReservation(null);
-                }}>
+                <TouchableOpacity 
+                  onPress={() => {
+                    setShowReservationModal(false);
+                    setSelectedReservation(null);
+                  }}
+                  style={{ padding: 4 }}
+                >
                   <X size={24} color="#666" />
                 </TouchableOpacity>
               </View>
-              
-              <View style={styles.reservationDetails}>
-                <Text style={styles.reservationDetailTitle}>Detalles de la Reserva</Text>
-                <View style={styles.reservationDetailRow}>
-                  <Text style={styles.reservationDetailLabel}>Fecha:</Text>
-                  <Text style={styles.reservationDetailValue}>
-                    {new Date(selectedReservation.date).toLocaleDateString('es-ES', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </Text>
-                </View>
-                <View style={styles.reservationDetailRow}>
-                  <Text style={styles.reservationDetailLabel}>Hora:</Text>
-                  <Text style={styles.reservationDetailValue}>{selectedReservation.time}</Text>
-                </View>
-                <View style={styles.reservationDetailRow}>
-                  <Text style={styles.reservationDetailLabel}>Servicio:</Text>
-                  <Text style={styles.reservationDetailValue}>{selectedReservation.service}</Text>
-                </View>
-                <View style={styles.reservationDetailRow}>
-                  <Text style={styles.reservationDetailLabel}>Proveedor:</Text>
-                  <Text style={styles.reservationDetailValue}>{selectedReservation.clientName}</Text>
-                </View>
-                <View style={styles.reservationDetailRow}>
-                  <Text style={styles.reservationDetailLabel}>Estado:</Text>
-                  <View style={[
-                    styles.statusBadge,
-                    selectedReservation.status === 'confirmed' && styles.statusConfirmed,
-                    selectedReservation.status === 'pending' && styles.statusPending,
-                    selectedReservation.status === 'cancelled' && styles.statusCancelled
-                  ]}>
-                    <Text style={styles.statusText}>
-                      {selectedReservation.status === 'confirmed' ? 'Confirmada' :
-                       selectedReservation.status === 'pending' ? 'Pendiente' : 'Cancelada'}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-              
-              <View style={styles.reservationActions}>
-                {/* Enhanced Confirmation Process */}
-                {selectedReservation.status === 'pending' && (
-                  <TouchableOpacity 
-                    style={[styles.reservationActionButton, styles.confirmButton]}
-                    onPress={async () => {
-                      Alert.alert(
-                        'Confirmar Reserva',
-                        `¿Confirmas tu cita para el ${new Date(selectedReservation.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })} a las ${selectedReservation.time}?\n\nServicio: ${selectedReservation.service}\nProveedor: ${selectedReservation.clientName}\n\nAl confirmar, tu cita quedará asegurada y el proveedor será notificado inmediatamente.`,
-                        [
-                          { text: 'Revisar Más', style: 'cancel' },
-                          {
-                            text: 'Sí, Confirmar',
-                            style: 'default',
-                            onPress: async () => {
-                              await updateAppointment(selectedReservation.id, { 
-                                status: 'confirmed',
-                                notes: (selectedReservation.notes || '') + ' [Confirmada por cliente]'
-                              });
-                              setShowReservationModal(false);
-                              Alert.alert(
-                                '✅ Reserva Confirmada', 
-                                'Tu reserva ha sido confirmada exitosamente.\n\n• El proveedor ha sido notificado\n• Tu cita está asegurada\n• Recibirás un recordatorio 24h antes\n\n¡Gracias por usar Kompa2Go!',
-                                [{ text: 'Perfecto', style: 'default' }]
-                              );
-                            }
-                          }
-                        ]
-                      );
-                    }}
-                  >
-                    <CheckCircle size={20} color="white" />
-                    <Text style={styles.reservationActionText}>Confirmar Reserva</Text>
-                  </TouchableOpacity>
-                )}
-                
-                {/* Improved Rescheduling Flow */}
-                <TouchableOpacity 
-                  style={[styles.reservationActionButton, styles.rescheduleButton]}
-                  onPress={() => {
-                    setShowReservationModal(false);
-                    Alert.alert(
-                      'Reprogramar Cita', 
-                      `Para reprogramar tu cita del ${new Date(selectedReservation.date).toLocaleDateString('es-ES')} necesitas coordinar directamente con ${selectedReservation.clientName}.\n\n¿Cómo prefieres contactarlos?`,
-                      [
-                        { text: 'Cancelar', style: 'cancel' },
-                        { 
-                          text: '📞 Llamar Ahora', 
-                          style: 'default',
-                          onPress: () => handlePhoneCall(selectedReservation.clientPhone || '+506 8888-0000')
-                        },
-                        {
-                          text: '💬 Chat Kompa2Go',
-                          style: 'default',
-                          onPress: async () => {
-                            try {
-                              // Get provider info from reservation
-                              const providerId = selectedReservation.providerId || 'provider_' + selectedReservation.id;
-                              const providerName = selectedReservation.providerName || selectedReservation.clientName;
-                              
-                              // Create or get existing chat
-                              const chatId = await createChat(providerId, providerName);
-                              
-                              // Send initial message about rescheduling
-                              await sendMessage(chatId, `Hola, necesito reprogramar nuestra cita del ${new Date(selectedReservation.date).toLocaleDateString('es-ES')} a las ${selectedReservation.time} para ${selectedReservation.service}. ¿Cuándo tienes disponibilidad?`);
-                              
-                              // Close modal and navigate to chat
-                              setShowReservationModal(false);
-                              setSelectedReservation(null);
-                              router.push(`/chat/${chatId}`);
-                            } catch (error) {
-                              console.error('Error opening chat:', error);
-                              Alert.alert('Error', 'No se pudo abrir el chat. Por favor intenta de nuevo.');
-                            }
-                          }
-                        }
-                      ]
-                    );
-                  }}
-                >
-                  <RotateCcw size={20} color="white" />
-                  <Text style={styles.reservationActionText}>Reprogramar</Text>
-                </TouchableOpacity>
-                
-                {/* Commission-Aware Cancellation */}
-                {selectedReservation.status !== 'cancelled' && (
-                  <TouchableOpacity 
-                    style={[styles.reservationActionButton, styles.cancelReservationButton]}
-                    onPress={() => {
-                      Alert.alert(
-                        '⚠️ Cancelar Reserva',
-                        `POLÍTICA DE CANCELACIÓN:\n\n• La comisión pagada NO será reembolsada\n• El proveedor será notificado inmediatamente\n• Esta acción no se puede deshacer\n\nReserva: ${selectedReservation.service}\nFecha: ${new Date(selectedReservation.date).toLocaleDateString('es-ES')}\nHora: ${selectedReservation.time}\n\n¿Estás completamente seguro?`,
-                        [
-                          { text: 'No, Mantener Reserva', style: 'cancel' },
-                          {
-                            text: 'Sí, Cancelar (Sin Reembolso)',
-                            style: 'destructive',
-                            onPress: () => {
-                              // Double confirmation for cancellation
-                              Alert.alert(
-                                'Confirmación Final',
-                                'Esta es tu última oportunidad para mantener la reserva.\n\n¿Proceder con la cancelación SIN reembolso de comisión?',
-                                [
-                                  { text: 'No, Mantener', style: 'cancel' },
-                                  {
-                                    text: 'Sí, Cancelar Definitivamente',
-                                    style: 'destructive',
-                                    onPress: async () => {
-                                      await updateAppointment(selectedReservation.id, { 
-                                        status: 'cancelled',
-                                        notes: (selectedReservation.notes || '') + ` [Cancelada por cliente ${new Date().toLocaleString('es-ES')} - Comisión no reembolsable]`
-                                      });
-                                      setShowReservationModal(false);
-                                      Alert.alert(
-                                        '❌ Reserva Cancelada', 
-                                        'Tu reserva ha sido cancelada exitosamente.\n\n• El proveedor ha sido notificado\n• La comisión no es reembolsable\n• Puedes hacer una nueva reserva cuando gustes\n\nGracias por usar Kompa2Go.',
-                                        [{ text: 'Entendido', style: 'default' }]
-                                      );
-                                    }
-                                  }
-                                ]
-                              );
-                            }
-                          }
-                        ]
-                      );
-                    }}
-                  >
-                    <XCircle size={20} color="white" />
-                    <Text style={styles.reservationActionText}>Cancelar</Text>
-                  </TouchableOpacity>
-                )}
-                
-                {/* Better Action Visibility - Contact Options */}
-                <View style={styles.contactActionsSection}>
-                  <Text style={styles.contactSectionTitle}>Contactar Proveedor:</Text>
-                  <View style={styles.contactButtonsRow}>
-                    <TouchableOpacity 
-                      style={[styles.contactActionButton, styles.callContactButton]}
-                      onPress={() => handlePhoneCall(selectedReservation.clientPhone || '+506 8888-0000')}
-                    >
-                      <Phone size={18} color="white" />
-                      <Text style={styles.contactActionText}>Llamar</Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity 
-                      style={[styles.contactActionButton, styles.chatContactButton]}
-                      onPress={() => handleChatOptions(selectedReservation)}
-                    >
-                      <MessageCircle size={18} color="white" />
-                      <Text style={styles.contactActionText}>Chat</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
+            
+            {selectedReservation && (
+              <ReservationDetailCard 
+                reservation={selectedReservation}
+                onClose={() => {
+                  setShowReservationModal(false);
+                  setSelectedReservation(null);
+                }}
+                showHeader={false}
+              />
+            )}
+
             </View>
           ) : (
             <View style={styles.reservationModalContent}>
@@ -2242,6 +2059,17 @@ const styles = StyleSheet.create({
     width: '90%',
     maxWidth: 400,
     maxHeight: '80%',
+  },
+  reservationDetailsModalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 0,
+    width: '95%',
+    maxWidth: 450,
+    maxHeight: '90%',
+    minHeight: 400,
+    overflow: 'hidden',
+    alignSelf: 'center',
   },
   reservationDetails: {
     marginBottom: 24,
