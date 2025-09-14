@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Modal } from 'react-native';
-import { XCircle, MessageCircle, Calendar, Clock, X } from 'lucide-react-native';
+import { XCircle, MessageCircle, Calendar, Clock, X, CheckCircle } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppointments } from '@/contexts/AppointmentsContext';
 import { useChat } from '@/contexts/ChatContext';
@@ -187,6 +187,62 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
     }
   };
 
+  const handleConfirmAppointment = () => {
+    console.log('✅ Confirm appointment button pressed for reservation:', reservation);
+    console.log('UpdateAppointment function available:', !!updateAppointment);
+    
+    if (!reservation?.id) {
+      console.error('❌ No reservation ID found');
+      Alert.alert('Error', 'No se pudo identificar la reserva.');
+      return;
+    }
+    
+    if (reservation.status === 'confirmed') {
+      Alert.alert('Información', 'Esta cita ya está confirmada.');
+      return;
+    }
+    
+    Alert.alert(
+      '✅ Confirmar Cita',
+      userType === 'provider' ? 
+        'Al confirmar esta cita, el cliente será notificado inmediatamente y la reserva quedará establecida.\n\n¿Confirmas la cita?' :
+        'Al confirmar esta cita, el proveedor será notificado de tu confirmación.\n\n¿Confirmas tu asistencia?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sí, Confirmar',
+          style: 'default',
+          onPress: async () => {
+            try {
+              console.log('✅ Starting confirmation for reservation:', reservation.id);
+              
+              if (!updateAppointment) {
+                throw new Error('updateAppointment function not available');
+              }
+              
+              await updateAppointment(reservation.id, { 
+                status: 'confirmed',
+                notes: (reservation.notes || '') + ` [Confirmada por ${userType} el ${new Date().toLocaleString('es-ES')}]`
+              });
+              
+              console.log('✅ Appointment confirmed successfully');
+              Alert.alert(
+                '✅ Cita Confirmada', 
+                userType === 'provider' ? 
+                  'La cita ha sido confirmada exitosamente. El cliente ha sido notificado.' :
+                  'Tu confirmación ha sido enviada al proveedor. ¡Nos vemos en la cita!'
+              );
+              onClose?.();
+            } catch (error) {
+              console.error('❌ Error confirming appointment:', error);
+              Alert.alert('Error', `No se pudo confirmar la cita: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const handleChatContact = async () => {
     console.log('💬 Chat button pressed for reservation:', reservation);
     console.log('Chat functions available:', { createChat: !!createChat, sendMessage: !!sendMessage });
@@ -298,7 +354,17 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
         <View style={styles.actionsSection}>
           <Text style={styles.sectionTitle}>Administrar Reserva</Text>
           
-
+          {/* Confirm Action */}
+          {reservation.status === 'pending' && (
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.confirmButton]}
+              onPress={handleConfirmAppointment}
+              activeOpacity={0.7}
+            >
+              <CheckCircle size={20} color="white" />
+              <Text style={styles.actionButtonText}>Confirmar cita</Text>
+            </TouchableOpacity>
+          )}
           
           {/* Reschedule Action */}
           {reservation.status !== 'cancelled' && (
