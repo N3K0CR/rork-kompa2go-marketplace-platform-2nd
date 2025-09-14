@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Platform } from 'react-native';
-import { CheckCircle, XCircle, RotateCcw, MessageCircle } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import { CheckCircle, XCircle, MessageCircle } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppointments } from '@/contexts/AppointmentsContext';
 import { useChat } from '@/contexts/ChatContext';
@@ -63,79 +63,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
     );
   };
 
-  const handleReschedule = () => {
-    console.log('🔄 Reschedule button pressed for reservation:', reservation);
-    console.log('Chat functions available:', { createChat: !!createChat, sendMessage: !!sendMessage });
-    
-    if (!reservation?.id) {
-      console.error('❌ No reservation ID found');
-      Alert.alert('Error', 'No se pudo identificar la reserva.');
-      return;
-    }
-    
-    Alert.alert(
-      'Reprogramar Cita',
-      `Para reprogramar tu reserva del ${new Date(reservation.date).toLocaleDateString('es-ES')} necesitas coordinar directamente con ${userType === 'client' ? 'el proveedor' : 'el cliente'}.\n\n¿Cómo prefieres contactarlos?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: '💬 Chat Kompa2Go',
-          style: 'default',
-          onPress: async () => {
-            try {
-              console.log('💬 Opening chat for reschedule');
-              
-              if (!createChat || !sendMessage) {
-                throw new Error('Chat functions not available');
-              }
-              
-              const providerId = reservation.providerId || 'provider_' + reservation.id;
-              const providerName = reservation.providerName || reservation.clientName;
-              console.log('Creating chat with:', { providerId, providerName });
-              
-              const chatId = await createChat(providerId, providerName);
-              console.log('Chat created with ID:', chatId);
-              
-              await sendMessage(chatId, `Hola, necesito reprogramar nuestra cita del ${new Date(reservation.date).toLocaleDateString('es-ES')} a las ${reservation.time} para ${reservation.service}. ¿Cuándo tienes disponibilidad?`);
-              console.log('Message sent successfully');
-              
-              onClose?.();
-              router.push(`/chat/${chatId}`);
-            } catch (error) {
-              console.error('❌ Error opening chat:', error);
-              Alert.alert('Error', `No se pudo abrir el chat: ${error instanceof Error ? error.message : 'Error desconocido'}`);
-            }
-          }
-        },
-        {
-          text: '📞 Llamar',
-          style: 'default',
-          onPress: () => {
-            console.log('📞 Initiating phone call');
-            const phoneNumber = reservation.clientPhone || '+506 8888-0000';
-            const cleanPhone = phoneNumber.replace(/[^0-9+]/g, '');
-            const telUrl = `tel:${cleanPhone}`;
-            
-            Alert.alert(
-              'Realizar Llamada',
-              `¿Deseas llamar a ${phoneNumber}?`,
-              [
-                { text: 'Cancelar', style: 'cancel' },
-                {
-                  text: 'Llamar',
-                  onPress: () => {
-                    Linking.openURL(telUrl).catch(() => {
-                      Alert.alert('Error', 'No se pudo realizar la llamada.');
-                    });
-                  }
-                }
-              ]
-            );
-          }
-        }
-      ]
-    );
-  };
+
 
   const handleCancelReservation = () => {
     console.log('❌ Cancel button pressed for reservation:', reservation);
@@ -311,15 +239,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
             </TouchableOpacity>
           )}
           
-          {/* Reschedule Action */}
-          <TouchableOpacity 
-            style={[styles.actionButton, styles.rescheduleButton]}
-            onPress={handleReschedule}
-            activeOpacity={0.7}
-          >
-            <RotateCcw size={20} color="white" />
-            <Text style={styles.actionButtonText}>Reprogramar</Text>
-          </TouchableOpacity>
+
           
           {/* Cancel Action */}
           {reservation.status !== 'cancelled' && (
@@ -456,9 +376,7 @@ const styles = StyleSheet.create({
   confirmButton: {
     backgroundColor: '#4CAF50',
   },
-  rescheduleButton: {
-    backgroundColor: '#2196F3',
-  },
+
   cancelButton: {
     backgroundColor: '#F44336',
   },
