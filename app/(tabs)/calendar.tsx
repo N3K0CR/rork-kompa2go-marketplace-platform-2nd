@@ -757,8 +757,10 @@ export default function CalendarScreen() {
                       style={[styles.clientActionButton, styles.reservationDetailsButton]}
                       onPress={() => {
                         console.log('🎯 Opening reservation details for:', appointment.id);
+                        console.log('🎯 Appointment data:', JSON.stringify(appointment, null, 2));
                         setSelectedReservation(appointment);
                         setShowReservationModal(true);
+                        setForceUpdate(prev => prev + 1);
                       }}
                       activeOpacity={0.7}
                       testID={`reservation-details-${appointment.id}`}
