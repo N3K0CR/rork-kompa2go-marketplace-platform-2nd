@@ -177,10 +177,11 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
     return days;
   };
 
-  const confirmReschedule = async () => {
-    console.log('🔵 Confirmar button pressed in rescheduling modal');
+  const handleConfirmReschedule = async () => {
+    console.log('🔵 Confirming reschedule from summary card');
     console.log('Selected date:', selectedDate);
     console.log('Selected time:', selectedTime);
+    console.log('Reservation ID:', reservation?.id);
     console.log('UpdateAppointment function available:', !!updateAppointment);
     
     if (!selectedDate || !selectedTime) {
@@ -189,48 +190,44 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
       return;
     }
     
-    Alert.alert(
-      'Confirmar Reprogramación',
-      `¿Confirmas reprogramar tu cita para el ${selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })} a las ${selectedTime}?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Confirmar',
-          onPress: async () => {
-            try {
-              console.log('✅ Starting rescheduling process for reservation:', reservation.id);
-              console.log('New date:', selectedDate.toISOString());
-              console.log('New time:', selectedTime);
-              
-              if (!updateAppointment) {
-                throw new Error('updateAppointment function not available');
-              }
-              
-              const updateData = {
-                date: selectedDate.toISOString(),
-                time: selectedTime,
-                status: 'pending' as const, // Reset to pending after rescheduling
-                notes: (reservation.notes || '') + ` [Reprogramada por ${userType} el ${new Date().toLocaleString('es-ES')}]`
-              };
-              
-              console.log('Update data:', updateData);
-              
-              await updateAppointment(reservation.id, updateData);
-              
-              console.log('✅ Reservation rescheduled successfully');
-              Alert.alert('✅ Reprogramada', 'Tu reserva ha sido reprogramada exitosamente.');
-              setShowRescheduleModal(false);
-              setSelectedDate(null);
-              setSelectedTime(null);
-              onClose?.();
-            } catch (error) {
-              console.error('❌ Error rescheduling reservation:', error);
-              Alert.alert('Error', `No se pudo reprogramar la reserva: ${error instanceof Error ? error.message : 'Error desconocido'}`);
-            }
-          }
-        }
-      ]
-    );
+    if (!reservation?.id) {
+      console.error('❌ No reservation ID found');
+      Alert.alert('Error', 'No se pudo identificar la reserva.');
+      return;
+    }
+    
+    try {
+      console.log('✅ Starting rescheduling process for reservation:', reservation.id);
+      console.log('New date:', selectedDate.toISOString());
+      console.log('New time:', selectedTime);
+      
+      if (!updateAppointment) {
+        throw new Error('updateAppointment function not available');
+      }
+      
+      const updateData = {
+        date: selectedDate.toISOString().split('T')[0], // Use date format YYYY-MM-DD
+        time: selectedTime,
+        status: 'pending' as const, // Reset to pending after rescheduling
+        notes: (reservation.notes || '') + ` [Reprogramada por ${userType} el ${new Date().toLocaleString('es-ES')}]`
+      };
+      
+      console.log('Update data:', updateData);
+      
+      await updateAppointment(reservation.id, updateData);
+      
+      console.log('✅ Reservation rescheduled successfully');
+      Alert.alert('✅ Reprogramada', 'Tu reserva ha sido reprogramada exitosamente.');
+      
+      // Reset modal state
+      setShowRescheduleModal(false);
+      setSelectedDate(null);
+      setSelectedTime(null);
+      onClose?.();
+    } catch (error) {
+      console.error('❌ Error rescheduling reservation:', error);
+      Alert.alert('Error', `No se pudo reprogramar la reserva: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    }
   };
 
   const handleChatContact = async () => {
@@ -489,7 +486,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
               {selectedDate && selectedTime && (
                 <TouchableOpacity 
                   style={styles.selectedSummary}
-                  onPress={confirmReschedule}
+                  onPress={handleConfirmReschedule}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.summaryTitle}>Resumen de la reprogramación:</Text>
