@@ -14,6 +14,7 @@ export interface Appointment {
   notes?: string;
   collaboratorId?: string;
   providerId?: string;
+  providerName?: string;
 }
 
 interface AppointmentsContextType {

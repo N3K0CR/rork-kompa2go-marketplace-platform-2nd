@@ -19,7 +19,16 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
   const userType = user?.userType || 'client';
 
   const handleConfirmReservation = async () => {
-    console.log('🔵 Confirm button pressed for reservation:', reservation.id);
+    console.log('🔵 Confirm button pressed for reservation:', reservation);
+    console.log('User type:', userType);
+    console.log('UpdateAppointment function available:', !!updateAppointment);
+    
+    if (!reservation?.id) {
+      console.error('❌ No reservation ID found');
+      Alert.alert('Error', 'No se pudo identificar la reserva.');
+      return;
+    }
+    
     Alert.alert(
       'Confirmar Reserva',
       `¿Confirmas tu reserva para el ${new Date(reservation.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })} a las ${reservation.time}?\n\nServicio: ${reservation.service}\n${userType === 'client' ? `Proveedor: ${reservation.clientName}` : `Cliente: ${reservation.clientName}`}`,
@@ -30,16 +39,23 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
           style: 'default',
           onPress: async () => {
             try {
-              console.log('✅ Confirming reservation:', reservation.id);
+              console.log('✅ Starting confirmation for reservation:', reservation.id);
+              
+              if (!updateAppointment) {
+                throw new Error('updateAppointment function not available');
+              }
+              
               await updateAppointment(reservation.id, { 
                 status: 'confirmed',
                 notes: (reservation.notes || '') + ` [Confirmada por ${userType} el ${new Date().toLocaleString('es-ES')}]`
               });
+              
+              console.log('✅ Reservation confirmed successfully');
               Alert.alert('✅ Confirmada', 'Tu reserva ha sido confirmada exitosamente.');
               onClose?.();
             } catch (error) {
-              console.error('Error confirming reservation:', error);
-              Alert.alert('Error', 'No se pudo confirmar la reserva. Por favor intenta de nuevo.');
+              console.error('❌ Error confirming reservation:', error);
+              Alert.alert('Error', `No se pudo confirmar la reserva: ${error instanceof Error ? error.message : 'Error desconocido'}`);
             }
           }
         }
@@ -48,7 +64,15 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
   };
 
   const handleReschedule = () => {
-    console.log('🔄 Reschedule button pressed for reservation:', reservation.id);
+    console.log('🔄 Reschedule button pressed for reservation:', reservation);
+    console.log('Chat functions available:', { createChat: !!createChat, sendMessage: !!sendMessage });
+    
+    if (!reservation?.id) {
+      console.error('❌ No reservation ID found');
+      Alert.alert('Error', 'No se pudo identificar la reserva.');
+      return;
+    }
+    
     Alert.alert(
       'Reprogramar Cita',
       `Para reprogramar tu reserva del ${new Date(reservation.date).toLocaleDateString('es-ES')} necesitas coordinar directamente con ${userType === 'client' ? 'el proveedor' : 'el cliente'}.\n\n¿Cómo prefieres contactarlos?`,
@@ -60,15 +84,26 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
           onPress: async () => {
             try {
               console.log('💬 Opening chat for reschedule');
+              
+              if (!createChat || !sendMessage) {
+                throw new Error('Chat functions not available');
+              }
+              
               const providerId = reservation.providerId || 'provider_' + reservation.id;
               const providerName = reservation.providerName || reservation.clientName;
+              console.log('Creating chat with:', { providerId, providerName });
+              
               const chatId = await createChat(providerId, providerName);
+              console.log('Chat created with ID:', chatId);
+              
               await sendMessage(chatId, `Hola, necesito reprogramar nuestra cita del ${new Date(reservation.date).toLocaleDateString('es-ES')} a las ${reservation.time} para ${reservation.service}. ¿Cuándo tienes disponibilidad?`);
+              console.log('Message sent successfully');
+              
               onClose?.();
               router.push(`/chat/${chatId}`);
             } catch (error) {
-              console.error('Error opening chat:', error);
-              Alert.alert('Error', 'No se pudo abrir el chat. Por favor intenta de nuevo.');
+              console.error('❌ Error opening chat:', error);
+              Alert.alert('Error', `No se pudo abrir el chat: ${error instanceof Error ? error.message : 'Error desconocido'}`);
             }
           }
         },
@@ -103,7 +138,15 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
   };
 
   const handleCancelReservation = () => {
-    console.log('❌ Cancel button pressed for reservation:', reservation.id);
+    console.log('❌ Cancel button pressed for reservation:', reservation);
+    console.log('UpdateAppointment function available:', !!updateAppointment);
+    
+    if (!reservation?.id) {
+      console.error('❌ No reservation ID found');
+      Alert.alert('Error', 'No se pudo identificar la reserva.');
+      return;
+    }
+    
     Alert.alert(
       '⚠️ Cancelar Reserva',
       userType === 'client' ? 
@@ -116,11 +159,18 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
           style: 'destructive',
           onPress: async () => {
             try {
-              console.log('🗑️ Cancelling reservation:', reservation.id);
+              console.log('🗑️ Starting cancellation for reservation:', reservation.id);
+              
+              if (!updateAppointment) {
+                throw new Error('updateAppointment function not available');
+              }
+              
               await updateAppointment(reservation.id, { 
                 status: 'cancelled',
                 notes: (reservation.notes || '') + ` [Cancelada por ${userType} el ${new Date().toLocaleString('es-ES')}${userType === 'client' ? ' - Comisión no reembolsable' : ''}]`
               });
+              
+              console.log('✅ Reservation cancelled successfully');
               Alert.alert(
                 '❌ Reserva Cancelada', 
                 userType === 'client' ? 
@@ -129,8 +179,8 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
               );
               onClose?.();
             } catch (error) {
-              console.error('Error cancelling reservation:', error);
-              Alert.alert('Error', 'No se pudo cancelar la reserva. Por favor intenta de nuevo.');
+              console.error('❌ Error cancelling reservation:', error);
+              Alert.alert('Error', `No se pudo cancelar la reserva: ${error instanceof Error ? error.message : 'Error desconocido'}`);
             }
           }
         }
@@ -139,18 +189,32 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
   };
 
   const handleChatContact = async () => {
-    console.log('💬 Chat button pressed for reservation:', reservation.id);
+    console.log('💬 Chat button pressed for reservation:', reservation);
+    console.log('Chat functions available:', { createChat: !!createChat, sendMessage: !!sendMessage });
+    
+    if (!reservation?.id) {
+      console.error('❌ No reservation ID found');
+      Alert.alert('Error', 'No se pudo identificar la reserva.');
+      return;
+    }
+    
     try {
+      if (!createChat) {
+        throw new Error('createChat function not available');
+      }
+      
       const providerId = reservation.providerId || 'provider_' + reservation.id;
       const providerName = reservation.providerName || reservation.clientName;
       console.log('Creating chat with:', { providerId, providerName });
+      
       const chatId = await createChat(providerId, providerName);
       console.log('Chat created with ID:', chatId);
+      
       onClose?.();
       router.push(`/chat/${chatId}`);
     } catch (error) {
-      console.error('Error opening chat:', error);
-      Alert.alert('Error', 'No se pudo abrir el chat. Por favor intenta de nuevo.');
+      console.error('❌ Error opening chat:', error);
+      Alert.alert('Error', `No se pudo abrir el chat: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     }
   };
 

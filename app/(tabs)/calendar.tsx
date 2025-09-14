@@ -721,8 +721,15 @@ export default function CalendarScreen() {
                   { borderLeftColor: getEventColor(appointment.type) }
                 ]}
                 onPress={() => {
-                  console.log('🎯 Opening reservation details for:', appointment.id);
-                  setSelectedReservation(appointment);
+                  console.log('🎯 Opening reservation details for:', appointment);
+                  // Ensure appointment has all required fields
+                  const completeAppointment = {
+                    ...appointment,
+                    providerId: appointment.providerId || 'provider_' + appointment.id,
+                    providerName: appointment.providerName || appointment.clientName
+                  };
+                  console.log('Complete appointment data:', completeAppointment);
+                  setSelectedReservation(completeAppointment);
                   setShowReservationDetailsModal(true);
                 }}
                 activeOpacity={0.7}
