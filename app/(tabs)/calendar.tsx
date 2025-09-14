@@ -9,6 +9,7 @@ import { useTeamCalendar } from '@/contexts/TeamCalendarContext';
 import { useChat } from '@/contexts/ChatContext';
 import { router } from 'expo-router';
 import FloatingKompi from '@/components/FloatingKompi';
+import ReservationDetailCard from '@/components/ReservationDetailCard';
 
 export default function CalendarScreen() {
   const insets = useSafeAreaInsets();
@@ -753,16 +754,17 @@ export default function CalendarScreen() {
                 {appointment.type === 'kompa2go' && (
                   <View style={styles.clientAppointmentActions}>
                     <TouchableOpacity 
-                      style={[styles.clientActionButton, styles.reservationOptionsButton]}
+                      style={[styles.clientActionButton, styles.reservationDetailsButton]}
                       onPress={() => {
-                        console.log('🔥 DIRECT PRESS: Reservation options button pressed!');
-                        handleReservationOptions(appointment);
+                        console.log('🎯 Opening reservation details for:', appointment.id);
+                        setSelectedReservation(appointment);
+                        setShowReservationModal(true);
                       }}
                       activeOpacity={0.7}
-                      testID={`reservation-options-${appointment.id}`}
+                      testID={`reservation-details-${appointment.id}`}
                     >
                       <Settings size={16} color="white" />
-                      <Text style={styles.clientActionText}>Opciones de Reserva</Text>
+                      <Text style={styles.clientActionText}>Detalles de Reserva</Text>
                     </TouchableOpacity>
                     
                     <TouchableOpacity 
@@ -994,7 +996,6 @@ export default function CalendarScreen() {
         transparent={true}
         animationType="slide"
         onRequestClose={() => {
-          console.log('🔧 Closing reservation modal via onRequestClose');
           setShowReservationModal(false);
           setSelectedReservation(null);
         }}
@@ -1017,9 +1018,9 @@ export default function CalendarScreen() {
           {selectedReservation ? (
             <View style={styles.reservationModalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Opciones de Reserva</Text>
+                <Text style={styles.modalTitle}>Detalles de Reserva</Text>
                 <TouchableOpacity onPress={() => {
-                  console.log('🎯 Closing reservation options modal via X button');
+                  console.log('🎯 Closing reservation details modal via X button');
                   setShowReservationModal(false);
                   setSelectedReservation(null);
                 }}>
@@ -2216,7 +2217,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
-  reservationOptionsButton: {
+  reservationDetailsButton: {
     flex: 2,
     backgroundColor: '#D81B60',
   },
