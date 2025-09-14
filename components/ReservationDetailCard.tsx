@@ -516,21 +516,6 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
               >
                 <Text style={styles.modalButtonCancelText}>Cancelar</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.modalButton, 
-                  selectedDate && selectedTime ? styles.modalButtonConfirm : styles.modalButtonDisabled
-                ]}
-                onPress={confirmReschedule}
-                disabled={!selectedDate || !selectedTime}
-                activeOpacity={selectedDate && selectedTime ? 0.7 : 1}
-              >
-                <Text style={[
-                  styles.modalButtonConfirmText,
-                  (!selectedDate || !selectedTime) && { color: '#999' }
-                ]}>Confirmar</Text>
-              </TouchableOpacity>
             </View>
           </View>
         </View>
