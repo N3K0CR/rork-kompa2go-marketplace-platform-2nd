@@ -516,25 +516,6 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
               >
                 <Text style={styles.modalButtonCancelText}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.modalButton, 
-                  styles.modalButtonConfirm,
-                  (!selectedDate || !selectedTime) && styles.modalButtonDisabled
-                ]}
-                onPress={() => {
-                  console.log('🔵 Confirmar button touched');
-                  console.log('Button enabled:', !!(selectedDate && selectedTime));
-                  confirmReschedule();
-                }}
-                disabled={!selectedDate || !selectedTime}
-                activeOpacity={0.7}
-              >
-                <Text style={[
-                  styles.modalButtonConfirmText,
-                  (!selectedDate || !selectedTime) && { color: '#999' }
-                ]}>Confirmar</Text>
-              </TouchableOpacity>
             </View>
           </View>
         </View>
