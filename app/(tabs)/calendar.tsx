@@ -751,21 +751,7 @@ export default function CalendarScreen() {
                 )}
                 
                 {/* Enhanced management actions for kompa2go appointments */}
-                {appointment.type === 'kompa2go' && (
-                  <View style={styles.clientAppointmentActions}>
-                    <TouchableOpacity 
-                      style={[styles.clientActionButton, styles.chatButton]}
-                      onPress={() => {
-                        console.log('Chat button pressed for appointment:', appointment.id);
-                        handleChatOptions(appointment);
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <MessageCircle size={16} color="white" />
-                      <Text style={styles.clientActionText}>Chat</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
+                {/* Chat button removed as requested */}
                 
 
               </View>
