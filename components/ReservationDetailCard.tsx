@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Modal } from 'react-native';
-import { XCircle, MessageCircle, Calendar, Clock, X } from 'lucide-react-native';
+import { XCircle, MessageCircle, Calendar, Clock, X, CheckCircle } from 'lucide-react-native';
+import { Audio } from 'expo-av';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppointments } from '@/contexts/AppointmentsContext';
 import { useChat } from '@/contexts/ChatContext';
@@ -187,6 +188,72 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
     }
   };
 
+  const handleConfirmAttendance = async () => {
+    console.log('✅ Confirm attendance button pressed for reservation:', reservation);
+    console.log('UpdateAppointment function available:', !!updateAppointment);
+    
+    if (!reservation?.id) {
+      console.error('❌ No reservation ID found');
+      Alert.alert('Error', 'No se pudo identificar la reserva.');
+      return;
+    }
+    
+    Alert.alert(
+      '✅ Confirmar Asistencia',
+      userType === 'client' ? 
+        'Confirmas que asistirás a esta cita? El proveedor será notificado inmediatamente.' :
+        'Confirmas que el cliente asistió a esta cita?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Confirmar',
+          style: 'default',
+          onPress: async () => {
+            try {
+              console.log('✅ Starting attendance confirmation for reservation:', reservation.id);
+              
+              if (!updateAppointment) {
+                throw new Error('updateAppointment function not available');
+              }
+              
+              // Play sound alert for provider notification
+              if (Platform.OS !== 'web') {
+                try {
+                  const { sound } = await Audio.Sound.createAsync(
+                    { uri: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav' },
+                    { shouldPlay: true, volume: 0.8 }
+                  );
+                  setTimeout(() => {
+                    sound.unloadAsync();
+                  }, 3000);
+                } catch (soundError) {
+                  console.log('Sound notification failed:', soundError);
+                }
+              }
+              
+              await updateAppointment(reservation.id, { 
+                status: 'confirmed',
+                notes: (reservation.notes || '') + ` [Asistencia confirmada por ${userType} el ${new Date().toLocaleString('es-ES')}]`
+              });
+              
+              console.log('✅ Attendance confirmed successfully');
+              Alert.alert(
+                '✅ Asistencia Confirmada', 
+                userType === 'client' ? 
+                  'Tu asistencia ha sido confirmada. El proveedor ha sido notificado.' :
+                  'La asistencia del cliente ha sido confirmada.'
+              );
+              onClose?.();
+            } catch (error) {
+              console.error('❌ Error confirming attendance:', error);
+              Alert.alert('Error', `No se pudo confirmar la asistencia: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const handleChatContact = async () => {
     console.log('💬 Chat button pressed for reservation:', reservation);
     console.log('Chat functions available:', { createChat: !!createChat, sendMessage: !!sendMessage });
@@ -298,7 +365,17 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
         <View style={styles.actionsSection}>
           <Text style={styles.sectionTitle}>Administrar Reserva</Text>
           
-
+          {/* Confirm Attendance Action */}
+          {reservation.status !== 'cancelled' && (
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.confirmAttendanceButton]}
+              onPress={handleConfirmAttendance}
+              activeOpacity={0.7}
+            >
+              <CheckCircle size={20} color="white" />
+              <Text style={styles.actionButtonText}>Confirmar asistencia</Text>
+            </TouchableOpacity>
+          )}
           
           {/* Reschedule Action */}
           {reservation.status !== 'cancelled' && (
@@ -573,6 +650,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   confirmButton: {
+    backgroundColor: '#4CAF50',
+  },
+  confirmAttendanceButton: {
     backgroundColor: '#4CAF50',
   },
   rescheduleButton: {
