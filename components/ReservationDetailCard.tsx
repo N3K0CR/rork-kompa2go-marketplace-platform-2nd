@@ -487,7 +487,11 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
               )}
               
               {selectedDate && selectedTime && (
-                <View style={styles.selectedSummary}>
+                <TouchableOpacity 
+                  style={styles.selectedSummary}
+                  onPress={confirmReschedule}
+                  activeOpacity={0.7}
+                >
                   <Text style={styles.summaryTitle}>Resumen de la reprogramación:</Text>
                   <Text style={styles.summaryText}>
                     <Text style={styles.summaryLabel}>Fecha: </Text>
@@ -505,7 +509,8 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
                     <Text style={styles.summaryLabel}>Duración: </Text>
                     {reservation.duration} minutos
                   </Text>
-                </View>
+                  <Text style={styles.confirmText}>Haz click aquí para Confirmar</Text>
+                </TouchableOpacity>
               )}
             </ScrollView>
             
@@ -780,6 +785,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginTop: 12,
+    borderWidth: 2,
+    borderColor: '#2196F3',
   },
   summaryTitle: {
     fontSize: 16,
@@ -795,6 +802,16 @@ const styles = StyleSheet.create({
   summaryLabel: {
     fontWeight: '600',
     color: '#1976D2',
+  },
+  confirmText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2196F3',
+    textAlign: 'center',
+    marginTop: 12,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#BBDEFB',
   },
   modalFooter: {
     flexDirection: 'row',
