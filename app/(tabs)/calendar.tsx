@@ -43,6 +43,7 @@ export default function CalendarScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showReservationModal, setShowReservationModal] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<any>(null);
+  const [showReservationDetailsModal, setShowReservationDetailsModal] = useState(false);
   
   // Debug state logging
   useEffect(() => {
@@ -713,12 +714,18 @@ export default function CalendarScreen() {
           
           <View style={styles.selectedDateScrollContainer}>
             {selectedDateAppointments.map((appointment) => (
-              <View 
-                key={appointment.id} 
+              <TouchableOpacity
+                key={appointment.id}
                 style={[
                   styles.appointmentDetailCard,
                   { borderLeftColor: getEventColor(appointment.type) }
                 ]}
+                onPress={() => {
+                  console.log('🎯 Opening reservation details for:', appointment.id);
+                  setSelectedReservation(appointment);
+                  setShowReservationDetailsModal(true);
+                }}
+                activeOpacity={0.7}
               >
                 <View style={styles.appointmentDetailHeader}>
                   <View style={styles.appointmentTimeContainer}>
@@ -740,21 +747,10 @@ export default function CalendarScreen() {
                 <Text style={styles.appointmentDetailClient}>Proveedor: {appointment.clientName}</Text>
                 <Text style={styles.appointmentDetailService}>{appointment.service}</Text>
                 
-                {appointment.clientPhone && (
-                  <View style={styles.contactInfoContainer}>
-                    {/* Removed phone display, only chat available */}
-                  </View>
-                )}
-                
                 {appointment.notes && (
                   <Text style={styles.appointmentDetailNotes}>📝 {appointment.notes}</Text>
                 )}
-                
-                {/* Enhanced management actions for kompa2go appointments */}
-                {/* Chat button removed as requested */}
-                
-
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         </View>
@@ -813,6 +809,45 @@ export default function CalendarScreen() {
       <View style={styles.container}>
         {renderClientCalendarView()}
         <FloatingKompi isVisible={true} />
+        
+        {/* Reservation Details Modal for Client */}
+        <Modal
+          visible={showReservationDetailsModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => {
+            setShowReservationDetailsModal(false);
+            setSelectedReservation(null);
+          }}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.reservationDetailsModalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Detalles de Reserva</Text>
+                <TouchableOpacity 
+                  onPress={() => {
+                    setShowReservationDetailsModal(false);
+                    setSelectedReservation(null);
+                  }}
+                  style={{ padding: 4 }}
+                >
+                  <X size={24} color="#666" />
+                </TouchableOpacity>
+              </View>
+              
+              {selectedReservation && (
+                <ReservationDetailCard 
+                  reservation={selectedReservation}
+                  onClose={() => {
+                    setShowReservationDetailsModal(false);
+                    setSelectedReservation(null);
+                  }}
+                  showHeader={false}
+                />
+              )}
+            </View>
+          </View>
+        </Modal>
       </View>
     );
   }
