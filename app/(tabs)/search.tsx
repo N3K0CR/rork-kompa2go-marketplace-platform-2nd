@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Dimensions, ActivityIndicator } from 'react-native';
 import { Search, MapPin, Star, Filter, Navigation, Loader, AlertCircle } from 'lucide-react-native';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -103,6 +103,8 @@ export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [showK2GProducts, setShowK2GProducts] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const resultsRef = useRef<View>(null);
   
   const k2gProducts = getActiveProducts();
   
@@ -142,6 +144,10 @@ export default function SearchScreen() {
     if (categoryId === 1) {
       // K2G Products category
       setShowK2GProducts(true);
+      // Scroll to results after state update
+      setTimeout(() => {
+        scrollToResults();
+      }, 100);
     } else {
       setShowK2GProducts(false);
       await searchProviders(sanitizedName);
@@ -151,6 +157,18 @@ export default function SearchScreen() {
   const handleTextSearch = async () => {
     if (searchQuery.trim()) {
       await searchProviders(searchQuery.trim());
+    }
+  };
+
+  const scrollToResults = () => {
+    if (resultsRef.current && scrollViewRef.current) {
+      resultsRef.current.measureLayout(
+        scrollViewRef.current as any,
+        (x, y) => {
+          scrollViewRef.current?.scrollTo({ y: y - 20, animated: true });
+        },
+        () => {}
+      );
     }
   };
   
@@ -254,8 +272,17 @@ export default function SearchScreen() {
     );
   };
 
+  // Auto-scroll to results when search results are found
+  useEffect(() => {
+    if (foundProviders.length > 0) {
+      setTimeout(() => {
+        scrollToResults();
+      }, 100);
+    }
+  }, [foundProviders.length]);
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView ref={scrollViewRef} style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>{t('search_services_title')}</Text>
         
@@ -344,7 +371,7 @@ export default function SearchScreen() {
           </View>
         </View>
 
-        <View style={styles.section}>
+        <View ref={resultsRef} style={styles.section}>
           <Text style={styles.sectionTitle}>
             {showK2GProducts ? 'K2G Products' : foundProviders.length > 0 ? 'Proveedores Encontrados' : t('featured_providers')}
           </Text>
