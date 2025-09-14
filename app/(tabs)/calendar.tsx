@@ -754,22 +754,6 @@ export default function CalendarScreen() {
                 {appointment.type === 'kompa2go' && (
                   <View style={styles.clientAppointmentActions}>
                     <TouchableOpacity 
-                      style={[styles.clientActionButton, styles.reservationDetailsButton]}
-                      onPress={() => {
-                        console.log('🎯 Opening reservation details for:', appointment.id);
-                        console.log('🎯 Appointment data:', JSON.stringify(appointment, null, 2));
-                        setSelectedReservation(appointment);
-                        setShowReservationModal(true);
-                        setForceUpdate(prev => prev + 1);
-                      }}
-                      activeOpacity={0.7}
-                      testID={`reservation-details-${appointment.id}`}
-                    >
-                      <Settings size={16} color="white" />
-                      <Text style={styles.clientActionText}>Detalles de Reserva</Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity 
                       style={[styles.clientActionButton, styles.chatButton]}
                       onPress={() => {
                         console.log('Chat button pressed for appointment:', appointment.id);
@@ -2003,10 +1987,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,
-  },
-  reservationDetailsButton: {
-    flex: 2,
-    backgroundColor: '#D81B60',
   },
   callButton: {
     flex: 1,
