@@ -1,9 +1,10 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
-import { CheckCircle, XCircle, MessageCircle } from 'lucide-react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Modal } from 'react-native';
+import { CheckCircle, XCircle, MessageCircle, Calendar, Clock, X } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppointments } from '@/contexts/AppointmentsContext';
 import { useChat } from '@/contexts/ChatContext';
+import { useProvider } from '@/contexts/ProviderContext';
 import { router } from 'expo-router';
 
 interface ReservationDetailCardProps {
@@ -16,7 +17,11 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
   const { user } = useAuth();
   const { updateAppointment } = useAppointments();
   const { createChat, sendMessage } = useChat();
+  const { businessHours, services } = useProvider();
   const userType = user?.userType || 'client';
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
   const handleConfirmReservation = async () => {
     console.log('🔵 Confirm button pressed for reservation:', reservation);
@@ -109,6 +114,104 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
             } catch (error) {
               console.error('❌ Error cancelling reservation:', error);
               Alert.alert('Error', `No se pudo cancelar la reserva: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleReschedule = () => {
+    console.log('📅 Reschedule button pressed for reservation:', reservation);
+    setShowRescheduleModal(true);
+  };
+
+  const getAvailableTimeSlots = (date: Date) => {
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
+    const dayName = dayNames[date.getDay()];
+    const dayHours = businessHours[dayName];
+    
+    if (!dayHours?.isOpen) {
+      return [];
+    }
+    
+    const slots: string[] = [];
+    const [openHour, openMinute] = dayHours.openTime.split(':').map(Number);
+    const [closeHour, closeMinute] = dayHours.closeTime.split(':').map(Number);
+    
+    const serviceDuration = reservation.duration || 60; // Default to 60 minutes
+    const slotInterval = 30; // 30-minute intervals
+    
+    let currentHour = openHour;
+    let currentMinute = openMinute;
+    
+    while (currentHour < closeHour || (currentHour === closeHour && currentMinute < closeMinute)) {
+      // Check if there's enough time for the service before closing
+      const minutesUntilClose = (closeHour - currentHour) * 60 + (closeMinute - currentMinute);
+      if (minutesUntilClose >= serviceDuration) {
+        const timeString = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
+        slots.push(timeString);
+      }
+      
+      // Move to next slot
+      currentMinute += slotInterval;
+      if (currentMinute >= 60) {
+        currentHour += Math.floor(currentMinute / 60);
+        currentMinute = currentMinute % 60;
+      }
+    }
+    
+    return slots;
+  };
+
+  const getNextSevenDays = () => {
+    const days = [];
+    const today = new Date();
+    
+    for (let i = 1; i <= 7; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      days.push(date);
+    }
+    
+    return days;
+  };
+
+  const confirmReschedule = async () => {
+    if (!selectedDate || !selectedTime) {
+      Alert.alert('Error', 'Por favor selecciona una fecha y hora.');
+      return;
+    }
+    
+    Alert.alert(
+      'Confirmar Reprogramación',
+      `¿Confirmas reprogramar tu cita para el ${selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })} a las ${selectedTime}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Confirmar',
+          onPress: async () => {
+            try {
+              console.log('✅ Rescheduling reservation:', reservation.id);
+              
+              if (!updateAppointment) {
+                throw new Error('updateAppointment function not available');
+              }
+              
+              await updateAppointment(reservation.id, {
+                date: selectedDate.toISOString(),
+                time: selectedTime,
+                status: 'pending', // Reset to pending after rescheduling
+                notes: (reservation.notes || '') + ` [Reprogramada por ${userType} el ${new Date().toLocaleString('es-ES')}]`
+              });
+              
+              console.log('✅ Reservation rescheduled successfully');
+              Alert.alert('✅ Reprogramada', 'Tu reserva ha sido reprogramada exitosamente.');
+              setShowRescheduleModal(false);
+              onClose?.();
+            } catch (error) {
+              console.error('❌ Error rescheduling reservation:', error);
+              Alert.alert('Error', `No se pudo reprogramar la reserva: ${error instanceof Error ? error.message : 'Error desconocido'}`);
             }
           }
         }
@@ -239,7 +342,17 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
             </TouchableOpacity>
           )}
           
-
+          {/* Reschedule Action */}
+          {reservation.status !== 'cancelled' && (
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.rescheduleButton]}
+              onPress={handleReschedule}
+              activeOpacity={0.7}
+            >
+              <Calendar size={20} color="white" />
+              <Text style={styles.actionButtonText}>Reprogramar</Text>
+            </TouchableOpacity>
+          )}
           
           {/* Cancel Action */}
           {reservation.status !== 'cancelled' && (
@@ -270,6 +383,140 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
           </View>
         </View>
       </ScrollView>
+      
+      {/* Reschedule Modal */}
+      <Modal
+        visible={showRescheduleModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowRescheduleModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Reprogramar Cita</Text>
+              <TouchableOpacity 
+                onPress={() => setShowRescheduleModal(false)}
+                style={styles.closeButton}
+              >
+                <X size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.modalBody}>
+              <Text style={styles.modalSectionTitle}>Selecciona una fecha:</Text>
+              <View style={styles.dateGrid}>
+                {getNextSevenDays().map((date) => {
+                  const isSelected = selectedDate?.toDateString() === date.toDateString();
+                  const dayName = date.toLocaleDateString('es-ES', { weekday: 'short' });
+                  const dayNumber = date.getDate();
+                  const monthName = date.toLocaleDateString('es-ES', { month: 'short' });
+                  
+                  return (
+                    <TouchableOpacity
+                      key={date.toISOString()}
+                      style={[
+                        styles.dateCard,
+                        isSelected && styles.dateCardSelected
+                      ]}
+                      onPress={() => {
+                        setSelectedDate(date);
+                        setSelectedTime(null); // Reset time when date changes
+                      }}
+                    >
+                      <Text style={[
+                        styles.dateCardDay,
+                        isSelected && styles.dateCardTextSelected
+                      ]}>{dayName}</Text>
+                      <Text style={[
+                        styles.dateCardNumber,
+                        isSelected && styles.dateCardTextSelected
+                      ]}>{dayNumber}</Text>
+                      <Text style={[
+                        styles.dateCardMonth,
+                        isSelected && styles.dateCardTextSelected
+                      ]}>{monthName}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              
+              {selectedDate && (
+                <>
+                  <Text style={styles.modalSectionTitle}>Horarios disponibles:</Text>
+                  <View style={styles.timeGrid}>
+                    {getAvailableTimeSlots(selectedDate).length > 0 ? (
+                      getAvailableTimeSlots(selectedDate).map((time) => {
+                        const isSelected = selectedTime === time;
+                        return (
+                          <TouchableOpacity
+                            key={time}
+                            style={[
+                              styles.timeSlot,
+                              isSelected && styles.timeSlotSelected
+                            ]}
+                            onPress={() => setSelectedTime(time)}
+                          >
+                            <Clock size={16} color={isSelected ? 'white' : '#666'} />
+                            <Text style={[
+                              styles.timeSlotText,
+                              isSelected && styles.timeSlotTextSelected
+                            ]}>{time}</Text>
+                          </TouchableOpacity>
+                        );
+                      })
+                    ) : (
+                      <Text style={styles.noSlotsText}>No hay horarios disponibles para esta fecha</Text>
+                    )}
+                  </View>
+                </>
+              )}
+              
+              {selectedDate && selectedTime && (
+                <View style={styles.selectedSummary}>
+                  <Text style={styles.summaryTitle}>Resumen de la reprogramación:</Text>
+                  <Text style={styles.summaryText}>
+                    <Text style={styles.summaryLabel}>Fecha: </Text>
+                    {selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  </Text>
+                  <Text style={styles.summaryText}>
+                    <Text style={styles.summaryLabel}>Hora: </Text>
+                    {selectedTime}
+                  </Text>
+                  <Text style={styles.summaryText}>
+                    <Text style={styles.summaryLabel}>Servicio: </Text>
+                    {reservation.service}
+                  </Text>
+                  <Text style={styles.summaryText}>
+                    <Text style={styles.summaryLabel}>Duración: </Text>
+                    {reservation.duration} minutos
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+            
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => setShowRescheduleModal(false)}
+              >
+                <Text style={styles.modalButtonCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton, 
+                  styles.modalButtonConfirm,
+                  (!selectedDate || !selectedTime) && styles.modalButtonDisabled
+                ]}
+                onPress={confirmReschedule}
+                disabled={!selectedDate || !selectedTime}
+              >
+                <Text style={styles.modalButtonConfirmText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -376,7 +623,9 @@ const styles = StyleSheet.create({
   confirmButton: {
     backgroundColor: '#4CAF50',
   },
-
+  rescheduleButton: {
+    backgroundColor: '#2196F3',
+  },
   cancelButton: {
     backgroundColor: '#F44336',
   },
@@ -411,5 +660,169 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  dateGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 20,
+  },
+  dateCard: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    minWidth: 80,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  dateCardSelected: {
+    backgroundColor: '#2196F3',
+    borderColor: '#1976D2',
+  },
+  dateCardDay: {
+    fontSize: 12,
+    color: '#666',
+    textTransform: 'capitalize',
+  },
+  dateCardNumber: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginVertical: 4,
+  },
+  dateCardMonth: {
+    fontSize: 12,
+    color: '#666',
+    textTransform: 'capitalize',
+  },
+  dateCardTextSelected: {
+    color: 'white',
+  },
+  timeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 20,
+  },
+  timeSlot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    gap: 6,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  timeSlotSelected: {
+    backgroundColor: '#2196F3',
+    borderColor: '#1976D2',
+  },
+  timeSlotText: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+  },
+  timeSlotTextSelected: {
+    color: 'white',
+  },
+  noSlotsText: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 20,
+  },
+  selectedSummary: {
+    backgroundColor: '#E3F2FD',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+  },
+  summaryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  summaryText: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 6,
+  },
+  summaryLabel: {
+    fontWeight: '600',
+    color: '#1976D2',
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5E5',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalButtonCancel: {
+    backgroundColor: '#F5F5F5',
+  },
+  modalButtonConfirm: {
+    backgroundColor: '#2196F3',
+  },
+  modalButtonDisabled: {
+    backgroundColor: '#CCCCCC',
+  },
+  modalButtonCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  modalButtonConfirmText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
   },
 });
