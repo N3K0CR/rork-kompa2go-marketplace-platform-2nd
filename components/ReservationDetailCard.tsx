@@ -178,7 +178,13 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
   };
 
   const confirmReschedule = async () => {
+    console.log('🔵 Confirmar button pressed in rescheduling modal');
+    console.log('Selected date:', selectedDate);
+    console.log('Selected time:', selectedTime);
+    console.log('UpdateAppointment function available:', !!updateAppointment);
+    
     if (!selectedDate || !selectedTime) {
+      console.log('❌ Missing date or time selection');
       Alert.alert('Error', 'Por favor selecciona una fecha y hora.');
       return;
     }
@@ -192,22 +198,30 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
           text: 'Confirmar',
           onPress: async () => {
             try {
-              console.log('✅ Rescheduling reservation:', reservation.id);
+              console.log('✅ Starting rescheduling process for reservation:', reservation.id);
+              console.log('New date:', selectedDate.toISOString());
+              console.log('New time:', selectedTime);
               
               if (!updateAppointment) {
                 throw new Error('updateAppointment function not available');
               }
               
-              await updateAppointment(reservation.id, {
+              const updateData = {
                 date: selectedDate.toISOString(),
                 time: selectedTime,
-                status: 'pending', // Reset to pending after rescheduling
+                status: 'pending' as const, // Reset to pending after rescheduling
                 notes: (reservation.notes || '') + ` [Reprogramada por ${userType} el ${new Date().toLocaleString('es-ES')}]`
-              });
+              };
+              
+              console.log('Update data:', updateData);
+              
+              await updateAppointment(reservation.id, updateData);
               
               console.log('✅ Reservation rescheduled successfully');
               Alert.alert('✅ Reprogramada', 'Tu reserva ha sido reprogramada exitosamente.');
               setShowRescheduleModal(false);
+              setSelectedDate(null);
+              setSelectedTime(null);
               onClose?.();
             } catch (error) {
               console.error('❌ Error rescheduling reservation:', error);
@@ -508,10 +522,18 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
                   styles.modalButtonConfirm,
                   (!selectedDate || !selectedTime) && styles.modalButtonDisabled
                 ]}
-                onPress={confirmReschedule}
+                onPress={() => {
+                  console.log('🔵 Confirmar button touched');
+                  console.log('Button enabled:', !!(selectedDate && selectedTime));
+                  confirmReschedule();
+                }}
                 disabled={!selectedDate || !selectedTime}
+                activeOpacity={0.7}
               >
-                <Text style={styles.modalButtonConfirmText}>Confirmar</Text>
+                <Text style={[
+                  styles.modalButtonConfirmText,
+                  (!selectedDate || !selectedTime) && { color: '#999' }
+                ]}>Confirmar</Text>
               </TouchableOpacity>
             </View>
           </View>
