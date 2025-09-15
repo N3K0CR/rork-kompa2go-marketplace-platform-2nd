@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Modal } from 'react-native';
-import { XCircle, MessageCircle, Calendar, Clock, X, CheckCircle, Bell, TimerOff } from 'lucide-react-native';
+import { XCircle, MessageCircle, Calendar, Clock, X, CheckCircle, Bell, TimerOff, AlertTriangle } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppointments, Appointment, ConfirmationState } from '@/contexts/AppointmentsContext';
+import { useChat } from '@/contexts/ChatContext';
+import { router } from 'expo-router';
 
 interface ReservationDetailCardProps {
   reservation: Appointment;
@@ -13,12 +15,12 @@ interface ReservationDetailCardProps {
 export default function ReservationDetailCard({ reservation, onClose, showHeader = true }: ReservationDetailCardProps) {
   const { user } = useAuth();
   const { updateAppointment, getConfirmationState } = useAppointments();
+  const { createChat } = useChat();
+  const userType = user?.userType || 'client';
   
-  // El estado de confirmación se deriva y se almacena aquí
   const [confirmationState, setConfirmationState] = useState<ConfirmationState | null>(null);
 
   useEffect(() => {
-    // Cada vez que la reserva cambie, calculamos su estado de confirmación
     if (reservation) {
       const state = getConfirmationState(reservation);
       setConfirmationState(state);
@@ -74,62 +76,81 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
   };
 
   const handleReschedule = () => {
-    // Aquí iría tu lógica para abrir el modal de reagendamiento
     Alert.alert("Reagendar Cita", "Esta función abriría el selector de fecha y hora para reagendar.");
     // onClose?.();
   };
 
   const handleCancel = () => {
-    // Aquí iría tu lógica de cancelación
-    Alert.alert("Cancelar Reserva", "Esta función te guiará a través de la política de cancelación.", [
+    Alert.alert("Cancelar Reserva", "Esta acción te guiará a través de la política de cancelación.", [
         { text: "Cerrar" }
     ]);
     // onClose?.();
+  };
+
+  const handleChatContact = async () => {
+    try {
+      const providerId = reservation.providerId || 'provider_' + reservation.id;
+      const providerName = reservation.providerName || reservation.clientName;
+      const chatId = await createChat(providerId, providerName);
+      onClose?.();
+      router.push(`/chat/${chatId}`);
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo abrir el chat.');
+    }
   };
   
   const renderActionButtons = () => {
     if (!confirmationState) return null;
 
-    if (confirmationState.status === 'pending_confirmation') {
-      return (
-        <>
-          <Text style={styles.actionMessage}>{confirmationState.message}</Text>
-          <TouchableOpacity style={[styles.actionButton, styles.confirmButton]} onPress={handleConfirm}>
-            <CheckCircle size={20} color="white" />
-            <Text style={styles.actionButtonText}>Confirmar Asistencia</Text>
-          </TouchableOpacity>
-          {confirmationState.canPostpone && (
-            <TouchableOpacity style={[styles.actionButton, styles.postponeButton]} onPress={handlePostpone}>
-              <TimerOff size={20} color="white" />
-              <Text style={styles.actionButtonText}>Posponer {confirmationState.postponeDuration} hrs</Text>
-            </TouchableOpacity>
-          )}
-        </>
-      );
-    }
-    
-    if (confirmationState.status === 'final_options') {
-       return (
-        <>
-          <Text style={styles.actionMessage}>{confirmationState.message}</Text>
-          <TouchableOpacity style={[styles.actionButton, styles.confirmButton]} onPress={handleConfirm}>
-            <CheckCircle size={20} color="white" />
-            <Text style={styles.actionButtonText}>Confirmar Asistencia</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionButton, styles.rescheduleButton]} onPress={handleReschedule}>
-            <Calendar size={20} color="white" />
-            <Text style={styles.actionButtonText}>Reagendar</Text>
-          </TouchableOpacity>
-           <TouchableOpacity style={[styles.actionButton, styles.cancelButton]} onPress={handleCancel}>
-            <XCircle size={20} color="white" />
-            <Text style={styles.actionButtonText}>Cancelar Reserva</Text>
-          </TouchableOpacity>
-        </>
-      );
+    // Client-specific confirmation flow
+    if (userType === 'client' && confirmationState.status !== 'default') {
+        if (confirmationState.status === 'pending_confirmation') {
+            return (
+                <>
+                  <View style={styles.actionMessageContainer}>
+                    <Bell size={20} color="#FF9800" />
+                    <Text style={styles.actionMessage}>{confirmationState.message}</Text>
+                  </View>
+                  <TouchableOpacity style={[styles.actionButton, styles.confirmButton]} onPress={handleConfirm}>
+                    <CheckCircle size={20} color="white" />
+                    <Text style={styles.actionButtonText}>Confirmar Asistencia</Text>
+                  </TouchableOpacity>
+                  {confirmationState.canPostpone && (
+                    <TouchableOpacity style={[styles.actionButton, styles.postponeButton]} onPress={handlePostpone}>
+                      <TimerOff size={20} color="white" />
+                      <Text style={styles.actionButtonText}>Posponer {confirmationState.postponeDuration} hrs</Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+            );
+        }
+        
+        if (confirmationState.status === 'final_options') {
+           return (
+            <>
+              <View style={[styles.actionMessageContainer, styles.actionMessageUrgent]}>
+                <AlertTriangle size={20} color="#F44336" />
+                <Text style={styles.actionMessage}>{confirmationState.message}</Text>
+              </View>
+              <TouchableOpacity style={[styles.actionButton, styles.confirmButton]} onPress={handleConfirm}>
+                <CheckCircle size={20} color="white" />
+                <Text style={styles.actionButtonText}>Confirmar Asistencia</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.actionButton, styles.rescheduleButton]} onPress={handleReschedule}>
+                <Calendar size={20} color="white" />
+                <Text style={styles.actionButtonText}>Reagendar</Text>
+              </TouchableOpacity>
+               <TouchableOpacity style={[styles.actionButton, styles.cancelButton]} onPress={handleCancel}>
+                <XCircle size={20} color="white" />
+                <Text style={styles.actionButtonText}>Cancelar Reserva</Text>
+              </TouchableOpacity>
+            </>
+          );
+        }
     }
 
-    // Si es una cita confirmada o fuera del período de confirmación, no muestra nada especial
-    return <Text style={styles.actionMessage}>Recuerda llegar 10 minutos antes de tu cita para una mejor experiencia.</Text>;
+    // Default message for confirmed appointments or non-actionable states
+    return <Text style={styles.defaultMessage}>Recuerda llegar 10 minutos antes de tu cita para una mejor experiencia.</Text>;
   };
 
   return (
@@ -142,30 +163,78 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
       )}
       
       <ScrollView style={styles.content}>
-        {/* ... (Sección de Información de la Reserva sin cambios) ... */}
+        {/* --- SECCIÓN DE INFORMACIÓN RESTAURADA --- */}
+        <View style={styles.infoSection}>
+          <Text style={styles.sectionTitle}>Información de la Reserva</Text>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Fecha:</Text>
+            <Text style={styles.detailValue}>{new Date(reservation.date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Hora:</Text>
+            <Text style={styles.detailValue}>{reservation.time}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Servicio:</Text>
+            <Text style={styles.detailValue}>{reservation.service}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>{userType === 'client' ? 'Proveedor:' : 'Cliente:'}</Text>
+            <Text style={styles.detailValue}>{reservation.clientName}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Estado:</Text>
+            <View style={[styles.statusBadge, reservation.status === 'confirmed' && styles.statusConfirmed, reservation.status === 'pending' && styles.statusPending, reservation.status === 'cancelled' && styles.statusCancelled]}>
+              <Text style={styles.statusText}>{reservation.status}</Text>
+            </View>
+          </View>
+        </View>
+        
         <View style={styles.actionsSection}>
           <Text style={styles.sectionTitle}>Administrar Reserva</Text>
           {renderActionButtons()}
         </View>
-        {/* ... (Sección de Contacto sin cambios) ... */}
+        
+        <View style={styles.contactSection}>
+          <Text style={styles.sectionTitle}>Contacto</Text>
+          <TouchableOpacity style={[styles.contactButton, styles.kompa2goButton]} onPress={handleChatContact} activeOpacity={0.7}>
+            <MessageCircle size={18} color="white" />
+            <Text style={styles.contactButtonText}>Chat Kompa2Go</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: 'white', maxHeight: '90%', borderTopLeftRadius: 20, borderTopRightRadius: 20 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#E5E5E5' },
-  headerTitle: { fontSize: 20, fontWeight: 'bold' },
-  content: { padding: 20 },
-  actionsSection: { marginTop: 16, marginBottom: 24 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 16 },
-  actionMessage: { fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 16, lineHeight: 20 },
-  actionButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12, marginBottom: 12, gap: 8 },
-  actionButtonText: { color: 'white', fontSize: 16, fontWeight: '600' },
-  confirmButton: { backgroundColor: '#4CAF50' },
-  postponeButton: { backgroundColor: '#FF9800' },
-  rescheduleButton: { backgroundColor: '#2196F3' },
-  cancelButton: { backgroundColor: '#F44336' },
-  // ... (El resto de tus estilos)
+    container: { backgroundColor: 'white', maxHeight: '90%', minHeight: '60%', borderTopLeftRadius: 20, borderTopRightRadius: 20 },
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#E5E5E5' },
+    headerTitle: { fontSize: 20, fontWeight: 'bold' },
+    content: { padding: 20 },
+    infoSection: { marginBottom: 24 },
+    sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 16 },
+    detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+    detailLabel: { fontSize: 14, color: '#666', fontWeight: '500', flex: 1 },
+    detailValue: { fontSize: 14, color: '#333', fontWeight: '600', flex: 1.5, textAlign: 'right' },
+    statusBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
+    statusConfirmed: { backgroundColor: '#4CAF50' },
+    statusPending: { backgroundColor: '#FF9800' },
+    statusCancelled: { backgroundColor: '#F44336' },
+    statusText: { color: 'white', fontSize: 12, fontWeight: '600', textTransform: 'capitalize' },
+    actionsSection: { marginBottom: 24 },
+    actionMessageContainer: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFF3E0', padding: 12, borderRadius: 8, marginBottom: 16 },
+    actionMessageUrgent: { backgroundColor: '#FFEBEE' },
+    actionMessage: { fontSize: 14, color: '#666', lineHeight: 20, flex: 1 },
+    defaultMessage: { fontSize: 14, color: '#666', textAlign: 'center', fontStyle: 'italic' },
+    actionButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12, marginBottom: 12, gap: 8, elevation: 2 },
+    actionButtonText: { color: 'white', fontSize: 16, fontWeight: '600' },
+    confirmButton: { backgroundColor: '#4CAF50' },
+    postponeButton: { backgroundColor: '#FF9800' },
+    rescheduleButton: { backgroundColor: '#2196F3' },
+    cancelButton: { backgroundColor: '#F44336' },
+    contactSection: { borderTopWidth: 1, borderTopColor: '#E5E5E5', paddingTop: 20 },
+    contactButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, gap: 8 },
+    kompa2goButton: { backgroundColor: '#D81B60' },
+    contactButtonText: { color: 'white', fontSize: 14, fontWeight: '600' },
 });
