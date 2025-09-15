@@ -31,6 +31,7 @@ interface AppointmentsContextType {
   deleteAppointment: (id: string) => Promise<void>;
   getAppointmentsForDate: (date: string) => Appointment[];
   getTodayAppointments: () => Appointment[];
+  getUpcomingAppointments: () => Appointment[];
   getClientFreeSlots: (date: string, serviceDuration: number) => TimeSlot[];
   refreshAppointments: () => Promise<void>;
   setUserTypeAndReload: (userType: string) => Promise<void>;
@@ -128,6 +129,13 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
     return getAppointmentsForDate(today);
   }, [getAppointmentsForDate]);
 
+  const getUpcomingAppointments = useCallback((): Appointment[] => {
+    const today = new Date().toISOString().split('T')[0];
+    return appointments
+      .filter(appointment => appointment.date > today && appointment.status === 'confirmed')
+      .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+  }, [appointments]);
+
   // --- ¡NUEVA FUNCIÓN! ---
   const getClientFreeSlots = useCallback((date: string, serviceDuration: number): TimeSlot[] => {
     const dayStart = new Date(`${date}T08:00:00`); // Asumimos un día de 8 AM
@@ -177,7 +185,8 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
     deleteAppointment,
     getAppointmentsForDate,
     getTodayAppointments,
-    getClientFreeSlots, // <-- Exportamos la nueva función
+    getUpcomingAppointments,
+    getClientFreeSlots,
     refreshAppointments,
     setUserTypeAndReload,
   };
