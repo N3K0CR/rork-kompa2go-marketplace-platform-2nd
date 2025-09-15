@@ -17,6 +17,12 @@ export interface Appointment {
   providerName?: string;
 }
 
+// Interfaz para un bloque de tiempo
+interface TimeSlot {
+  start: Date;
+  end: Date;
+}
+
 interface AppointmentsContextType {
   appointments: Appointment[];
   loading: boolean;
@@ -25,9 +31,7 @@ interface AppointmentsContextType {
   deleteAppointment: (id: string) => Promise<void>;
   getAppointmentsForDate: (date: string) => Appointment[];
   getTodayAppointments: () => Appointment[];
-  getUpcomingAppointments: () => Appointment[];
-  getAvailableTimeSlotsForDate: (date: string, providerId?: string) => string[];
-  getClientVisibleAppointments: (providerId: string) => Appointment[];
+  getClientFreeSlots: (date: string, serviceDuration: number) => TimeSlot[];
   refreshAppointments: () => Promise<void>;
   setUserTypeAndReload: (userType: string) => Promise<void>;
 }
@@ -50,14 +54,14 @@ const clientMockAppointments: Appointment[] = [
 export function AppointmentsProvider({ children }: { children: ReactNode }) {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [userType, setUserType] = useState<string>('provider');
-  
+
   const getMockDataForUser = (type: string) => {
     return type === 'client' ? clientMockAppointments : mockAppointments;
   };
 
   const loadAppointments = useCallback(async (currentUserType: string) => {
+    setLoading(true);
     try {
       const storageKey = currentUserType === 'client' ? 'client_appointments' : 'appointments';
       const storedAppointments = await AsyncStorage.getItem(storageKey);
@@ -86,9 +90,7 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
     }
   }, [userType]);
 
-  // This effect will run when the userType changes, loading the correct data.
   useEffect(() => {
-    setLoading(true);
     loadAppointments(userType);
   }, [userType, loadAppointments]);
 
@@ -104,7 +106,7 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
     setAppointments(updatedAppointments);
     await saveAppointments(updatedAppointments);
   }, [appointments, saveAppointments]);
-
+  
   const updateAppointment = useCallback(async (id: string, updates: Partial<Appointment>) => {
     const updatedAppointments = appointments.map(app => app.id === id ? { ...app, ...updates } : app);
     setAppointments(updatedAppointments);
@@ -126,32 +128,58 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
     return getAppointmentsForDate(today);
   }, [getAppointmentsForDate]);
 
-  const getUpcomingAppointments = useCallback((): Appointment[] => {
-    const today = new Date().toISOString().split('T')[0];
-    return appointments
-      .filter(appointment => appointment.date > today && appointment.status === 'confirmed')
-      .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
-  }, [appointments]);
+  // --- ¡NUEVA FUNCIÓN! ---
+  const getClientFreeSlots = useCallback((date: string, serviceDuration: number): TimeSlot[] => {
+    const dayStart = new Date(`${date}T08:00:00`); // Asumimos un día de 8 AM
+    const dayEnd = new Date(`${date}T20:00:00`);   // a 8 PM
+    
+    const clientBookedSlots = getAppointmentsForDate(date).map(app => {
+        const start = new Date(`${app.date}T${app.time}`);
+        const end = new Date(start.getTime() + app.duration * 60000);
+        return { start, end };
+    });
 
-  const getAvailableTimeSlotsForDate = (date: string, providerId?: string): string[] => {
-    // Implementación sin cambios
-    return [];
-  };
+    let freeSlots: TimeSlot[] = [];
+    let currentTime = dayStart;
 
-  const getClientVisibleAppointments = (providerId: string): Appointment[] => {
-    // Implementación sin cambios
-    return [];
-  };
+    while (currentTime < dayEnd) {
+      const potentialSlotEnd = new Date(currentTime.getTime() + serviceDuration * 60000);
+      if (potentialSlotEnd > dayEnd) break;
+
+      let isAvailable = true;
+      for (const bookedSlot of clientBookedSlots) {
+        // Comprobar si el slot potencial se solapa con un slot ocupado
+        if (currentTime < bookedSlot.end && potentialSlotEnd > bookedSlot.start) {
+          isAvailable = false;
+          currentTime = bookedSlot.end; // Saltamos al final del slot ocupado
+          break;
+        }
+      }
+
+      if (isAvailable) {
+        freeSlots.push({ start: new Date(currentTime), end: potentialSlotEnd });
+        currentTime = new Date(currentTime.getTime() + 30 * 60000); // Avanzamos en intervalos de 30 min
+      }
+    }
+    
+    return freeSlots;
+  }, [getAppointmentsForDate]);
 
   const refreshAppointments = useCallback(async () => {
-    setLoading(true);
     await loadAppointments(userType);
   }, [userType, loadAppointments]);
 
   const value = {
-    appointments, loading, addAppointment, updateAppointment, deleteAppointment,
-    getAppointmentsForDate, getTodayAppointments, getUpcomingAppointments,
-    getAvailableTimeSlotsForDate, getClientVisibleAppointments, refreshAppointments, setUserTypeAndReload
+    appointments,
+    loading,
+    addAppointment,
+    updateAppointment,
+    deleteAppointment,
+    getAppointmentsForDate,
+    getTodayAppointments,
+    getClientFreeSlots, // <-- Exportamos la nueva función
+    refreshAppointments,
+    setUserTypeAndReload,
   };
 
   return <AppointmentsContext.Provider value={value}>{children}</AppointmentsContext.Provider>;
