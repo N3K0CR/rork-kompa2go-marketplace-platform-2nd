@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import { XCircle, MessageCircle, Calendar, Clock, X, CheckCircle, Bell, TimerOff, AlertTriangle } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppointments, Appointment, ConfirmationState } from '@/contexts/AppointmentsContext';
 import { useChat } from '@/contexts/ChatContext';
 import { router } from 'expo-router';
-import { useProvider } from '@/contexts/ProviderContext';
 
 interface ReservationDetailCardProps {
   reservation: Appointment;
@@ -17,12 +16,8 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
   const { user } = useAuth();
   const { updateAppointment, getConfirmationState } = useAppointments();
   const { createChat } = useChat();
-  const { businessHours } = useProvider();
   const userType = user?.userType || 'client';
   
-  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [confirmationState, setConfirmationState] = useState<ConfirmationState | null>(null);
 
   useEffect(() => {
@@ -34,7 +29,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
 
   const handleConfirm = async () => {
     await updateAppointment(reservation.id, { status: 'confirmed' });
-    Alert.alert("¡Confirmado!", "Tu cita ha sido confirmada.");
+    Alert.alert("¡Confirmado!", "Tu cita ha sido confirmada. El proveedor ha sido notificado.");
     onClose?.();
   };
 
@@ -47,67 +42,30 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
   };
 
   const handleReschedule = () => {
-    setShowRescheduleModal(true);
-  };
-  
-  const handleFinishReschedule = async () => {
-    if (!selectedDate || !selectedTime) {
-      Alert.alert('Error', 'Por favor selecciona una nueva fecha y hora.');
-      return;
-    }
-    const newDate = selectedDate.toISOString().split('T')[0];
-    try {
-      await updateAppointment(reservation.id, { date: newDate, time: selectedTime });
-      setShowRescheduleModal(false);
-      onClose?.();
-      Alert.alert('Éxito', 'La cita ha sido reprogramada.');
-    } catch (error) {
-      Alert.alert('Error', 'No se pudo reprogramar la cita.');
-    }
+    Alert.alert("Reagendar Cita", "Esta función aún está en desarrollo, pero pronto podrás cambiar la fecha y hora desde aquí.");
   };
 
   const handleCancelReservation = () => {
     Alert.alert(
       'Cancelar Reserva',
-      '¿Estás seguro que deseas cancelar esta reserva? La comisión de la plataforma no es reembolsable.',
+      '¿Estás seguro que deseas cancelar esta reserva? La comisión de la plataforma no es reembolsable y esta acción no se puede deshacer.',
       [
         { text: 'No, mantener', style: 'cancel' },
         {
           text: 'Sí, Cancelar',
           style: 'destructive',
           onPress: async () => {
-            await updateAppointment(reservation.id, { status: 'cancelled' });
-            Alert.alert('Reserva Cancelada', 'La reserva ha sido cancelada exitosamente.');
-            onClose?.();
+            try {
+              await updateAppointment(reservation.id, { status: 'cancelled' });
+              Alert.alert('Reserva Cancelada', 'La reserva ha sido cancelada exitosamente.');
+              onClose?.();
+            } catch (error) {
+              Alert.alert('Error', 'Ocurrió un problema al cancelar la reserva. Por favor, inténtalo de nuevo.');
+            }
           }
         }
       ]
     );
-  };
-
-  const getNextSevenDays = () => {
-      const days = [];
-      for (let i = 1; i <= 7; i++) {
-          const date = new Date();
-          date.setDate(date.getDate() + i);
-          days.push(date);
-      }
-      return days;
-  };
-
-  const getAvailableTimeSlots = (date: Date) => {
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
-    const dayName = dayNames[date.getDay()];
-    const dayHours = businessHours[dayName];
-    if (!dayHours?.isOpen) return [];
-    const slots: string[] = [];
-    const [openHour] = dayHours.openTime.split(':').map(Number);
-    const [closeHour] = dayHours.closeTime.split(':').map(Number);
-    for (let hour = openHour; hour < closeHour; hour++) {
-      slots.push(`${hour.toString().padStart(2, '0')}:00`);
-      slots.push(`${hour.toString().padStart(2, '0')}:30`);
-    }
-    return slots;
   };
   
   const handleChatContact = async () => {
@@ -121,7 +79,12 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
   const renderActionButtons = () => {
     if (!confirmationState) return null;
 
-    // Caso 1: Flujo de confirmación activo (Cliente)
+    // Si la cita está cancelada, no mostrar acciones.
+    if (reservation.status === 'cancelled') {
+        return <Text style={styles.actionMessage}>Esta reserva fue cancelada.</Text>
+    }
+
+    // Flujo especial de confirmación para el cliente (dentro de las 24h)
     if (userType === 'client' && confirmationState.status !== 'default') {
       if (confirmationState.status === 'pending_confirmation') {
         return (
@@ -150,7 +113,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
             </View>
             <TouchableOpacity style={[styles.actionButton, styles.confirmButton]} onPress={handleConfirm}>
               <CheckCircle size={20} color="white" />
-              <Text style={styles.actionButtonText}>Confirmar Asistencia</Text>
+              <Text style={styles.actionButtonText}>Confirmar</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.actionButton, styles.rescheduleButton]} onPress={handleReschedule}>
               <Calendar size={20} color="white" />
@@ -158,38 +121,31 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
             </TouchableOpacity>
              <TouchableOpacity style={[styles.actionButton, styles.cancelButton]} onPress={handleCancelReservation}>
               <XCircle size={20} color="white" />
-              <Text style={styles.actionButtonText}>Cancelar Reserva</Text>
+              <Text style={styles.actionButtonText}>Cancelar</Text>
             </TouchableOpacity>
           </>
         );
       }
     }
 
-    if (reservation.status === 'confirmed' || reservation.status === 'pending') {
-        return (
-            <>
-                <Text style={styles.defaultMessage}>
-                  {reservation.status === 'pending'
-                    ? 'Recibirás una notificación para confirmar 24 horas antes.'
-                    : 'Recuerda llegar 10 minutos antes de tu cita.'}
-                </Text>
-                <TouchableOpacity style={[styles.actionButton, styles.rescheduleButton]} onPress={handleReschedule}>
-                  <Calendar size={20} color="white" />
-                  <Text style={styles.actionButtonText}>Reagendar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.actionButton, styles.cancelButton]} onPress={handleCancelReservation}>
-                  <XCircle size={20} color="white" />
-                  <Text style={styles.actionButtonText}>Cancelar Reserva</Text>
-                </TouchableOpacity>
-            </>
-        );
-    }
-    
-    if (reservation.status === 'cancelled') {
-        return <Text style={styles.actionMessage}>Esta reserva ha sido cancelada.</Text>
-    }
-
-    return null;
+    // Botones estándar para citas confirmadas o pendientes (fuera del flujo de 24h)
+    return (
+        <>
+            <Text style={styles.defaultMessage}>
+              {reservation.status === 'pending'
+                ? 'Recibirás una notificación para confirmar 24 horas antes.'
+                : 'Recuerda llegar 10 minutos antes de tu cita.'}
+            </Text>
+            <TouchableOpacity style={[styles.actionButton, styles.rescheduleButton]} onPress={handleReschedule}>
+              <Calendar size={20} color="white" />
+              <Text style={styles.actionButtonText}>Reagendar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionButton, styles.cancelButton]} onPress={handleCancelReservation}>
+              <XCircle size={20} color="white" />
+              <Text style={styles.actionButtonText}>Cancelar Reserva</Text>
+            </TouchableOpacity>
+        </>
+    );
   };
 
   return (
@@ -200,7 +156,6 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
           <TouchableOpacity onPress={onClose}><X size={24} color="#666"/></TouchableOpacity>
         </View>
       )}
-      
       <ScrollView style={styles.content}>
         <View style={styles.infoSection}>
           <Text style={styles.sectionTitle}>Información de la Reserva</Text>
@@ -241,74 +196,6 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      {/* Modal de Reagendamiento */}
-      <Modal visible={showRescheduleModal} animationType="slide" transparent={true} onRequestClose={() => setShowRescheduleModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Reprogramar Cita</Text>
-              <TouchableOpacity onPress={() => setShowRescheduleModal(false)}>
-                <X size={24} color="#666"/>
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.modalBody}>
-              <Text style={styles.sectionTitle}>Selecciona una nueva fecha</Text>
-              <View style={styles.dateGrid}>
-                {getNextSevenDays().map((date, index) => {
-                  const isSelected = selectedDate?.toDateString() === date.toDateString();
-                  return (
-                    <TouchableOpacity
-                      key={index}
-                      style={[styles.dateOption, isSelected && styles.dateOptionSelected]}
-                      onPress={() => {
-                        setSelectedDate(date);
-                        setSelectedTime(null);
-                      }}
-                    >
-                      <Text style={[styles.dateOptionDay, isSelected && styles.dateOptionDaySelected]}>
-                        {date.toLocaleDateString('es-ES', { weekday: 'short' })}
-                      </Text>
-                      <Text style={[styles.dateOptionNumber, isSelected && styles.dateOptionNumberSelected]}>
-                        {date.getDate()}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-              
-              {selectedDate && (
-                <>
-                  <Text style={styles.sectionTitle}>Selecciona una hora</Text>
-                  <View style={styles.timeGrid}>
-                    {getAvailableTimeSlots(selectedDate).map((time) => {
-                      const isSelected = selectedTime === time;
-                      return (
-                        <TouchableOpacity
-                          key={time}
-                          style={[styles.timeOption, isSelected && styles.timeOptionSelected]}
-                          onPress={() => setSelectedTime(time)}
-                        >
-                          <Text style={[styles.timeOptionText, isSelected && styles.timeOptionTextSelected]}>
-                            {time}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </>
-              )}
-              
-              {selectedDate && selectedTime && (
-                <TouchableOpacity style={styles.finalizarButton} onPress={handleFinishReschedule}>
-                  <CheckCircle size={20} color="white" />
-                  <Text style={styles.finalizarButtonText}>Finalizar</Text>
-                </TouchableOpacity>
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -343,24 +230,4 @@ const styles = StyleSheet.create({
     contactButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, gap: 8 },
     kompa2goButton: { backgroundColor: '#D81B60' },
     contactButtonText: { color: 'white', fontSize: 14, fontWeight: '600' },
-    // Modal styles
-    modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-    modalContent: { backgroundColor: 'white', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '80%' },
-    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#E5E5E5' },
-    modalTitle: { fontSize: 20, fontWeight: 'bold' },
-    modalBody: { padding: 20 },
-    dateGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
-    dateOption: { alignItems: 'center', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#E5E5E5', minWidth: 60 },
-    dateOptionSelected: { backgroundColor: '#2196F3', borderColor: '#2196F3' },
-    dateOptionDay: { fontSize: 12, color: '#666', textTransform: 'capitalize' },
-    dateOptionDaySelected: { color: 'white' },
-    dateOptionNumber: { fontSize: 18, fontWeight: 'bold', color: '#333', marginTop: 4 },
-    dateOptionNumberSelected: { color: 'white' },
-    timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
-    timeOption: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#E5E5E5' },
-    timeOptionSelected: { backgroundColor: '#2196F3', borderColor: '#2196F3' },
-    timeOptionText: { fontSize: 14, color: '#333' },
-    timeOptionTextSelected: { color: 'white' },
-    finalizarButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#4CAF50', borderRadius: 10, paddingVertical: 14, marginTop: 16, gap: 8 },
-    finalizarButtonText: { color: 'white', fontSize: 16, fontWeight: '700' },
 });
