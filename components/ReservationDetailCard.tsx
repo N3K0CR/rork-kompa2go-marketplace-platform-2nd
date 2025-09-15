@@ -310,17 +310,19 @@ El ${userType === 'client' ? 'proveedor' : 'cliente'} será notificado automáti
                     {
                       text: 'Perfecto',
                       onPress: () => {
-                        // Reset all modal states
-                        setShowRescheduleModal(false);
-                        setSelectedDate(null);
-                        setSelectedTime(null);
-                        
-                        // Close the detail modal if callback exists
-                        if (onClose && typeof onClose === 'function') {
-                          onClose();
-                        }
-                        
-                        console.log('✅ Reschedule process completed successfully');
+                        // Use a short timeout to allow the alert to dismiss before changing state
+                        setTimeout(() => {
+                          setShowRescheduleModal(false);
+                          setSelectedDate(null);
+                          setSelectedTime(null);
+                          
+                          // Close the detail modal if callback exists
+                          if (onClose && typeof onClose === 'function') {
+                            onClose();
+                          }
+                          
+                          console.log('✅ Reschedule process completed successfully');
+                        }, 100);
                       }
                     }
                   ]
@@ -386,6 +388,7 @@ Si el problema persiste, contacta al soporte técnico.`,
                       setShowRescheduleModal(false);
                       setSelectedDate(null);
                       setSelectedTime(null);
+                      onClose?.();
                     }
                   }
                 ]
