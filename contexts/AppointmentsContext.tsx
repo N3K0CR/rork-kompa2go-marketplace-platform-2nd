@@ -34,65 +34,23 @@ interface AppointmentsContextType {
 
 const AppointmentsContext = createContext<AppointmentsContextType | undefined>(undefined);
 
-// Mock data for testing
+// Mock data for testing - PROVIDER
 const mockAppointments: Appointment[] = [
-  {
-    id: '1',
-    date: new Date().toISOString().split('T')[0], // Today
-    time: '09:00',
-    duration: 120,
-    clientName: 'María González',
-    clientPhone: '+506 8888-1111',
-    service: 'Limpieza Residencial',
-    type: 'kompa2go',
-    status: 'confirmed',
-  },
-  {
-    id: '2',
-    date: new Date().toISOString().split('T')[0], // Today
-    time: '11:30',
-    duration: 90,
-    clientName: 'Carlos Rodríguez',
-    clientPhone: '+506 7777-2222',
-    service: 'Limpieza de Oficina',
-    type: 'kompa2go',
-    status: 'confirmed',
-  },
-  // ... (otros datos de prueba para proveedores)
+  { id: '1', date: new Date().toISOString().split('T')[0], time: '09:00', duration: 120, clientName: 'María González', service: 'Limpieza Residencial', type: 'kompa2go', status: 'confirmed' },
+  { id: '2', date: new Date().toISOString().split('T')[0], time: '11:30', duration: 90, clientName: 'Carlos Rodríguez', service: 'Limpieza de Oficina', type: 'kompa2go', status: 'confirmed' },
+  { id: 'p3', date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], time: '10:00', duration: 60, clientName: 'Reunión Interna', service: 'Planificación', type: 'manual', status: 'confirmed' },
 ];
 
-// Mock appointments for client view (showing their reservations)
+// Mock appointments for CLIENT view
 const clientMockAppointments: Appointment[] = [
-  {
-    id: 'c1',
-    date: new Date().toISOString().split('T')[0], // Today
-    time: '10:00',
-    duration: 120,
-    clientName: 'Ana Cleaning Services',
-    clientPhone: '+506 8888-1234',
-    service: 'Limpieza Residencial Completa',
-    type: 'kompa2go',
-    status: 'confirmed',
-  },
-  {
-    id: 'c2',
-    date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    time: '14:00',
-    duration: 90,
-    clientName: 'María Cleaning Pro',
-    clientPhone: '+506 7777-5678',
-    service: 'Limpieza de Ventanas',
-    type: 'kompa2go',
-    status: 'pending',
-    notes: 'Pendiente de confirmación'
-  },
-  // ... (otros datos de prueba para clientes)
+  { id: 'c1', date: new Date().toISOString().split('T')[0], time: '10:00', duration: 120, clientName: 'Ana Cleaning Services', service: 'Limpieza Completa', type: 'kompa2go', status: 'confirmed' },
+  { id: 'c2', date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], time: '14:00', duration: 90, clientName: 'María Cleaning Pro', service: 'Limpieza de Ventanas', type: 'kompa2go', status: 'pending' },
 ];
 
 export function AppointmentsProvider({ children }: { children: ReactNode }) {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
+
   const [userType, setUserType] = useState<string>('provider');
   
   const getMockDataForUser = (type: string) => {
@@ -128,13 +86,14 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
     }
   }, [userType]);
 
+  // This effect will run when the userType changes, loading the correct data.
   useEffect(() => {
+    setLoading(true);
     loadAppointments(userType);
   }, [userType, loadAppointments]);
 
   const setUserTypeAndReload = useCallback(async (newUserType: string) => {
     if (newUserType !== userType) {
-      setLoading(true);
       setUserType(newUserType);
     }
   }, [userType]);
@@ -144,21 +103,18 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
     const updatedAppointments = [...appointments, newAppointment];
     setAppointments(updatedAppointments);
     await saveAppointments(updatedAppointments);
-    setLastRefresh(Date.now());
   }, [appointments, saveAppointments]);
 
   const updateAppointment = useCallback(async (id: string, updates: Partial<Appointment>) => {
     const updatedAppointments = appointments.map(app => app.id === id ? { ...app, ...updates } : app);
     setAppointments(updatedAppointments);
     await saveAppointments(updatedAppointments);
-    setLastRefresh(Date.now());
   }, [appointments, saveAppointments]);
 
   const deleteAppointment = useCallback(async (id: string) => {
     const updatedAppointments = appointments.filter(app => app.id !== id);
     setAppointments(updatedAppointments);
     await saveAppointments(updatedAppointments);
-    setLastRefresh(Date.now());
   }, [appointments, saveAppointments]);
 
   const getAppointmentsForDate = useCallback((date: string): Appointment[] => {
@@ -177,15 +133,15 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
       .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
   }, [appointments]);
 
-  const getAvailableTimeSlotsForDate = useCallback((date: string, providerId?: string): string[] => {
+  const getAvailableTimeSlotsForDate = (date: string, providerId?: string): string[] => {
     // Implementación sin cambios
     return [];
-  }, [appointments]);
+  };
 
-  const getClientVisibleAppointments = useCallback((providerId: string): Appointment[] => {
+  const getClientVisibleAppointments = (providerId: string): Appointment[] => {
     // Implementación sin cambios
     return [];
-  }, [appointments]);
+  };
 
   const refreshAppointments = useCallback(async () => {
     setLoading(true);
@@ -203,8 +159,6 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
 
 export function useAppointments() {
   const context = useContext(AppointmentsContext);
-  if (context === undefined) {
-    throw new Error('useAppointments must be used within an AppointmentsProvider');
-  }
+  if (!context) throw new Error('useAppointments must be used within an AppointmentsProvider');
   return context;
 }
