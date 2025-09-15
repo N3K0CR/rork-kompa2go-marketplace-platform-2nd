@@ -36,12 +36,21 @@ interface AppointmentsContextType {
   addAppointment: (appointment: Omit<Appointment, 'id' | 'confirmationPostpones'>) => Promise<void>;
   updateAppointment: (id: string, updates: Partial<Appointment>) => Promise<void>;
   getAppointmentsForDate: (date: string) => Appointment[];
+  getTodayAppointments: () => Appointment[];
+  getUpcomingAppointments: () => Appointment[];
   getConfirmationState: (appointment: Appointment) => ConfirmationState;
   refreshAppointments: () => Promise<void>;
   setUserTypeAndReload: (userType: string) => Promise<void>;
 }
 
 const AppointmentsContext = createContext<AppointmentsContextType | undefined>(undefined);
+
+// Mock data for provider
+const mockAppointments: Appointment[] = [
+  { id: '1', date: new Date().toISOString().split('T')[0], time: '09:00', duration: 120, clientName: 'María González', service: 'Limpieza Residencial', type: 'kompa2go', status: 'confirmed', confirmationPostpones: 0 },
+  { id: '2', date: new Date().toISOString().split('T')[0], time: '11:30', duration: 90, clientName: 'Carlos Rodríguez', service: 'Limpieza de Oficina', type: 'kompa2go', status: 'confirmed', confirmationPostpones: 0 },
+  { id: 'p3', date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], time: '10:00', duration: 60, clientName: 'Reunión Interna', service: 'Planificación', type: 'manual', status: 'confirmed', confirmationPostpones: 0 },
+];
 
 // Datos de prueba actualizados para incluir citas en diferentes momentos
 const clientMockAppointments: Appointment[] = [
@@ -60,7 +69,7 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
   const [userType, setUserType] = useState<string>('client'); // Default a cliente para pruebas
 
   const getMockDataForUser = (type: string) => {
-    return type === 'client' ? clientMockAppointments : [];
+    return type === 'client' ? clientMockAppointments : mockAppointments;
   };
 
   const loadAppointments = useCallback(async (currentUserType: string) => {
@@ -124,6 +133,18 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
     return appointments.filter(appointment => appointment.date === date);
   }, [appointments]);
 
+  const getTodayAppointments = useCallback((): Appointment[] => {
+    const today = new Date().toISOString().split('T')[0];
+    return getAppointmentsForDate(today);
+  }, [getAppointmentsForDate]);
+
+  const getUpcomingAppointments = useCallback((): Appointment[] => {
+    const today = new Date().toISOString().split('T')[0];
+    return appointments
+      .filter(appointment => appointment.date > today && appointment.status === 'confirmed')
+      .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+  }, [appointments]);
+
   // --- ¡NUEVO CEREBRO DE LA LÓGICA! ---
   const getConfirmationState = (appointment: Appointment): ConfirmationState => {
     const appointmentDateTime = new Date(`${appointment.date}T${appointment.time}`);
@@ -162,7 +183,7 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
     await loadAppointments(userType);
   }, [userType, loadAppointments]);
 
-  const value = { appointments, loading, addAppointment, updateAppointment, getAppointmentsForDate, getConfirmationState, refreshAppointments, setUserTypeAndReload };
+  const value = { appointments, loading, addAppointment, updateAppointment, getAppointmentsForDate, getTodayAppointments, getUpcomingAppointments, getConfirmationState, refreshAppointments, setUserTypeAndReload };
 
   return <AppointmentsContext.Provider value={value}>{children}</AppointmentsContext.Provider>;
 }
