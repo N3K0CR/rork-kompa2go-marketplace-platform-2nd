@@ -135,57 +135,127 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
     return days;
   };
 
-  const handleConfirmReschedule = async () => {
-    console.log('🔵 Confirming reschedule from summary card');
+  const handleFinishReschedule = async () => {
+    console.log('🎯 Finalizar button pressed - Starting fail-proof rescheduling process');
     console.log('Selected date:', selectedDate);
     console.log('Selected time:', selectedTime);
     console.log('Reservation ID:', reservation?.id);
     console.log('UpdateAppointment function available:', !!updateAppointment);
     
+    // Comprehensive validation
     if (!selectedDate || !selectedTime) {
       console.log('❌ Missing date or time selection');
-      Alert.alert('Error', 'Por favor selecciona una fecha y hora.');
+      Alert.alert('Error de Validación', 'Por favor selecciona una fecha y hora antes de finalizar la reprogramación.');
       return;
     }
     
     if (!reservation?.id) {
       console.error('❌ No reservation ID found');
-      Alert.alert('Error', 'No se pudo identificar la reserva.');
+      Alert.alert('Error del Sistema', 'No se pudo identificar la reserva. Por favor intenta nuevamente.');
       return;
     }
     
-    try {
-      console.log('✅ Starting rescheduling process for reservation:', reservation.id);
-      console.log('New date:', selectedDate.toISOString());
-      console.log('New time:', selectedTime);
-      
-      if (!updateAppointment) {
-        throw new Error('updateAppointment function not available');
-      }
-      
-      const updateData = {
-        date: selectedDate.toISOString().split('T')[0], // Use date format YYYY-MM-DD
-        time: selectedTime,
-        status: 'pending' as const, // Reset to pending after rescheduling
-        notes: (reservation.notes || '') + ` [Reprogramada por ${userType} el ${new Date().toLocaleString('es-ES')}]`
-      };
-      
-      console.log('Update data:', updateData);
-      
-      await updateAppointment(reservation.id, updateData);
-      
-      console.log('✅ Reservation rescheduled successfully');
-      Alert.alert('✅ Reprogramada', 'Tu reserva ha sido reprogramada exitosamente.');
-      
-      // Reset modal state
-      setShowRescheduleModal(false);
-      setSelectedDate(null);
-      setSelectedTime(null);
-      onClose?.();
-    } catch (error) {
-      console.error('❌ Error rescheduling reservation:', error);
-      Alert.alert('Error', `No se pudo reprogramar la reserva: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    if (!updateAppointment) {
+      console.error('❌ updateAppointment function not available');
+      Alert.alert('Error del Sistema', 'Función de actualización no disponible. Por favor reinicia la aplicación.');
+      return;
     }
+    
+    // Show confirmation dialog
+    Alert.alert(
+      '🎯 Finalizar Reprogramación',
+      `¿Confirmas que deseas reprogramar esta cita?\n\n📅 Nueva fecha: ${selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}\n⏰ Nueva hora: ${selectedTime}\n🔧 Servicio: ${reservation.service}\n⏱️ Duración: ${reservation.duration} minutos\n\nEsta acción no se puede deshacer.`,
+      [
+        { 
+          text: 'Cancelar', 
+          style: 'cancel',
+          onPress: () => console.log('Reschedule finalization cancelled by user')
+        },
+        {
+          text: 'Finalizar',
+          style: 'default',
+          onPress: async () => {
+            try {
+              console.log('✅ User confirmed - Starting rescheduling process for reservation:', reservation.id);
+              console.log('New date:', selectedDate.toISOString());
+              console.log('New time:', selectedTime);
+              
+              // Prepare update data with comprehensive information
+              const updateData = {
+                date: selectedDate.toISOString().split('T')[0], // Use date format YYYY-MM-DD
+                time: selectedTime,
+                status: 'confirmed' as const, // Set as confirmed after successful rescheduling
+                notes: (reservation.notes || '') + ` [Reprogramada por ${userType} el ${new Date().toLocaleString('es-ES')} - Fecha anterior: ${reservation.date} ${reservation.time}]`
+              };
+              
+              console.log('Update data prepared:', updateData);
+              
+              // Execute the update with error handling
+              await updateAppointment(reservation.id, updateData);
+              
+              console.log('✅ Reservation rescheduled successfully');
+              
+              // Play success sound notification
+              if (Platform.OS !== 'web') {
+                try {
+                  const { sound } = await Audio.Sound.createAsync(
+                    { uri: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav' },
+                    { shouldPlay: true, volume: 0.6 }
+                  );
+                  setTimeout(() => {
+                    sound.unloadAsync();
+                  }, 2000);
+                } catch (soundError) {
+                  console.log('Success sound notification failed:', soundError);
+                }
+              }
+              
+              // Show success message
+              Alert.alert(
+                '✅ Reprogramación Finalizada', 
+                `Tu reserva ha sido reprogramada exitosamente para el ${selectedDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })} a las ${selectedTime}.\n\nEl ${userType === 'client' ? 'proveedor' : 'cliente'} será notificado automáticamente.`,
+                [
+                  {
+                    text: 'Entendido',
+                    onPress: () => {
+                      // Reset modal state and close
+                      setShowRescheduleModal(false);
+                      setSelectedDate(null);
+                      setSelectedTime(null);
+                      onClose?.();
+                    }
+                  }
+                ]
+              );
+              
+            } catch (error) {
+              console.error('❌ Error during rescheduling process:', error);
+              
+              // Detailed error handling
+              let errorMessage = 'Error desconocido';
+              if (error instanceof Error) {
+                errorMessage = error.message;
+              }
+              
+              Alert.alert(
+                '❌ Error en la Reprogramación', 
+                `No se pudo completar la reprogramación:\n\n${errorMessage}\n\nPor favor verifica tu conexión e intenta nuevamente.`,
+                [
+                  {
+                    text: 'Reintentar',
+                    onPress: () => handleFinishReschedule()
+                  },
+                  {
+                    text: 'Cancelar',
+                    style: 'cancel'
+                  }
+                ]
+              );
+            }
+          }
+        }
+      ]
+    );
   };
 
   const handleConfirmAttendance = async () => {
@@ -508,11 +578,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
               )}
               
               {selectedDate && selectedTime && (
-                <TouchableOpacity 
-                  style={styles.selectedSummary}
-                  onPress={handleConfirmReschedule}
-                  activeOpacity={0.7}
-                >
+                <View style={styles.selectedSummary}>
                   <Text style={styles.summaryTitle}>Resumen de la reprogramación:</Text>
                   <Text style={styles.summaryText}>
                     <Text style={styles.summaryLabel}>Fecha: </Text>
@@ -530,8 +596,16 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
                     <Text style={styles.summaryLabel}>Duración: </Text>
                     {reservation.duration} minutos
                   </Text>
-                  <Text style={styles.confirmText}>Haz click aquí para Confirmar</Text>
-                </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={styles.finalizarButton}
+                    onPress={handleFinishReschedule}
+                    activeOpacity={0.7}
+                  >
+                    <CheckCircle size={20} color="white" />
+                    <Text style={styles.finalizarButtonText}>Finalizar</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </ScrollView>
             
@@ -811,6 +885,31 @@ const styles = StyleSheet.create({
     marginTop: 12,
     borderWidth: 2,
     borderColor: '#2196F3',
+  },
+  finalizarButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4CAF50',
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    marginTop: 16,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  finalizarButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   summaryTitle: {
     fontSize: 16,
