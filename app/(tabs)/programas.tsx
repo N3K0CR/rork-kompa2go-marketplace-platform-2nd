@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Share, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useOKoins } from '@/contexts/OKoinsContext';
 import { TrendingUp, DollarSign, Users, Calendar, Gift, History, Star, Coins } from 'lucide-react-native';
 import FloatingKompi from '@/components/FloatingKompi';
+import { router } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -57,21 +58,49 @@ export default function ProgramasScreen() {
           <View style={styles.earnSection}>
             <Text style={styles.sectionTitle}>¿Cómo ganar OKoins?</Text>
             <View style={styles.earnMethods}>
-              <View style={styles.earnMethod}>
+              <TouchableOpacity 
+                style={styles.earnMethod}
+                onPress={() => router.push('/(tabs)/search')}
+              >
                 <Star size={20} color="#FFD700" />
                 <Text style={styles.earnMethodText}>Completa servicios (+50 OKoins)</Text>
-              </View>
-              <View style={styles.earnMethod}>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.earnMethod}
+                onPress={() => {
+                  router.push('/(tabs)/profile');
+                  // Navigate to history section within profile
+                  setTimeout(() => {
+                    router.push('/client/history');
+                  }, 100);
+                }}
+              >
                 <Star size={20} color="#FFD700" />
                 <Text style={styles.earnMethodText}>Califica proveedores (+10 OKoins)</Text>
-              </View>
-              <View style={styles.earnMethod}>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.earnMethod}
+                onPress={async () => {
+                  try {
+                    const referralLink = `https://kompa2go.com/referral/${user?.id || 'guest'}`;
+                    const message = `¡Únete a Kompa2Go y gana 100 OKoins gratis! 🎉\n\nUsa mi código de referido para obtener beneficios exclusivos:\n${referralLink}\n\n¡Descarga la app y comienza a ganar OKoins hoy!`;
+                    
+                    await Share.share({
+                      message: message,
+                      url: referralLink,
+                      title: 'Únete a Kompa2Go'
+                    });
+                  } catch (error) {
+                    Alert.alert('Error', 'No se pudo compartir el enlace de referido');
+                  }
+                }}
+              >
                 <Star size={20} color="#FFD700" />
                 <Text style={styles.earnMethodText}>Refiere amigos (+100 OKoins)</Text>
-              </View>
+              </TouchableOpacity>
               <View style={styles.earnMethod}>
                 <Star size={20} color="#FFD700" />
-                <Text style={styles.earnMethodText}>Bono diario de login (+5 OKoins)</Text>
+                <Text style={styles.earnMethodText}>Bono diario de login y reserva (+5 OKoins)</Text>
               </View>
             </View>
           </View>
