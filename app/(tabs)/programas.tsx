@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, Alert, Platform } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -83,56 +82,51 @@ export default function ProgramasScreen() {
                 style={styles.earnMethod}
                 onPress={async () => {
                   console.log('Refiere amigos button pressed');
-                  try {
-                    const referralLink = `https://kompa2go.com/referral/${user?.id || 'guest'}`;
-                    const message = `¡Únete a Kompa2Go y gana 100 OKoins gratis! 🎉\n\nUsa mi código de referido para obtener beneficios exclusivos:\n${referralLink}\n\n¡Descarga la app y comienza a ganar OKoins hoy!`;
+                  const referralLink = `https://kompa2go.com/referral/${user?.id || 'guest'}`;
+                  const message = `¡Únete a Kompa2Go y gana 100 OKoins gratis! 🎉\n\nUsa mi código de referido para obtener beneficios exclusivos:\n${referralLink}\n\n¡Descarga la app y comienza a ganar OKoins hoy!`;
+                  
+                  console.log('About to share:', { message, referralLink });
+                  
+                  if (Platform.OS === 'web') {
+                    // For web, create a shareable URL and show it in a modal
+                    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
+                    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+                    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralLink)}&quote=${encodeURIComponent(message)}`;
                     
-                    console.log('About to share:', { message, referralLink });
-                    
-                    if (Platform.OS === 'web') {
-                      // For web, use multiple fallback strategies
-                      let success = false;
-                      
-                      // Try modern clipboard API first
-                      if (navigator.clipboard && navigator.clipboard.writeText) {
-                        try {
-                          await navigator.clipboard.writeText(`${message}\n\n${referralLink}`);
-                          success = true;
-                          console.log('Content copied using navigator.clipboard');
-                        } catch (clipboardError) {
-                          console.log('navigator.clipboard failed:', clipboardError);
-                        }
-                      }
-                      
-                      // Try expo-clipboard as fallback
-                      if (!success) {
-                        try {
-                          await Clipboard.setStringAsync(`${message}\n\n${referralLink}`);
-                          success = true;
-                          console.log('Content copied using expo-clipboard');
-                        } catch (clipboardError) {
-                          console.log('expo-clipboard failed:', clipboardError);
-                        }
-                      }
-                      
-                      if (success) {
-                        Alert.alert(
-                          'Enlace copiado',
-                          'El enlace de referido se ha copiado al portapapeles. Puedes pegarlo en cualquier aplicación para compartirlo.',
-                          [{ text: 'OK' }]
-                        );
-                      } else {
-                        // Final fallback - show the link in an alert for manual copy
-                        Alert.alert(
-                          'Enlace de referido',
-                          `Copia este enlace para compartir:\n\n${referralLink}\n\nMensaje:\n${message}`,
-                          [
-                            { text: 'Cerrar', style: 'cancel' }
-                          ]
-                        );
-                      }
-                    } else {
-                      // Native mobile platforms
+                    Alert.alert(
+                      'Compartir enlace de referido',
+                      `Tu enlace de referido:\n${referralLink}\n\nMensaje para compartir:\n${message}`,
+                      [
+                        {
+                          text: 'WhatsApp',
+                          onPress: () => {
+                            if (typeof window !== 'undefined') {
+                              window.open(whatsappUrl, '_blank');
+                            }
+                          }
+                        },
+                        {
+                          text: 'Twitter',
+                          onPress: () => {
+                            if (typeof window !== 'undefined') {
+                              window.open(shareUrl, '_blank');
+                            }
+                          }
+                        },
+                        {
+                          text: 'Facebook',
+                          onPress: () => {
+                            if (typeof window !== 'undefined') {
+                              window.open(facebookUrl, '_blank');
+                            }
+                          }
+                        },
+                        { text: 'Cerrar', style: 'cancel' }
+                      ]
+                    );
+                  } else {
+                    // Native mobile platforms - use native share
+                    try {
                       const result = await Share.share({
                         message: message,
                         url: referralLink,
@@ -146,22 +140,13 @@ export default function ProgramasScreen() {
                       } else if (result.action === Share.dismissedAction) {
                         console.log('Share dialog was dismissed');
                       }
-                    }
-                  } catch (error) {
-                    console.error('Share error:', error);
-                    // Final fallback for any platform
-                    try {
-                      const referralLink = `https://kompa2go.com/referral/${user?.id || 'guest'}`;
-                      const message = `¡Únete a Kompa2Go y gana 100 OKoins gratis! 🎉\n\nUsa mi código de referido para obtener beneficios exclusivos:\n${referralLink}\n\n¡Descarga la app y comienza a ganar OKoins hoy!`;
-                      await Clipboard.setStringAsync(`${message}\n\n${referralLink}`);
+                    } catch (error) {
+                      console.error('Share error:', error);
                       Alert.alert(
-                        'Enlace copiado',
-                        'El enlace de referido se ha copiado al portapapeles. Puedes pegarlo en cualquier aplicación para compartirlo.',
+                        'Error al compartir',
+                        'No se pudo abrir el diálogo de compartir. Tu enlace de referido es:\n\n' + referralLink,
                         [{ text: 'OK' }]
                       );
-                    } catch (clipboardError) {
-                      console.error('Clipboard error:', clipboardError);
-                      Alert.alert('Error', 'No se pudo compartir el enlace de referido. Por favor, inténtalo de nuevo.');
                     }
                   }
                 }}
