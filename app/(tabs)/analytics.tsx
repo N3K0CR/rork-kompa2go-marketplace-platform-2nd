@@ -322,7 +322,7 @@ export default function AnalyticsScreen() {
     );
   }
 
-  // Admin Analytics View (existing functionality)
+  // Admin View (existing functionality)
   if (user?.userType !== 'admin') {
     return (
       <View style={styles.container}>
@@ -335,7 +335,7 @@ export default function AnalyticsScreen() {
     <ScrollView style={styles.container}>
       <View style={styles.adminHeader}>
         <Text style={styles.adminTitle}>Panel de Administración</Text>
-        <Text style={styles.adminSubtitle}>Análisis y métricas de Kompa2Go</Text>
+        <Text style={styles.adminSubtitle}>Métricas y estadísticas de Kompa2Go</Text>
       </View>
 
       {/* Key Metrics */}
