@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, Alert, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, Platform, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -12,8 +12,11 @@ import { router } from 'expo-router';
 
 export default function ProgramasScreen() {
   const { user } = useAuth();
-
   const { balance, getTransactionHistory, isLoading } = useOKoins();
+  const [showReferralModal, setShowReferralModal] = useState(false);
+  const [referralLink, setReferralLink] = useState('');
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Only show for clients
   if (user?.userType !== 'client') {
@@ -90,27 +93,9 @@ export default function ProgramasScreen() {
       if (Platform.OS === 'web') {
         console.log('🌐 Web platform detected - showing referral link');
         
-        // Para web: solo mostrar el enlace sin intentar copiarlo
-        Alert.alert(
-          '🎉 ¡Refiere amigos y gana OKoins!', 
-          `Comparte este enlace con tus amigos:\n\n${referralLink}\n\n¡Gana 100 OKoins por cada amigo que se registre usando tu enlace!\n\nPuedes copiarlo manualmente y compartirlo en WhatsApp, redes sociales o donde prefieras.`,
-          [
-            {
-              text: 'WhatsApp Web',
-              onPress: () => {
-                const message = encodeURIComponent(`¡Únete a Kompa2Go y gana 100 OKoins gratis! 🎉 Usa mi enlace: ${referralLink}`);
-                const whatsappUrl = `https://web.whatsapp.com/send?text=${message}`;
-                if (typeof window !== 'undefined') {
-                  window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-                }
-              }
-            },
-            {
-              text: 'Cerrar',
-              style: 'cancel'
-            }
-          ]
-        );
+        // Para web: mostrar modal personalizado
+        setReferralLink(referralLink);
+        setShowReferralModal(true);
         
       } else {
         console.log('📱 Mobile platform detected - using native share');
@@ -134,16 +119,15 @@ export default function ProgramasScreen() {
           }
         } catch (shareError) {
           console.error('❌ Share error:', shareError);
-          Alert.alert(
-            'Error', 
-            `No se pudo compartir. Tu enlace es:\n${referralLink}`
-          );
+          setErrorMessage(`No se pudo compartir. Tu enlace es:\n${referralLink}`);
+          setShowErrorModal(true);
         }
       }
       
     } catch (generalError) {
       console.error('❌ General error:', generalError);
-      Alert.alert('Error', 'Ocurrió un error. Intenta de nuevo.');
+      setErrorMessage('Ocurrió un error. Intenta de nuevo.');
+      setShowErrorModal(true);
     }
   }}
 >
@@ -220,6 +204,80 @@ export default function ProgramasScreen() {
         </View>
       </ScrollView>
       <FloatingKompi isVisible={true} />
+      
+      {/* Referral Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showReferralModal}
+        onRequestClose={() => setShowReferralModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>🎉 ¡Refiere amigos y gana OKoins!</Text>
+            <Text style={styles.modalDescription}>
+              Comparte este enlace con tus amigos:
+            </Text>
+            
+            <View style={styles.linkContainer}>
+              <Text style={styles.linkText} selectable={true}>
+                {referralLink}
+              </Text>
+            </View>
+            
+            <Text style={styles.modalSubtext}>
+              ¡Gana 100 OKoins por cada amigo que se registre usando tu enlace!
+            </Text>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={styles.whatsappButton}
+                onPress={() => {
+                  const message = encodeURIComponent(`¡Únete a Kompa2Go y gana 100 OKoins gratis! 🎉 Usa mi enlace: ${referralLink}`);
+                  const whatsappUrl = `https://web.whatsapp.com/send?text=${message}`;
+                  if (typeof window !== 'undefined') {
+                    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+                  }
+                  setShowReferralModal(false);
+                }}
+              >
+                <Text style={styles.whatsappButtonText}>📱 WhatsApp Web</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setShowReferralModal(false)}
+              >
+                <Text style={styles.closeButtonText}>Cerrar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      
+      {/* Error Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showErrorModal}
+        onRequestClose={() => setShowErrorModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>⚠️ Error</Text>
+            <Text style={styles.modalDescription}>
+              {errorMessage}
+            </Text>
+            
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setShowErrorModal(false)}
+            >
+              <Text style={styles.closeButtonText}>Cerrar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -457,5 +515,84 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#D81B60',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  modalDescription: {
+    fontSize: 16,
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  linkContainer: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  linkText: {
+    fontSize: 14,
+    color: '#D81B60',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  modalSubtext: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  modalButtons: {
+    gap: 12,
+  },
+  whatsappButton: {
+    backgroundColor: '#25D366',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  whatsappButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  closeButton: {
+    backgroundColor: '#F0F0F0',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
