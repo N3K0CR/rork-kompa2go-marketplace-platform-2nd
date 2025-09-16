@@ -60,7 +60,11 @@ const clientMockAppointments: Appointment[] = [
   { id: 'c5', date: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString().split('T')[0], time: new Date(Date.now() + 4 * 60 * 60 * 1000).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit'}), duration: 180, clientName: 'Juan Mecánica', service: 'Revisión General', type: 'kompa2go', status: 'pending', confirmationPostpones: 3 },
 ];
 
-const mockAppointments: Appointment[] = [ /* ... tus datos de proveedor ... */ ];
+const mockAppointments: Appointment[] = [
+  { id: '1', date: new Date().toISOString().split('T')[0], time: '09:00', duration: 120, clientName: 'María González', service: 'Limpieza Residencial', type: 'kompa2go', status: 'confirmed', confirmationPostpones: 0 },
+  { id: '2', date: new Date().toISOString().split('T')[0], time: '11:30', duration: 90, clientName: 'Carlos Rodríguez', service: 'Limpieza de Oficina', type: 'kompa2go', status: 'confirmed', confirmationPostpones: 0 },
+  { id: 'p3', date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], time: '10:00', duration: 60, clientName: 'Reunión Interna', service: 'Planificación', type: 'manual', status: 'confirmed', confirmationPostpones: 0 },
+];
 
 export function AppointmentsProvider({ children }: { children: ReactNode }) {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
