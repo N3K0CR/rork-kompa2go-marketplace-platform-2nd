@@ -1,4 +1,4 @@
-// ID: ReservationDetailCard_v10_stable
+// ID: ReservationDetailCard_v11_improved_reschedule
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal } from 'react-native';
 import { XCircle, MessageCircle, Calendar, CheckCircle, Bell, TimerOff, AlertTriangle, X } from 'lucide-react-native';
@@ -23,6 +23,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedTime, setSelectedTime] = useState<string>('');
+  const [availableDates, setAvailableDates] = useState<{[key: string]: string[]}>({});
 
   // Debug logging
   useEffect(() => {
@@ -143,18 +144,20 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
     setShowRescheduleModal(true);
   };
 
-  const generateAvailableSlots = () => {
-    const slots = [];
+  const generateAvailableDates = () => {
+    const dateSlots: {[key: string]: string[]} = {};
     const today = new Date();
     
-    // Generate slots for the next 7 days
-    for (let i = 1; i <= 7; i++) {
+    // Generate slots for the next 14 days (2 weeks)
+    for (let i = 1; i <= 14; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
       const dateStr = date.toISOString().split('T')[0];
       
-      // Generate time slots from 9 AM to 6 PM
-      for (let hour = 9; hour <= 18; hour++) {
+      const availableTimesForDate: string[] = [];
+      
+      // Generate time slots from 8 AM to 8 PM
+      for (let hour = 8; hour <= 20; hour++) {
         for (let minute = 0; minute < 60; minute += 30) {
           const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
           
@@ -171,14 +174,29 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
           });
           
           if (!hasConflict) {
-            slots.push({ date: dateStr, time: timeStr, dateObj: date });
+            availableTimesForDate.push(timeStr);
           }
         }
       }
+      
+      // Only include dates that have available slots
+      if (availableTimesForDate.length > 0) {
+        dateSlots[dateStr] = availableTimesForDate;
+      }
     }
     
-    return slots.slice(0, 20); // Limit to first 20 available slots
+    return dateSlots;
   };
+
+  useEffect(() => {
+    if (showRescheduleModal) {
+      const dates = generateAvailableDates();
+      setAvailableDates(dates);
+      // Reset selections when modal opens
+      setSelectedDate('');
+      setSelectedTime('');
+    }
+  }, [showRescheduleModal]);
 
   const handleConfirmReschedule = async () => {
     if (!selectedDate || !selectedTime) {
@@ -453,46 +471,80 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
         <ScrollView style={styles.modalContent}>
           <Text style={styles.modalSubtitle}>Selecciona una nueva fecha y hora:</Text>
           
-          <View style={styles.slotsContainer}>
-            {generateAvailableSlots().map((slot, index) => {
-              const isSelected = selectedDate === slot.date && selectedTime === slot.time;
-              return (
-                <TouchableOpacity
-                  key={`${slot.date}-${slot.time}`}
-                  style={[
-                    styles.slotButton,
-                    isSelected && styles.slotButtonSelected
-                  ]}
-                  onPress={() => {
-                    setSelectedDate(slot.date);
-                    setSelectedTime(slot.time);
-                  }}
-                >
-                  <Text style={[
-                    styles.slotDate,
-                    isSelected && styles.slotTextSelected
-                  ]}>
-                    {slot.dateObj.toLocaleDateString('es-ES', {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric'
-                    })}
-                  </Text>
-                  <Text style={[
-                    styles.slotTime,
-                    isSelected && styles.slotTextSelected
-                  ]}>
-                    {slot.time}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {generateAvailableSlots().length === 0 && (
+          {Object.keys(availableDates).length === 0 ? (
             <Text style={styles.noSlotsText}>
-              No hay horarios disponibles en los próximos 7 días.
+              No hay horarios disponibles en las próximas 2 semanas.
             </Text>
+          ) : (
+            <View style={styles.datesContainer}>
+              {Object.entries(availableDates).map(([dateStr, times]) => {
+                const dateObj = new Date(dateStr);
+                const isDateSelected = selectedDate === dateStr;
+                
+                return (
+                  <View key={dateStr} style={styles.dateSection}>
+                    <TouchableOpacity
+                      style={[
+                        styles.dateHeader,
+                        isDateSelected && styles.dateHeaderSelected
+                      ]}
+                      onPress={() => {
+                        if (selectedDate === dateStr) {
+                          setSelectedDate('');
+                          setSelectedTime('');
+                        } else {
+                          setSelectedDate(dateStr);
+                          setSelectedTime('');
+                        }
+                      }}
+                    >
+                      <Text style={[
+                        styles.dateHeaderText,
+                        isDateSelected && styles.dateHeaderTextSelected
+                      ]}>
+                        {dateObj.toLocaleDateString('es-ES', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </Text>
+                      <Text style={[
+                        styles.availableSlotsCount,
+                        isDateSelected && styles.dateHeaderTextSelected
+                      ]}>
+                        {times.length} horarios disponibles
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    {isDateSelected && (
+                      <View style={styles.timeSlotsContainer}>
+                        {times.map((time) => {
+                          const isTimeSelected = selectedTime === time;
+                          return (
+                            <TouchableOpacity
+                              key={time}
+                              style={[
+                                styles.timeSlotButton,
+                                isTimeSelected && styles.timeSlotButtonSelected
+                              ]}
+                              onPress={() => setSelectedTime(time)}
+                            >
+                              <Text style={[
+                                styles.timeSlotText,
+                                isTimeSelected && styles.timeSlotTextSelected
+                              ]}>
+                                {time}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
           )}
         </ScrollView>
 
@@ -559,12 +611,22 @@ const styles = StyleSheet.create({
     closeButton: { padding: 4 },
     modalContent: { flex: 1, padding: 20 },
     modalSubtitle: { fontSize: 16, fontWeight: '600', color: '#333', marginBottom: 20 },
-    slotsContainer: { gap: 12 },
-    slotButton: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#E5E5E5', backgroundColor: '#F9F9F9' },
-    slotButtonSelected: { borderColor: '#2196F3', backgroundColor: '#E3F2FD' },
-    slotDate: { fontSize: 14, fontWeight: '600', color: '#333' },
-    slotTime: { fontSize: 14, color: '#666' },
-    slotTextSelected: { color: '#2196F3' },
+    
+    // New date-based layout styles
+    datesContainer: { gap: 16 },
+    dateSection: { marginBottom: 8 },
+    dateHeader: { padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#E5E5E5', backgroundColor: '#F9F9F9' },
+    dateHeaderSelected: { borderColor: '#2196F3', backgroundColor: '#E3F2FD' },
+    dateHeaderText: { fontSize: 16, fontWeight: '600', color: '#333' },
+    dateHeaderTextSelected: { color: '#2196F3' },
+    availableSlotsCount: { fontSize: 12, color: '#666', marginTop: 4 },
+    
+    timeSlotsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12, paddingHorizontal: 8 },
+    timeSlotButton: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#E5E5E5', backgroundColor: 'white', minWidth: 80, alignItems: 'center' },
+    timeSlotButtonSelected: { borderColor: '#2196F3', backgroundColor: '#2196F3' },
+    timeSlotText: { fontSize: 14, fontWeight: '500', color: '#333' },
+    timeSlotTextSelected: { color: 'white' },
+    
     noSlotsText: { textAlign: 'center', fontSize: 16, color: '#666', fontStyle: 'italic', marginTop: 40 },
     modalFooter: { flexDirection: 'row', padding: 20, gap: 12, borderTopWidth: 1, borderTopColor: '#E5E5E5' },
     cancelModalButton: { flex: 1, paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: '#E5E5E5', alignItems: 'center' },
