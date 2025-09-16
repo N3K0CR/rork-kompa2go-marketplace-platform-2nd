@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Home, Search, Calendar, BarChart3, Bell, LayoutGrid, User, MessageCircle } from "lucide-react-native";
+import { Home, Search, Calendar, BarChart3, Bell, LayoutGrid, User, MessageCircle, Gift } from "lucide-react-native";
 import React from "react";
 import { View, Text } from "react-native";
 import { useAuth } from "@/contexts/AuthContext";
@@ -72,6 +72,16 @@ export default function TabLayout() {
           options={{
             title: t('calendar'),
             tabBarIcon: ({ color, size }) => <Calendar color={color} size={size} />,
+          }}
+        />
+      )}
+
+      {userType === 'client' && (
+        <Tabs.Screen
+          name="programas"
+          options={{
+            title: 'Programas',
+            tabBarIcon: ({ color, size }) => <Gift color={color} size={size} />,
           }}
         />
       )}
@@ -192,6 +202,16 @@ export default function TabLayout() {
       {userType === 'client' && (
         <Tabs.Screen
           name="analytics"
+          options={{
+            href: null,
+          }}
+        />
+      )}
+      
+      {/* Hide programas tab for non-client users */}
+      {userType !== 'client' && (
+        <Tabs.Screen
+          name="programas"
           options={{
             href: null,
           }}
