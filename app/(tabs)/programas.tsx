@@ -78,107 +78,103 @@ export default function ProgramasScreen() {
                 <Star size={20} color="#FFD700" />
                 <Text style={styles.earnMethodText}>Califica proveedores (+10 OKoins)</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.earnMethod}
-                onPress={async () => {
-                  console.log('Refiere amigos button pressed');
-                  const referralLink = `https://kompa2go.com/referral/${user?.id || 'guest'}`;
-                  const message = `¡Únete a Kompa2Go y gana 100 OKoins gratis! 🎉\n\nUsa mi código de referido para obtener beneficios exclusivos:\n${referralLink}\n\n¡Descarga la app y comienza a ganar OKoins hoy!`;
-                  
-                  console.log('About to share:', { message, referralLink });
-                  
-                  if (Platform.OS === 'web') {
-                    // For web, show options to share on different platforms
-                    const shortMessage = `¡Únete a Kompa2Go y gana 100 OKoins gratis! 🎉 ${referralLink}`;
-                    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shortMessage)}`;
-                    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shortMessage)}`;
-                    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralLink)}`;
-                    const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent('¡Únete a Kompa2Go y gana 100 OKoins gratis! 🎉')}`;
-                    
-                    Alert.alert(
-                      'Compartir enlace de referido',
-                      `Tu enlace de referido: ${referralLink}\n\n¡Compártelo en tus redes sociales para ganar 100 OKoins por cada amigo que se registre!`,
-                      [
-                        {
-                          text: 'WhatsApp',
-                          onPress: () => {
-                            console.log('Opening WhatsApp share');
-                            if (typeof window !== 'undefined') {
-                              window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-                            }
-                          }
-                        },
-                        {
-                          text: 'Twitter',
-                          onPress: () => {
-                            console.log('Opening Twitter share');
-                            if (typeof window !== 'undefined') {
-                              window.open(twitterUrl, '_blank', 'noopener,noreferrer');
-                            }
-                          }
-                        },
-                        {
-                          text: 'Facebook',
-                          onPress: () => {
-                            console.log('Opening Facebook share');
-                            if (typeof window !== 'undefined') {
-                              window.open(facebookUrl, '_blank', 'noopener,noreferrer');
-                            }
-                          }
-                        },
-                        {
-                          text: 'Telegram',
-                          onPress: () => {
-                            console.log('Opening Telegram share');
-                            if (typeof window !== 'undefined') {
-                              window.open(telegramUrl, '_blank', 'noopener,noreferrer');
-                            }
-                          }
-                        },
-                        {
-                          text: 'Copiar enlace',
-                          onPress: () => {
-                            console.log('Copying link to show in alert');
-                            Alert.alert(
-                              'Enlace copiado',
-                              `Copia este enlace y compártelo:\n\n${referralLink}\n\nMensaje sugerido:\n${shortMessage}`,
-                              [{ text: 'OK' }]
-                            );
-                          }
-                        },
-                        { text: 'Cerrar', style: 'cancel' }
-                      ]
-                    );
-                  } else {
-                    // Native mobile platforms - use native share
-                    try {
-                      const result = await Share.share({
-                        message: message,
-                        url: referralLink,
-                        title: 'Únete a Kompa2Go'
-                      });
-                      
-                      console.log('Share result:', result);
-                      
-                      if (result.action === Share.sharedAction) {
-                        console.log('Content was shared successfully');
-                      } else if (result.action === Share.dismissedAction) {
-                        console.log('Share dialog was dismissed');
-                      }
-                    } catch (error) {
-                      console.error('Share error:', error);
-                      Alert.alert(
-                        'Error al compartir',
-                        'No se pudo abrir el diálogo de compartir. Tu enlace de referido es:\n\n' + referralLink,
-                        [{ text: 'OK' }]
-                      );
-                    }
+<TouchableOpacity 
+  style={styles.earnMethod}
+  onPress={async () => {
+    console.log('Refiere amigos button pressed');
+    
+    try {
+      const referralLink = `https://kompa2go.com/referral/${user?.id || 'guest'}`;
+      const message = `¡Únete a Kompa2Go y gana 100 OKoins gratis! 🎉\n\nUsa mi código de referido para obtener beneficios exclusivos:\n${referralLink}\n\n¡Descarga la app y comienza a ganar OKoins hoy!`;
+      
+      console.log('About to share:', { message, referralLink });
+      
+      if (Platform.OS === 'web') {
+        // Para web, mostrar el enlace en un alert simple
+        const shortMessage = `¡Únete a Kompa2Go y gana 100 OKoins gratis! 🎉`;
+        
+        Alert.alert(
+          'Compartir enlace de referido',
+          `${shortMessage}\n\nTu enlace de referido:\n${referralLink}\n\n¡Compártelo en tus redes sociales para ganar 100 OKoins por cada amigo que se registre!`,
+          [
+            {
+              text: 'WhatsApp',
+              onPress: () => {
+                console.log('Opening WhatsApp share');
+                const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shortMessage + ' ' + referralLink)}`;
+                try {
+                  if (typeof window !== 'undefined') {
+                    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
                   }
-                }}
-              >
-                <Star size={20} color="#FFD700" />
-                <Text style={styles.earnMethodText}>Refiere amigos (+100 OKoins)</Text>
-              </TouchableOpacity>
+                } catch (error) {
+                  console.error('Error opening WhatsApp:', error);
+                  Alert.alert('Error', 'No se pudo abrir WhatsApp');
+                }
+              }
+            },
+            {
+              text: 'Copiar enlace',
+              onPress: async () => {
+                console.log('Copying link');
+                try {
+                  if (navigator.clipboard) {
+                    await navigator.clipboard.writeText(referralLink);
+                    Alert.alert('¡Copiado!', 'El enlace se ha copiado al portapapeles');
+                  } else {
+                    // Fallback para navegadores más antiguos
+                    Alert.alert(
+                      'Enlace de referido',
+                      `Copia este enlace manualmente:\n\n${referralLink}`,
+                      [{ text: 'OK' }]
+                    );
+                  }
+                } catch (error) {
+                  console.error('Error copying:', error);
+                  Alert.alert(
+                    'Enlace de referido',
+                    `Copia este enlace manualmente:\n\n${referralLink}`,
+                    [{ text: 'OK' }]
+                  );
+                }
+              }
+            },
+            { text: 'Cerrar', style: 'cancel' }
+          ]
+        );
+      } else {
+        // Para móvil - usar Share nativo
+        try {
+          const result = await Share.share({
+            message: message,
+            url: referralLink,
+            title: 'Únete a Kompa2Go'
+          });
+          
+          console.log('Share result:', result);
+          
+          if (result.action === Share.sharedAction) {
+            console.log('Content was shared successfully');
+          } else if (result.action === Share.dismissedAction) {
+            console.log('Share dialog was dismissed');
+          }
+        } catch (error) {
+          console.error('Share error:', error);
+          Alert.alert(
+            'Error al compartir',
+            'No se pudo abrir el diálogo de compartir. Tu enlace de referido es:\n\n' + referralLink,
+            [{ text: 'OK' }]
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error general en compartir:', error);
+      Alert.alert('Error', 'Ocurrió un error al intentar compartir. Intenta de nuevo.');
+    }
+  }}
+>
+  <Star size={20} color="#FFD700" />
+  <Text style={styles.earnMethodText}>Refiere amigos (+100 OKoins)</Text>
+</TouchableOpacity>
               <View style={styles.earnMethod}>
                 <Star size={20} color="#FFD700" />
                 <Text style={styles.earnMethodText}>Bono diario de login y reserva (+5 OKoins)</Text>
