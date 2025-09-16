@@ -269,7 +269,6 @@ export default function ProfileScreen() {
 
   const menuItems = [
     { icon: User, title: t('edit_profile'), subtitle: t('update_personal_info'), action: 'edit_profile' },
-    ...(user?.userType === 'client' ? [{ icon: CreditCard, title: t('my_wallet'), subtitle: t('manage_credits_payments'), action: 'wallet' }] : []),
     { icon: History, title: t('historical'), subtitle: t('view_previous_bookings'), action: 'history' },
     { icon: Lock, title: 'Cambiar Contraseña', subtitle: 'Actualizar tu contraseña de acceso', action: 'change_password' },
     { icon: Key, title: 'Recuperar Contraseña', subtitle: 'Enviar correo de recuperación', action: 'reset_password' },
