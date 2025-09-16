@@ -22,13 +22,14 @@ export default function HomeScreen() {
   const { user, loading, switchRole } = useAuth();
   const { walletBalance, okoins, bookingPasses } = useWallet();
   const { t } = useLanguage();
-  const { getTodayAppointments, getUpcomingAppointments } = useAppointments();
+  const appointmentsContext = useAppointments();
   const { simulateNewReservation, pendingReservations, isAlertActive } = useReservationAlert();
   const userType = user?.userType || 'client';
   const { modal } = useLocalSearchParams<{ modal?: string }>();
   
-  const todayAppointments = getTodayAppointments();
-  const upcomingAppointments = getUpcomingAppointments();
+  // Safely call the functions with error handling
+  const todayAppointments = appointmentsContext?.getTodayAppointments ? appointmentsContext.getTodayAppointments() : [];
+  const upcomingAppointments = appointmentsContext?.getUpcomingAppointments ? appointmentsContext.getUpcomingAppointments() : [];
   const [showRoleSwitch, setShowRoleSwitch] = useState(false);
   const [roleSwitchData, setRoleSwitchData] = useState({
     email: '',

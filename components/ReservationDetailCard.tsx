@@ -73,25 +73,35 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
 
   const handleCancelReservation = () => {
     console.log('🔥 CANCELAR - Botón presionado');
+    console.log('🔥 CANCELAR - Alert disponible?', typeof Alert.alert);
     
-    Alert.alert(
-      'Confirmar Cancelación', 
-      '¿Estás seguro de que deseas cancelar esta reserva?', 
-      [
-        { 
-          text: 'No', 
-          style: 'cancel',
-          onPress: () => console.log('🔥 CANCELAR - Usuario canceló')
-        },
-        { 
-          text: 'Sí', 
-          onPress: () => {
-            console.log('🔥 CANCELAR - Usuario confirmó');
-            executeCancellation();
+    try {
+      console.log('🔥 CANCELAR - Intentando mostrar Alert...');
+      Alert.alert(
+        'Confirmar Cancelación', 
+        '¿Estás seguro de que deseas cancelar esta reserva?', 
+        [
+          { 
+            text: 'No', 
+            style: 'cancel',
+            onPress: () => console.log('🔥 CANCELAR - Usuario canceló')
+          },
+          { 
+            text: 'Sí', 
+            onPress: () => {
+              console.log('🔥 CANCELAR - Usuario confirmó');
+              executeCancellation();
+            }
           }
-        }
-      ]
-    );
+        ]
+      );
+      console.log('🔥 CANCELAR - Alert.alert llamado exitosamente');
+    } catch (error) {
+      console.error('❌ CANCELAR - Error con Alert:', error);
+      // Fallback - ejecutar directamente
+      console.log('🔥 CANCELAR - Ejecutando cancelación directamente...');
+      executeCancellation();
+    }
   };
 
   const handleConfirm = async () => {
