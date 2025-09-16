@@ -1,7 +1,7 @@
-// ID: ReservationDetailCard_v8_working
+// ID: ReservationDetailCard_v9_reschedule
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { XCircle, MessageCircle, Calendar, CheckCircle, Bell, TimerOff, AlertTriangle } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal } from 'react-native';
+import { XCircle, MessageCircle, Calendar, CheckCircle, Bell, TimerOff, AlertTriangle, X } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppointments, Appointment, ConfirmationState } from '@/contexts/AppointmentsContext';
 import { useChat } from '@/contexts/ChatContext';
@@ -15,11 +15,14 @@ interface ReservationDetailCardProps {
 
 export default function ReservationDetailCard({ reservation, onClose, showHeader = true }: ReservationDetailCardProps) {
   const { user } = useAuth();
-  const { updateAppointment, getConfirmationState } = useAppointments();
+  const { updateAppointment, getConfirmationState, getAppointmentsForDate } = useAppointments();
   const { createChat } = useChat();
   const userType = user?.userType || 'client';
 
   const [confirmationState, setConfirmationState] = useState<ConfirmationState | null>(null);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [selectedTime, setSelectedTime] = useState<string>('');
 
   // Debug logging
   useEffect(() => {
@@ -137,10 +140,66 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
 
   const handleReschedule = () => {
     console.log('📅 REAGENDAR - Botón presionado');
+    setShowRescheduleModal(true);
+  };
+
+  const generateAvailableSlots = () => {
+    const slots = [];
+    const today = new Date();
     
-    // Simplified approach - just log for now
-    console.log('📅 REAGENDAR - Función ejecutada');
-    onClose?.();
+    // Generate slots for the next 7 days
+    for (let i = 1; i <= 7; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      // Generate time slots from 9 AM to 6 PM
+      for (let hour = 9; hour <= 18; hour++) {
+        for (let minute = 0; minute < 60; minute += 30) {
+          const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+          
+          // Check if this slot conflicts with existing appointments
+          const existingAppointments = getAppointmentsForDate(dateStr);
+          const slotStart = new Date(`${dateStr}T${timeStr}`);
+          const slotEnd = new Date(slotStart.getTime() + reservation.duration * 60000);
+          
+          const hasConflict = existingAppointments.some((apt: Appointment) => {
+            if (apt.id === reservation.id) return false; // Skip current appointment
+            const aptStart = new Date(`${apt.date}T${apt.time}`);
+            const aptEnd = new Date(aptStart.getTime() + apt.duration * 60000);
+            return (slotStart < aptEnd && slotEnd > aptStart);
+          });
+          
+          if (!hasConflict) {
+            slots.push({ date: dateStr, time: timeStr, dateObj: date });
+          }
+        }
+      }
+    }
+    
+    return slots.slice(0, 20); // Limit to first 20 available slots
+  };
+
+  const handleConfirmReschedule = async () => {
+    if (!selectedDate || !selectedTime) {
+      Alert.alert('Error', 'Por favor selecciona una fecha y hora.');
+      return;
+    }
+
+    try {
+      await updateAppointment(reservation.id, {
+        date: selectedDate,
+        time: selectedTime,
+        status: 'confirmed' // Auto-confirm rescheduled appointments
+      });
+      
+      setShowRescheduleModal(false);
+      onClose?.();
+      Alert.alert('¡Reagendado!', 'Tu cita ha sido reagendada exitosamente.');
+    } catch (error) {
+      console.error('❌ Error al reagendar:', error);
+      Alert.alert('Error', 'No se pudo reagendar la cita. Intenta de nuevo.');
+    }
   };
 
   const handleChatContact = async () => {
@@ -284,14 +343,15 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
   };
 
   return (
-    <View style={styles.container}>
-      {showHeader && (
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Detalles de Reserva</Text>
-        </View>
-      )}
+    <>
+      <View style={styles.container}>
+        {showHeader && (
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Detalles de Reserva</Text>
+          </View>
+        )}
 
-      <ScrollView style={styles.content}>
+        <ScrollView style={styles.content}>
         <View style={styles.infoSection}>
           <Text style={styles.sectionTitle}>Información de la Reserva</Text>
 
@@ -370,7 +430,94 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </View>
+      </View>
+
+      {/* Reschedule Modal */}
+    <Modal
+      visible={showRescheduleModal}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => setShowRescheduleModal(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Reagendar Cita</Text>
+          <TouchableOpacity
+            onPress={() => setShowRescheduleModal(false)}
+            style={styles.closeButton}
+          >
+            <X size={24} color="#666" />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.modalContent}>
+          <Text style={styles.modalSubtitle}>Selecciona una nueva fecha y hora:</Text>
+          
+          <View style={styles.slotsContainer}>
+            {generateAvailableSlots().map((slot, index) => {
+              const isSelected = selectedDate === slot.date && selectedTime === slot.time;
+              return (
+                <TouchableOpacity
+                  key={`${slot.date}-${slot.time}`}
+                  style={[
+                    styles.slotButton,
+                    isSelected && styles.slotButtonSelected
+                  ]}
+                  onPress={() => {
+                    setSelectedDate(slot.date);
+                    setSelectedTime(slot.time);
+                  }}
+                >
+                  <Text style={[
+                    styles.slotDate,
+                    isSelected && styles.slotTextSelected
+                  ]}>
+                    {slot.dateObj.toLocaleDateString('es-ES', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </Text>
+                  <Text style={[
+                    styles.slotTime,
+                    isSelected && styles.slotTextSelected
+                  ]}>
+                    {slot.time}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {generateAvailableSlots().length === 0 && (
+            <Text style={styles.noSlotsText}>
+              No hay horarios disponibles en los próximos 7 días.
+            </Text>
+          )}
+        </ScrollView>
+
+        <View style={styles.modalFooter}>
+          <TouchableOpacity
+            style={styles.cancelModalButton}
+            onPress={() => setShowRescheduleModal(false)}
+          >
+            <Text style={styles.cancelModalButtonText}>Cancelar</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[
+              styles.confirmModalButton,
+              (!selectedDate || !selectedTime) && styles.confirmModalButtonDisabled
+            ]}
+            onPress={handleConfirmReschedule}
+            disabled={!selectedDate || !selectedTime}
+          >
+            <Text style={styles.confirmModalButtonText}>Confirmar</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 }
 
@@ -404,4 +551,25 @@ const styles = StyleSheet.create({
     contactButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, gap: 8 },
     kompa2goButton: { backgroundColor: '#D81B60' },
     contactButtonText: { color: 'white', fontSize: 14, fontWeight: '600' },
+    
+    // Modal styles
+    modalContainer: { flex: 1, backgroundColor: 'white' },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#E5E5E5' },
+    modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#333' },
+    closeButton: { padding: 4 },
+    modalContent: { flex: 1, padding: 20 },
+    modalSubtitle: { fontSize: 16, fontWeight: '600', color: '#333', marginBottom: 20 },
+    slotsContainer: { gap: 12 },
+    slotButton: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#E5E5E5', backgroundColor: '#F9F9F9' },
+    slotButtonSelected: { borderColor: '#2196F3', backgroundColor: '#E3F2FD' },
+    slotDate: { fontSize: 14, fontWeight: '600', color: '#333' },
+    slotTime: { fontSize: 14, color: '#666' },
+    slotTextSelected: { color: '#2196F3' },
+    noSlotsText: { textAlign: 'center', fontSize: 16, color: '#666', fontStyle: 'italic', marginTop: 40 },
+    modalFooter: { flexDirection: 'row', padding: 20, gap: 12, borderTopWidth: 1, borderTopColor: '#E5E5E5' },
+    cancelModalButton: { flex: 1, paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: '#E5E5E5', alignItems: 'center' },
+    cancelModalButtonText: { fontSize: 16, fontWeight: '600', color: '#666' },
+    confirmModalButton: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#2196F3', alignItems: 'center' },
+    confirmModalButtonDisabled: { backgroundColor: '#CCCCCC' },
+    confirmModalButtonText: { fontSize: 16, fontWeight: '600', color: 'white' },
 });
