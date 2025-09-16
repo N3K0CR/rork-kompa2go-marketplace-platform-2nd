@@ -316,7 +316,7 @@ export default function SearchScreen() {
               <TouchableOpacity 
                 style={[styles.restrictedButton, styles.primaryRestrictedButton]}
                 onPress={() => {
-                  router.push('/purchase-plan');
+                  router.push('/(tabs)/?modal=purchase');
                 }}
               >
                 <Text style={[styles.restrictedButtonText, styles.primaryRestrictedButtonText]}>Comprar pase de reserva</Text>
