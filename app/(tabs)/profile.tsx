@@ -82,9 +82,6 @@ export default function ProfileScreen() {
       case 'settings':
         Alert.alert(t('configurations'), 'Configuraciones en desarrollo');
         break;
-      case 'change_password':
-        setShowPasswordModal(true);
-        break;
       case 'reset_password':
         setShowResetModal(true);
         break;
@@ -270,7 +267,6 @@ export default function ProfileScreen() {
   const menuItems = [
     { icon: User, title: t('edit_profile'), subtitle: t('update_personal_info'), action: 'edit_profile' },
     { icon: History, title: t('historical'), subtitle: t('view_previous_bookings'), action: 'history' },
-    { icon: Lock, title: 'Cambiar Contraseña', subtitle: 'Actualizar tu contraseña de acceso', action: 'change_password' },
     ...(user?.userType !== 'provider' ? [{ icon: Settings, title: t('configurations'), subtitle: t('app_preferences'), action: 'settings' }] : []),
   ];
 

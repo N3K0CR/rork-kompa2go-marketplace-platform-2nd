@@ -46,12 +46,14 @@ export default function AuthScreen() {
   const [showRoleSwitch, setShowRoleSwitch] = useState(false);
   const [showGuidanceModal, setShowGuidanceModal] = useState(false);
   const [guidanceContent, setGuidanceContent] = useState('');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
   const [roleSwitchData, setRoleSwitchData] = useState({
     email: '',
     password: '',
     targetRole: 'client' as 'client' | 'provider',
   });
-  const { signIn, signUp, switchRole } = useAuth();
+  const { signIn, signUp, switchRole, resetPassword } = useAuth();
 
   const totalProviderSteps = 4;
 
@@ -130,6 +132,25 @@ export default function AuthScreen() {
       router.replace('/(tabs)');
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Error al cambiar de rol');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!forgotPasswordEmail) {
+      Alert.alert('Error', 'Por favor ingresa tu correo electrónico');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await resetPassword(forgotPasswordEmail);
+      Alert.alert('Éxito', 'Se ha enviado un correo de recuperación a tu email');
+      setShowForgotPassword(false);
+      setForgotPasswordEmail('');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Error al enviar el correo de recuperación');
     } finally {
       setLoading(false);
     }
@@ -623,15 +644,26 @@ export default function AuthScreen() {
           </TouchableOpacity>
 
           {isLogin && (
-            <TouchableOpacity
-              style={styles.roleSwitchButton}
-              onPress={() => setShowRoleSwitch(true)}
-            >
-              <RefreshCw size={16} color="#D81B60" />
-              <Text style={styles.roleSwitchButtonText}>
-                Cambiar a Proveedor/Cliente
-              </Text>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={styles.forgotPasswordButton}
+                onPress={() => setShowForgotPassword(true)}
+              >
+                <Text style={styles.forgotPasswordText}>
+                  ¿Olvidó su contraseña?
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.roleSwitchButton}
+                onPress={() => setShowRoleSwitch(true)}
+              >
+                <RefreshCw size={16} color="#D81B60" />
+                <Text style={styles.roleSwitchButtonText}>
+                  Cambiar a Proveedor/Cliente
+                </Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
       </ScrollView>
@@ -725,6 +757,55 @@ export default function AuthScreen() {
             >
               <Text style={styles.modalButtonText}>
                 {loading ? 'Cambiando...' : 'Cambiar Rol'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Forgot Password Modal */}
+      <Modal
+        visible={showForgotPassword}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowForgotPassword(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Recuperar Contraseña</Text>
+              <TouchableOpacity
+                onPress={() => setShowForgotPassword(false)}
+                style={styles.closeButton}
+              >
+                <X size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalDescription}>
+              Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.
+            </Text>
+
+            <View style={styles.modalInputContainer}>
+              <Mail size={20} color="#666" />
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Correo electrónico"
+                value={forgotPasswordEmail}
+                onChangeText={setForgotPasswordEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                placeholderTextColor="#666"
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={handleForgotPassword}
+              disabled={loading}
+            >
+              <Text style={styles.modalButtonText}>
+                {loading ? 'Enviando...' : 'Enviar Correo'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -880,6 +961,17 @@ const styles = StyleSheet.create({
     color: '#D81B60',
     fontSize: 14,
     fontWeight: '600',
+  },
+  forgotPasswordButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  forgotPasswordText: {
+    color: '#D81B60',
+    fontSize: 14,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   modalOverlay: {
     flex: 1,
