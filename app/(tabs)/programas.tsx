@@ -81,17 +81,29 @@ export default function ProgramasScreen() {
               <TouchableOpacity 
                 style={styles.earnMethod}
                 onPress={async () => {
+                  console.log('Refiere amigos button pressed');
                   try {
                     const referralLink = `https://kompa2go.com/referral/${user?.id || 'guest'}`;
                     const message = `¡Únete a Kompa2Go y gana 100 OKoins gratis! 🎉\n\nUsa mi código de referido para obtener beneficios exclusivos:\n${referralLink}\n\n¡Descarga la app y comienza a ganar OKoins hoy!`;
                     
-                    await Share.share({
+                    console.log('About to share:', { message, referralLink });
+                    
+                    const result = await Share.share({
                       message: message,
                       url: referralLink,
                       title: 'Únete a Kompa2Go'
                     });
+                    
+                    console.log('Share result:', result);
+                    
+                    if (result.action === Share.sharedAction) {
+                      console.log('Content was shared successfully');
+                    } else if (result.action === Share.dismissedAction) {
+                      console.log('Share dialog was dismissed');
+                    }
                   } catch (error) {
-                    Alert.alert('Error', 'No se pudo compartir el enlace de referido');
+                    console.error('Share error:', error);
+                    Alert.alert('Error', 'No se pudo compartir el enlace de referido. Por favor, inténtalo de nuevo.');
                   }
                 }}
               >
