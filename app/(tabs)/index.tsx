@@ -301,19 +301,19 @@ export default function HomeScreen() {
               {selectedPaymentMethod && (
                 <View style={styles.paymentInfoSection}>
                   <Text style={styles.paymentInfoTitle}>
-                    {selectedPaymentMethod === 'sinpe' ? 'SINPE Móvil' : 'Kash'}
+                    Información de Depósito:
                   </Text>
                   <Text style={styles.paymentInfoNumber}>
-                    +506 88332517
+                    📱 Número: 8833-2517
                   </Text>
                   <Text style={styles.paymentInfoOwner}>
-                    Ricardo Narvaez Vargas
+                    👤 Nombre: Ricardo Narváez Vargas
                   </Text>
                   <Text style={styles.paymentInfoInstructions}>
-                    Envía ₡500 al número indicado y sube el comprobante de pago.
+                    🏢 Sakura Beauty Salon TechDev Manager
                   </Text>
                   <Text style={styles.paymentInfoNote}>
-                    Sakura Beauty Salon es propietario de Kompa2Go. Todos los pagos serán revisados y aprobados por ellos.
+                    Envía ₡500 al número indicado y sube el comprobante de pago.
                   </Text>
                 </View>
               )}
@@ -478,19 +478,19 @@ export default function HomeScreen() {
                   {selectedPaymentMethod && (
                     <View style={styles.paymentInfoSection}>
                       <Text style={styles.paymentInfoTitle}>
-                        {selectedPaymentMethod === 'sinpe' ? 'SINPE Móvil' : 'Kash'}
+                        Información de Depósito:
                       </Text>
                       <Text style={styles.paymentInfoNumber}>
-                        +506 88332517
+                        📱 Número: 8833-2517
                       </Text>
                       <Text style={styles.paymentInfoOwner}>
-                        Ricardo Narvaez Vargas
+                        👤 Nombre: Ricardo Narváez Vargas
                       </Text>
                       <Text style={styles.paymentInfoInstructions}>
-                        Envía ₡{getAvailablePlans().find(p => p.id === selectedPlan)?.price.toLocaleString()} al número indicado y sube el comprobante de pago.
+                        🏢 Sakura Beauty Salon TechDev Manager
                       </Text>
                       <Text style={styles.paymentInfoNote}>
-                        Sakura Beauty Salon es propietario de Kompa2Go. Todos los pagos serán revisados y aprobados por ellos.
+                        Envía ₡{getAvailablePlans().find(p => p.id === selectedPlan)?.price.toLocaleString()} al número indicado y sube el comprobante de pago.
                       </Text>
                     </View>
                   )}
