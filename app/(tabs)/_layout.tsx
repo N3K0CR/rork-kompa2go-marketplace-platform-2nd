@@ -91,7 +91,7 @@ export default function TabLayout() {
           <Tabs.Screen
             name="analytics"
             options={{
-              title: t('analytics'),
+              title: 'Analytics',
               tabBarIcon: ({ color, size }) => <BarChart3 color={color} size={size} />,
             }}
           />
@@ -105,7 +105,7 @@ export default function TabLayout() {
           <Tabs.Screen
             name="chat"
             options={{
-              title: t('notifications'),
+              title: 'Notificaciones',
               tabBarIcon: ({ color, size }) => <Bell color={color} size={size} />,
             }}
           />
