@@ -1,7 +1,7 @@
 // ID: ReservationDetailCard_v6
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { XCircle, MessageCircle, Calendar, CheckCircle, Bell, TimerOff, AlertTriangle } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal } from 'react-native';
+import { XCircle, MessageCircle, Calendar, Clock, X, CheckCircle, Bell, TimerOff, AlertTriangle } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppointments, Appointment, ConfirmationState } from '@/contexts/AppointmentsContext';
 import { useChat } from '@/contexts/ChatContext';

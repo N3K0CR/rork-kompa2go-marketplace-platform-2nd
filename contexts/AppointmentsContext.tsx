@@ -14,9 +14,11 @@ export interface Appointment {
   notes?: string;
   providerId?: string;
   providerName?: string;
-  confirmationPostpones: number; // Campo clave para rastrear el flujo
+  // Nuevo campo para rastrear el flujo de confirmación
+  confirmationPostpones: number; 
 }
 
+// Describe el estado actual del flujo de confirmación de una cita
 export interface ConfirmationState {
   status: 'default' | 'pending_confirmation' | 'final_options';
   message: string;
@@ -27,11 +29,6 @@ export interface ConfirmationState {
   postponeDuration?: 8 | 5;
   canReschedule: boolean;
   canCancel: boolean;
-}
-
-interface TimeSlot {
-  start: Date;
-  end: Date;
 }
 
 interface AppointmentsContextType {
@@ -50,21 +47,59 @@ interface AppointmentsContextType {
 
 const AppointmentsContext = createContext<AppointmentsContextType | undefined>(undefined);
 
+// Datos de prueba actualizados para incluir citas en diferentes momentos
 const clientMockAppointments: Appointment[] = [
   { id: 'c1', date: new Date().toISOString().split('T')[0], time: '18:00', duration: 120, clientName: 'Ana Cleaning', service: 'Limpieza Completa', type: 'kompa2go', status: 'confirmed', confirmationPostpones: 0 },
+  // Cita para mañana a esta hora -> Entrará en el flujo de 24 horas
   { id: 'c2', date: new Date(Date.now() + 23 * 60 * 60 * 1000).toISOString().split('T')[0], time: new Date(Date.now() + 23 * 60 * 60 * 1000).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit'}), duration: 90, clientName: 'María Pro', service: 'Limpieza Ventanas', type: 'kompa2go', status: 'pending', confirmationPostpones: 0 },
+  // Cita para dentro de 15 horas -> Ya pospuesta una vez
   { id: 'c3', date: new Date(Date.now() + 15 * 60 * 60 * 1000).toISOString().split('T')[0], time: new Date(Date.now() + 15 * 60 * 60 * 1000).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit'}), duration: 60, clientName: 'Carlos Detailing', service: 'Lavado Auto', type: 'kompa2go', status: 'pending', confirmationPostpones: 1 },
+   // Cita para dentro de 7 horas -> Ya pospuesta dos veces
   { id: 'c4', date: new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().split('T')[0], time: new Date(Date.now() + 7 * 60 * 60 * 1000).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit'}), duration: 180, clientName: 'Sofia Garden', service: 'Jardinería', type: 'kompa2go', status: 'pending', confirmationPostpones: 2 },
+  // Cita para dentro de 4 horas -> Opciones finales
   { id: 'c5', date: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString().split('T')[0], time: new Date(Date.now() + 4 * 60 * 60 * 1000).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit'}), duration: 180, clientName: 'Juan Mecánica', service: 'Revisión General', type: 'kompa2go', status: 'pending', confirmationPostpones: 3 },
 ];
 
+const mockAppointments: Appointment[] = [ /* ... tus datos de proveedor ... */ ];
+
 export function AppointmentsProvider({ children }: { children: ReactNode }) {
-  const [appointments, setAppointments] = useState<Appointment[]>(clientMockAppointments);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
   const [userType, setUserType] = useState<string>('client');
   
   const saveAppointments = useCallback(async (newAppointments: Appointment[]) => {
     const storageKey = userType === 'client' ? 'client_appointments' : 'appointments';
     await AsyncStorage.setItem(storageKey, JSON.stringify(newAppointments));
+  }, [userType]);
+  
+  const loadAppointments = useCallback(async (currentUserType: string) => {
+    setLoading(true);
+    try {
+      const storageKey = currentUserType === 'client' ? 'client_appointments' : 'appointments';
+      const storedAppointments = await AsyncStorage.getItem(storageKey);
+      
+      if (storedAppointments) {
+        setAppointments(JSON.parse(storedAppointments));
+      } else {
+        const mockData = currentUserType === 'client' ? clientMockAppointments : mockAppointments;
+        setAppointments(mockData);
+        await AsyncStorage.setItem(storageKey, JSON.stringify(mockData));
+      }
+    } catch (error) {
+      console.error('Error loading appointments:', error);
+      const mockData = currentUserType === 'client' ? clientMockAppointments : mockAppointments;
+      setAppointments(mockData);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  useEffect(() => {
+    loadAppointments(userType);
+  }, [userType, loadAppointments]);
+
+  const setUserTypeAndReload = useCallback(async (newUserType: string) => {
+    if (newUserType !== userType) setUserType(newUserType);
   }, [userType]);
 
   const addAppointment = useCallback(async (appointmentData: Omit<Appointment, 'id' | 'confirmationPostpones'>) => {
@@ -101,7 +136,7 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
     const baseState: Omit<ConfirmationState, 'status' | 'message'> = {
         hoursUntilAppointment,
         postponeCount: appointment.confirmationPostpones || 0,
-        canConfirm: false, canPostpone: false, canReschedule: false, canCancel: true,
+        canConfirm: false, canPostpone: false, canReschedule: true, canCancel: true,
     };
 
     if (appointment.status !== 'pending' || appointment.type !== 'kompa2go' || hoursUntilAppointment > 24) {
@@ -110,13 +145,20 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
 
     const postponeCount = baseState.postponeCount;
 
-    if (postponeCount >= 2 && hoursUntilAppointment <= (24 - 8 - 8)) { // Después de 2 posposiciones (16h), y dentro de las últimas 8h
-        return { ...baseState, status: 'final_options', message: "Última oportunidad: Tu cita es muy pronto. Por favor, confirma, reagenda o cancela para respetar el tiempo del proveedor.", canConfirm: true, canReschedule: true };
+    // Etapa 4: Opciones finales (menos de 5 horas restantes O después de 3 posposiciones)
+    if (postponeCount >= 3 || (postponeCount >=2 && hoursUntilAppointment <= 5) ) {
+        return { ...baseState, status: 'final_options', message: "Última oportunidad: Tu cita es muy pronto. Por favor, toma una acción para respetar el tiempo del proveedor.", canConfirm: true, canReschedule: true, canCancel: true };
     }
-    if (postponeCount === 1 && hoursUntilAppointment <= (24 - 8)) { // Después de 1 posposición (8h)
+    // Etapa 3: Segunda posposición (5 horas)
+    if (postponeCount === 2 && hoursUntilAppointment <= (24 - 8 - 8)) {
         return { ...baseState, status: 'pending_confirmation', message: "Tu cita es pronto. Puedes posponer una última vez por 5 horas.", canConfirm: true, canPostpone: true, postponeDuration: 5 };
     }
-    if (postponeCount === 0 && hoursUntilAppointment <= 24) { // Primer recordatorio
+    // Etapa 2: Primera posposición (8 horas)
+    if (postponeCount === 1 && hoursUntilAppointment <= (24 - 8)) {
+        return { ...baseState, status: 'pending_confirmation', message: "Recordatorio de tu cita. ¿Confirmas tu asistencia?", canConfirm: true, canPostpone: true, postponeDuration: 8 };
+    }
+    // Etapa 1: Primer recordatorio (24 horas)
+    if (postponeCount === 0 && hoursUntilAppointment <= 24) {
         return { ...baseState, status: 'pending_confirmation', message: "Tu cita es en menos de 24 horas. Por favor, confirma tu asistencia.", canConfirm: true, canPostpone: true, postponeDuration: 8 };
     }
     
@@ -140,18 +182,12 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
   }, [appointments]);
 
   const refreshAppointments = useCallback(async () => {
-    // Reload appointments from storage or API
-  }, []);
-
-  const setUserTypeAndReload = useCallback(async (newUserType: string) => {
-    if (newUserType !== userType) {
-      setUserType(newUserType);
-    }
-  }, [userType]);
+    await loadAppointments(userType);
+  }, [userType, loadAppointments]);
 
   const value = {
     appointments,
-    loading: false,
+    loading,
     addAppointment,
     updateAppointment,
     deleteAppointment,
