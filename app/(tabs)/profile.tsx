@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, TextInput, Image, Platform } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWallet } from '@/contexts/WalletContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { User, Settings, CreditCard, History, LogOut, Shield, Calendar, Users, BarChart3, Star, TrendingUp, Lock, X, Key } from 'lucide-react-native';
+import { useReservationPlans } from '@/contexts/ReservationPlansContext';
+import { usePendingPayments } from '@/contexts/PendingPaymentsContext';
+import { User, Settings, CreditCard, History, LogOut, Shield, Calendar, Users, BarChart3, Star, TrendingUp, Lock, X, Key, Camera, Upload, Package, Check } from 'lucide-react-native';
 import { router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function ProfileScreen() {
   const { user, signOut, changePassword, resetPassword } = useAuth();
-  const { walletBalance, okoins } = useWallet();
+  const { walletBalance, okoins, bookingPasses } = useWallet();
   const { t } = useLanguage();
+  const { getAvailablePlans, purchasePlan } = useReservationPlans();
+  const { addPaymentProof } = usePendingPayments();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [passwordData, setPasswordData] = useState({
@@ -19,6 +24,12 @@ export default function ProfileScreen() {
   });
   const [resetEmail, setResetEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const [showPlansModal, setShowPlansModal] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'sinpe' | 'kash' | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [proofImage, setProofImage] = useState<string | null>(null);
+  const [purchaseLoading, setPurchaseLoading] = useState(false);
 
   const handleSignOut = () => {
     Alert.alert(
@@ -49,9 +60,16 @@ export default function ProfileScreen() {
         break;
       case 'wallet':
         if (user?.userType === 'client') {
-          Alert.alert(t('my_wallet'), 'Funcionalidad de billetera en desarrollo');
+          setShowPurchaseModal(true);
         } else {
           Alert.alert(t('my_wallet'), 'Esta función no está disponible para proveedores');
+        }
+        break;
+      case 'plans':
+        if (user?.userType === 'client') {
+          setShowPlansModal(true);
+        } else {
+          Alert.alert('Planes', 'Esta función no está disponible para proveedores');
         }
         break;
       case 'history':
@@ -147,6 +165,108 @@ export default function ProfileScreen() {
     }
   };
 
+  const pickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permisos requeridos', 'Necesitamos acceso a tu galería para subir el comprobante.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setProofImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'No se pudo seleccionar la imagen');
+    }
+  };
+
+  const handlePurchaseSubmit = async () => {
+    if (!selectedPaymentMethod || !proofImage) {
+      Alert.alert('Error', 'Por favor completa todos los campos');
+      return;
+    }
+
+    setPurchaseLoading(true);
+    try {
+      // Create payment submission data
+      const paymentData = {
+        userId: user?.id,
+        userName: user?.name,
+        userEmail: user?.email,
+        amount: 500,
+        paymentMethod: selectedPaymentMethod,
+        proofImage: proofImage,
+        type: 'booking_pass' as const
+      };
+
+      // Submit payment proof using context
+      await addPaymentProof(paymentData);
+
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      Alert.alert(
+        'Comprobante Enviado',
+        'Tu comprobante ha sido enviado exitosamente. El pase será activado una vez que se verifique el pago (usualmente en 5-10 minutos). El administrador recibirá una alerta sonora para procesar tu pago urgentemente.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowPurchaseModal(false);
+              setSelectedPaymentMethod(null);
+              setProofImage(null);
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo procesar el comprobante. Inténtalo de nuevo.');
+    } finally {
+      setPurchaseLoading(false);
+    }
+  };
+
+  const handlePlanPurchaseSubmit = async () => {
+    if (!selectedPlan || !selectedPaymentMethod || !proofImage) {
+      Alert.alert('Error', 'Por favor completa todos los campos');
+      return;
+    }
+
+    setPurchaseLoading(true);
+    try {
+      await purchasePlan(selectedPlan, selectedPaymentMethod, proofImage);
+      
+      Alert.alert(
+        'Plan Comprado',
+        'Tu comprobante ha sido enviado exitosamente. El plan será activado una vez que se verifique el pago (usualmente en 5-10 minutos). El administrador recibirá una alerta sonora para procesar tu pago urgentemente.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowPlansModal(false);
+              setSelectedPlan(null);
+              setSelectedPaymentMethod(null);
+              setProofImage(null);
+            }
+          }
+        ]
+      );
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'No se pudo procesar la compra del plan.');
+    } finally {
+      setPurchaseLoading(false);
+    }
+  };
+
   const menuItems = [
     { icon: User, title: t('edit_profile'), subtitle: t('update_personal_info'), action: 'edit_profile' },
     ...(user?.userType === 'client' ? [{ icon: CreditCard, title: t('my_wallet'), subtitle: t('manage_credits_payments'), action: 'wallet' }] : []),
@@ -193,22 +313,43 @@ export default function ProfileScreen() {
       <View style={styles.content}>
         {user?.userType === 'client' && (
           <View style={styles.walletSection}>
-            <View style={styles.walletCard}>
+            <TouchableOpacity 
+              style={styles.walletCard}
+              onPress={() => setShowPurchaseModal(true)}
+              activeOpacity={0.7}
+            >
               <View style={styles.walletHeader}>
                 <CreditCard size={20} color="#D81B60" />
                 <Text style={styles.walletTitle}>{t('my_wallet')}</Text>
               </View>
               <Text style={styles.walletBalance}>₡{walletBalance.toLocaleString()}</Text>
               <Text style={styles.walletSubtitle}>{t('wallet_balance')}</Text>
-            </View>
-            <View style={styles.okoinsCard}>
+              
+              {/* Booking Passes Info */}
+              <View style={styles.passesInfo}>
+                <Text style={styles.passesCount}>{bookingPasses.filter(p => !p.isUsed).length} pases disponibles</Text>
+                <Text style={styles.buyPassHint}>Toca para comprar pases</Text>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.okoinsCard}
+              onPress={() => setShowPlansModal(true)}
+              activeOpacity={0.7}
+            >
               <View style={styles.walletHeader}>
                 <Star size={20} color="#FF9800" />
                 <Text style={styles.okoinsTitle}>OKoins</Text>
               </View>
               <Text style={styles.okoinsBalance}>{okoins}</Text>
               <Text style={styles.okoinsSubtitle}>{t('loyalty_points')}</Text>
-            </View>
+              
+              {/* Plans Info */}
+              <View style={styles.plansInfo}>
+                <Package size={16} color="#FF9800" />
+                <Text style={styles.plansHint}>Ver planes</Text>
+              </View>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -505,6 +646,322 @@ const styles = StyleSheet.create({
   okoinsSubtitle: {
     fontSize: 12,
     color: '#999',
+  },
+  passesInfo: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    alignItems: 'center',
+  },
+  passesCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#D81B60',
+    marginBottom: 4,
+  },
+  buyPassHint: {
+    fontSize: 12,
+    color: '#999',
+    fontStyle: 'italic',
+  },
+  plansInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    gap: 6,
+  },
+  plansHint: {
+    fontSize: 12,
+    color: '#FF9800',
+    fontWeight: '500',
+  },
+  scrollModalContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 40,
+  },
+  purchaseModalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  plansModalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  plansDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 20,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  planCard: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    position: 'relative',
+  },
+  popularPlanCard: {
+    borderColor: '#FF9800',
+    backgroundColor: '#FFF8E1',
+  },
+  selectedPlanCard: {
+    borderColor: '#D81B60',
+    backgroundColor: '#FCE4EC',
+  },
+  popularBadge: {
+    position: 'absolute',
+    top: -8,
+    right: 16,
+    backgroundColor: '#FF9800',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  popularBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  planHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  planName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  planPrice: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#D81B60',
+  },
+  planDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+  },
+  planBenefits: {
+    marginBottom: 16,
+  },
+  benefitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  benefitText: {
+    fontSize: 14,
+    color: '#333',
+    flex: 1,
+  },
+  planStats: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  planStatsText: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  priceSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+    paddingVertical: 20,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+  },
+  priceLabel: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 8,
+  },
+  priceAmount: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#D81B60',
+    marginBottom: 4,
+  },
+  priceDescription: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+  },
+  paymentMethodSection: {
+    marginBottom: 24,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  paymentMethodButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#D81B60',
+    marginBottom: 8,
+    gap: 12,
+  },
+  paymentMethodButtonActive: {
+    backgroundColor: '#D81B60',
+  },
+  paymentMethodText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#D81B60',
+  },
+  paymentMethodTextActive: {
+    color: 'white',
+  },
+  paymentInfoSection: {
+    backgroundColor: '#E8F5E8',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  paymentInfoTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2E7D32',
+    marginBottom: 8,
+  },
+  paymentInfoNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1B5E20',
+    marginBottom: 4,
+  },
+  paymentInfoOwner: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2E7D32',
+    marginBottom: 12,
+  },
+  paymentInfoNote: {
+    fontSize: 12,
+    color: '#4CAF50',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginTop: 8,
+  },
+  paymentInfoInstructions: {
+    fontSize: 14,
+    color: '#388E3C',
+    textAlign: 'center',
+  },
+  proofSection: {
+    marginBottom: 24,
+  },
+  uploadButton: {
+    borderWidth: 2,
+    borderColor: '#D81B60',
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    padding: 24,
+    alignItems: 'center',
+    gap: 8,
+  },
+  uploadButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#D81B60',
+  },
+  uploadButtonSubtext: {
+    fontSize: 12,
+    color: '#999',
+  },
+  imagePreviewContainer: {
+    alignItems: 'center',
+    gap: 12,
+  },
+  imagePreview: {
+    width: 200,
+    height: 150,
+    borderRadius: 12,
+    resizeMode: 'cover',
+  },
+  changeImageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D81B60',
+  },
+  changeImageText: {
+    fontSize: 14,
+    color: '#D81B60',
+    fontWeight: '500',
+  },
+  submitButton: {
+    backgroundColor: '#D81B60',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  submitButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  recommendationSection: {
+    backgroundColor: '#FFF3E0',
+    padding: 16,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF9800',
+  },
+  recommendationTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#E65100',
+    marginBottom: 8,
+  },
+  recommendationText: {
+    fontSize: 14,
+    color: '#BF360C',
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  planButton: {
+    backgroundColor: '#FF9800',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  planButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
   statsCard: {
     backgroundColor: 'white',
