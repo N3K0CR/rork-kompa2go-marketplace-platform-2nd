@@ -1,4 +1,4 @@
-// ID: ReservationDetailCard_v6_fixed
+// ID: ReservationDetailCard_v7_debug
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { XCircle, MessageCircle, Calendar, CheckCircle, Bell, TimerOff, AlertTriangle } from 'lucide-react-native';
@@ -21,75 +21,157 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
 
   const [confirmationState, setConfirmationState] = useState<ConfirmationState | null>(null);
 
+  // Debug logging
   useEffect(() => {
-    if (reservation) {
-      const state = getConfirmationState(reservation);
-      setConfirmationState(state);
+    console.log('🔍 ReservationDetailCard - reservation:', reservation);
+    console.log('🔍 ReservationDetailCard - user:', user);
+    console.log('🔍 ReservationDetailCard - userType:', userType);
+  }, [reservation, user, userType]);
+
+  useEffect(() => {
+    if (reservation && getConfirmationState) {
+      try {
+        const state = getConfirmationState(reservation);
+        console.log('🔍 ReservationDetailCard - confirmationState:', state);
+        setConfirmationState(state);
+      } catch (error) {
+        console.error('❌ Error getting confirmation state:', error);
+      }
     }
   }, [reservation, getConfirmationState]);
 
   const executeCancellation = async () => {
+    console.log('🔥 CANCELAR - Iniciando cancelación para reserva:', reservation.id);
+    
+    if (!updateAppointment) {
+      console.error('❌ updateAppointment no está disponible');
+      Alert.alert('Error', 'Función de actualización no disponible');
+      return;
+    }
+
     try {
-      await updateAppointment(reservation.id, {
-        status: 'cancelled',
+      console.log('🔥 CANCELAR - Llamando updateAppointment...');
+      
+      const updates = {
+        status: 'cancelled' as const,
         notes: `${reservation.notes || ''} [Cancelada por ${userType}]`
-      });
+      };
+      
+      console.log('🔥 CANCELAR - Updates:', updates);
+      
+      await updateAppointment(reservation.id, updates);
+      
+      console.log('✅ CANCELAR - Actualización exitosa');
+      
       onClose?.();
       Alert.alert('Reserva Cancelada', 'La reserva ha sido cancelada exitosamente.');
     } catch (error) {
-      console.error('Error al cancelar reserva:', error);
-      Alert.alert('Error', 'No se pudo cancelar la reserva. Intenta de nuevo.');
+      console.error('❌ Error al cancelar reserva:', error);
+      Alert.alert('Error', `No se pudo cancelar la reserva: ${error}`);
     }
   };
 
   const handleCancelReservation = () => {
-    Alert.alert('Confirmar Cancelacion', 'Estas seguro de que deseas cancelar esta reserva?', [
-      { text: 'No', style: 'cancel' },
-      { text: 'Si', onPress: executeCancellation }
-    ]);
+    console.log('🔥 CANCELAR - Botón presionado');
+    
+    Alert.alert(
+      'Confirmar Cancelación', 
+      '¿Estás seguro de que deseas cancelar esta reserva?', 
+      [
+        { 
+          text: 'No', 
+          style: 'cancel',
+          onPress: () => console.log('🔥 CANCELAR - Usuario canceló')
+        },
+        { 
+          text: 'Sí', 
+          onPress: () => {
+            console.log('🔥 CANCELAR - Usuario confirmó');
+            executeCancellation();
+          }
+        }
+      ]
+    );
   };
 
   const handleConfirm = async () => {
+    console.log('✅ CONFIRMAR - Botón presionado');
+    
+    if (!updateAppointment) {
+      console.error('❌ updateAppointment no está disponible');
+      Alert.alert('Error', 'Función de actualización no disponible');
+      return;
+    }
+
     try {
+      console.log('✅ CONFIRMAR - Llamando updateAppointment...');
       await updateAppointment(reservation.id, { status: 'confirmed' });
+      console.log('✅ CONFIRMAR - Actualización exitosa');
+      
       onClose?.();
-      Alert.alert('Confirmado!', 'Tu cita ha sido confirmada exitosamente.');
+      Alert.alert('¡Confirmado!', 'Tu cita ha sido confirmada exitosamente.');
     } catch (error) {
-      console.error('Error al confirmar cita:', error);
-      Alert.alert('Error', 'No se pudo confirmar la cita. Intenta de nuevo.');
+      console.error('❌ Error al confirmar cita:', error);
+      Alert.alert('Error', `No se pudo confirmar la cita: ${error}`);
     }
   };
 
   const handlePostpone = async () => {
-    if (!confirmationState?.postponeDuration) return;
+    console.log('⏰ POSPONER - Botón presionado');
+    console.log('⏰ POSPONER - confirmationState:', confirmationState);
+    
+    if (!confirmationState?.postponeDuration) {
+      console.error('❌ No hay postponeDuration disponible');
+      Alert.alert('Error', 'No se puede posponer en este momento');
+      return;
+    }
+
+    if (!updateAppointment) {
+      console.error('❌ updateAppointment no está disponible');
+      Alert.alert('Error', 'Función de actualización no disponible');
+      return;
+    }
 
     const newPostponeCount = (reservation.confirmationPostpones || 0) + 1;
     const postponeHours = confirmationState.postponeDuration;
 
+    console.log('⏰ POSPONER - newPostponeCount:', newPostponeCount);
+    console.log('⏰ POSPONER - postponeHours:', postponeHours);
+
     let warningMessage = "";
     if (postponeHours === 5) {
-        warningMessage = "\n\nEste es tu ultimo aplazamiento. La proxima notificacion te pedira una accion final.";
+        warningMessage = "\n\nEste es tu último aplazamiento. La próxima notificación te pedirá una acción final.";
     }
 
     Alert.alert(
       `Posponer ${postponeHours} horas`,
-      `Recibiras otro recordatorio en ${postponeHours} horas.${warningMessage}`,
+      `Recibirás otro recordatorio en ${postponeHours} horas.${warningMessage}`,
       [
-        { text: "Cancelar", style: "cancel" },
+        { 
+          text: "Cancelar", 
+          style: "cancel",
+          onPress: () => console.log('⏰ POSPONER - Usuario canceló')
+        },
         {
-          text: "Si, Posponer",
+          text: "Sí, Posponer",
           onPress: async () => {
             try {
+              console.log('⏰ POSPONER - Ejecutando posposición...');
+              
               await updateAppointment(reservation.id, {
                 confirmationPostpones: newPostponeCount
               });
+              
+              console.log('✅ POSPONER - Actualización exitosa');
+              
               onClose?.();
               Alert.alert(
-                "Confirmacion Pospuesta",
+                "Confirmación Pospuesta",
                 `Te recordaremos de nuevo en ${postponeHours} horas.`
               );
             } catch (error) {
-              Alert.alert("Error", "No se pudo posponer la confirmacion.");
+              console.error('❌ Error al posponer:', error);
+              Alert.alert("Error", `No se pudo posponer la confirmación: ${error}`);
             }
           },
         },
@@ -98,20 +180,22 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
   };
 
   const handleReschedule = () => {
-    // Implementar funcionalidad de reagendar
+    console.log('📅 REAGENDAR - Botón presionado');
+    
     Alert.alert(
       "Reagendar Cita", 
       "¿Deseas reagendar esta cita?",
       [
-        { text: "Cancelar", style: "cancel" },
         { 
-          text: "Si, Reagendar", 
+          text: "Cancelar", 
+          style: "cancel",
+          onPress: () => console.log('📅 REAGENDAR - Usuario canceló')
+        },
+        { 
+          text: "Sí, Reagendar", 
           onPress: () => {
-            // Aquí puedes implementar la navegación a una pantalla de reagendamiento
-            // o abrir un modal para seleccionar nueva fecha/hora
-            console.log('Reagendar cita:', reservation.id);
+            console.log('📅 REAGENDAR - Usuario confirmó');
             onClose?.();
-            // Ejemplo: router.push(`/reschedule/${reservation.id}`);
             Alert.alert("En desarrollo", "Esta función estará disponible pronto.");
           }
         }
@@ -120,62 +204,111 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
   };
 
   const handleChatContact = async () => {
+    console.log('💬 CHAT - Botón presionado');
+    
+    if (!createChat) {
+      console.error('❌ createChat no está disponible');
+      Alert.alert('Error', 'Función de chat no disponible');
+      return;
+    }
+
     try {
       const providerId = reservation.providerId || 'provider_' + reservation.id;
       const providerName = reservation.providerName || reservation.clientName;
+      
+      console.log('💬 CHAT - providerId:', providerId);
+      console.log('💬 CHAT - providerName:', providerName);
+      
       const chatId = await createChat(providerId, providerName);
+      
+      console.log('💬 CHAT - chatId:', chatId);
+      
       onClose?.();
       router.push(`/chat/${chatId}`);
-    } catch {
+    } catch (error) {
+      console.error('❌ Error al abrir chat:', error);
       Alert.alert('Error', 'No se pudo abrir el chat.');
     }
   };
 
   const renderActionButtons = () => {
-    if (!confirmationState) return null;
+    console.log('🎨 RENDER - confirmationState:', confirmationState);
+    console.log('🎨 RENDER - userType:', userType);
+    console.log('🎨 RENDER - reservation.status:', reservation.status);
+    
+    if (!confirmationState) {
+      console.log('🎨 RENDER - No confirmationState, returning null');
+      return null;
+    }
 
     if (reservation.status === 'cancelled') {
+        console.log('🎨 RENDER - Reservation cancelled');
         return <Text style={styles.actionMessage}>Esta reserva fue cancelada.</Text>;
     }
 
     if (userType === 'client') {
       if (confirmationState.status === 'pending_confirmation') {
+        console.log('🎨 RENDER - Showing pending_confirmation buttons');
         return (
           <>
             <View style={styles.actionMessageContainer}>
               <Bell size={20} color="#FF9800" />
               <Text style={styles.actionMessage}>{confirmationState.message}</Text>
             </View>
-            <TouchableOpacity style={[styles.actionButton, styles.confirmButton]} onPress={handleConfirm}>
+            
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.confirmButton]} 
+              onPress={handleConfirm}
+              activeOpacity={0.7}
+            >
               <CheckCircle size={20} color="white" />
               <Text style={styles.actionButtonText}>Confirmar Asistencia</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={[styles.actionButton, styles.postponeButton]} onPress={handlePostpone}>
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.postponeButton]} 
+              onPress={handlePostpone}
+              activeOpacity={0.7}
+            >
               <TimerOff size={20} color="white" />
               <Text style={styles.actionButtonText}>Posponer {confirmationState.postponeDuration} hrs</Text>
             </TouchableOpacity>
           </>
         );
       }
+      
       if (confirmationState.status === 'final_options') {
+        console.log('🎨 RENDER - Showing final_options buttons');
          return (
           <>
             <View style={[styles.actionMessageContainer, styles.actionMessageUrgent]}>
               <AlertTriangle size={20} color="#F44336" />
               <Text style={styles.actionMessage}>{confirmationState.message}</Text>
             </View>
-            <TouchableOpacity style={[styles.actionButton, styles.confirmButton]} onPress={handleConfirm}>
+            
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.confirmButton]} 
+              onPress={handleConfirm}
+              activeOpacity={0.7}
+            >
               <CheckCircle size={20} color="white" />
               <Text style={styles.actionButtonText}>Confirmar</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={[styles.actionButton, styles.rescheduleButton]} onPress={handleReschedule}>
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.rescheduleButton]} 
+              onPress={handleReschedule}
+              activeOpacity={0.7}
+            >
               <Calendar size={20} color="white" />
               <Text style={styles.actionButtonText}>Reagendar</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={[styles.actionButton, styles.cancelButton]} onPress={handleCancelReservation}>
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.cancelButton]} 
+              onPress={handleCancelReservation}
+              activeOpacity={0.7}
+            >
               <XCircle size={20} color="white" />
               <Text style={styles.actionButtonText}>Cancelar</Text>
             </TouchableOpacity>
@@ -184,15 +317,25 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
       }
     }
 
+    console.log('🎨 RENDER - Showing default buttons');
     return (
         <>
             <Text style={styles.defaultMessage}>{confirmationState.message}</Text>
-            <TouchableOpacity style={[styles.actionButton, styles.rescheduleButton]} onPress={handleReschedule}>
+            
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.rescheduleButton]} 
+              onPress={handleReschedule}
+              activeOpacity={0.7}
+            >
               <Calendar size={20} color="white" />
               <Text style={styles.actionButtonText}>Reagendar</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={[styles.actionButton, styles.cancelButton]} onPress={handleCancelReservation}>
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.cancelButton]} 
+              onPress={handleCancelReservation}
+              activeOpacity={0.7}
+            >
               <XCircle size={20} color="white" />
               <Text style={styles.actionButtonText}>Cancelar Reserva</Text>
             </TouchableOpacity>
@@ -210,7 +353,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
 
       <ScrollView style={styles.content}>
         <View style={styles.infoSection}>
-          <Text style={styles.sectionTitle}>Informacion de la Reserva</Text>
+          <Text style={styles.sectionTitle}>Información de la Reserva</Text>
 
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Fecha:</Text>
@@ -230,7 +373,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
           </View>
 
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Duracion:</Text>
+            <Text style={styles.detailLabel}>Duración:</Text>
             <Text style={styles.detailValue}>{reservation.duration} minutos</Text>
           </View>
 
@@ -280,6 +423,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
           <TouchableOpacity
             style={[styles.contactButton, styles.kompa2goButton]}
             onPress={handleChatContact}
+            activeOpacity={0.7}
           >
             <MessageCircle size={20} color="white" />
             <Text style={styles.contactButtonText}>Chat Kompa2Go</Text>
