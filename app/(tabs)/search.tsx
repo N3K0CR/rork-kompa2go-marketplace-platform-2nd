@@ -252,7 +252,7 @@ export default function SearchScreen() {
               <TouchableOpacity 
                 style={styles.restrictedButton}
                 onPress={() => {
-                  router.push('/(tabs)');
+                  router.push('/purchase-plan');
                 }}
               >
                 <Text style={styles.restrictedButtonText}>Ver Planes</Text>
