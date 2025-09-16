@@ -113,22 +113,13 @@ export default function TabLayout() {
       )}
 
       {userType === 'client' && (
-        <>
-          <Tabs.Screen
-            name="analytics"
-            options={{
-              title: 'Programas',
-              tabBarIcon: ({ color, size }) => <LayoutGrid color={color} size={size} />,
-            }}
-          />
-          <Tabs.Screen
-            name="profile"
-            options={{
-              title: 'Perfil',
-              tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
-            }}
-          />
-        </>
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: 'Perfil',
+            tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
+          }}
+        />
       )}
 
       {userType === 'provider' && (
