@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Home, Search, Calendar, BarChart3, Bell, LayoutGrid, UserCircle, MessageCircle } from "lucide-react-native";
+import { Home, Search, Calendar, BarChart3, Bell, LayoutGrid, User, MessageCircle } from "lucide-react-native";
 import React from "react";
 import { View, Text } from "react-native";
 import { useAuth } from "@/contexts/AuthContext";
@@ -98,8 +98,8 @@ export default function TabLayout() {
           <Tabs.Screen
             name="profile"
             options={{
-              title: t('profile'),
-              tabBarIcon: ({ color, size }) => <UserCircle color={color} size={size} />,
+              title: 'Perfil',
+              tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
             }}
           />
           <Tabs.Screen
@@ -124,8 +124,8 @@ export default function TabLayout() {
           <Tabs.Screen
             name="profile"
             options={{
-              title: t('profile'),
-              tabBarIcon: ({ color, size }) => <UserCircle color={color} size={size} />,
+              title: 'Perfil',
+              tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
             }}
           />
         </>
@@ -144,7 +144,7 @@ export default function TabLayout() {
             name="profile"
             options={{
               title: 'Perfil',
-              tabBarIcon: ({ color, size }) => <UserCircle color={color} size={size} />,
+              tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
             }}
           />
         </>
