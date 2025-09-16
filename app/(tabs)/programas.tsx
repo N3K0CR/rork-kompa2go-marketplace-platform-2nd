@@ -89,8 +89,8 @@ export default function ProgramasScreen() {
                     console.log('About to share:', { message, referralLink });
                     
                     if (Platform.OS === 'web') {
-                      // Web fallback: Check if Web Share API is available and supported
-                      if (navigator.share && navigator.canShare && navigator.canShare({ text: message, url: referralLink })) {
+                      // For web, try Web Share API first, then fallback to clipboard
+                      if (navigator.share) {
                         try {
                           await navigator.share({
                             title: 'Únete a Kompa2Go',
