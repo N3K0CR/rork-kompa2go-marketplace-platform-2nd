@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWallet } from '@/contexts/WalletContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { User, Settings, CreditCard, History, LogOut, Shield, Calendar, Users, BarChart3, Star, TrendingUp, Lock, X, Key } from 'lucide-react-native';
 import { router } from 'expo-router';
 
 export default function ProfileScreen() {
   const { user, signOut, changePassword, resetPassword } = useAuth();
+  const { walletBalance, okoins } = useWallet();
   const { t } = useLanguage();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
@@ -190,16 +192,23 @@ export default function ProfileScreen() {
 
       <View style={styles.content}>
         {user?.userType === 'client' && (
-          <View style={styles.walletCard}>
-            <View style={styles.walletHeader}>
-              <CreditCard size={24} color="#D81B60" />
-              <Text style={styles.walletTitle}>{t('my_wallet')}</Text>
+          <View style={styles.walletSection}>
+            <View style={styles.walletCard}>
+              <View style={styles.walletHeader}>
+                <CreditCard size={20} color="#D81B60" />
+                <Text style={styles.walletTitle}>{t('my_wallet')}</Text>
+              </View>
+              <Text style={styles.walletBalance}>₡{walletBalance.toLocaleString()}</Text>
+              <Text style={styles.walletSubtitle}>{t('wallet_balance')}</Text>
             </View>
-            <Text style={styles.walletBalance}>₡25,000</Text>
-            <Text style={styles.walletSubtitle}>{t('available_credits')}</Text>
-            <TouchableOpacity style={styles.addCreditsButton}>
-              <Text style={styles.addCreditsText}>{t('add_credits')}</Text>
-            </TouchableOpacity>
+            <View style={styles.okoinsCard}>
+              <View style={styles.walletHeader}>
+                <Star size={20} color="#FF9800" />
+                <Text style={styles.okoinsTitle}>OKoins</Text>
+              </View>
+              <Text style={styles.okoinsBalance}>{okoins}</Text>
+              <Text style={styles.okoinsSubtitle}>{t('loyalty_points')}</Text>
+            </View>
           </View>
         )}
 
@@ -434,11 +443,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
   },
+  walletSection: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
   walletCard: {
+    flex: 1,
     backgroundColor: 'white',
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  okoinsCard: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -448,34 +473,38 @@ const styles = StyleSheet.create({
   walletHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
+    gap: 6,
+    marginBottom: 8,
   },
   walletTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  okoinsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
   },
   walletBalance: {
-    fontSize: 32,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#D81B60',
+    color: '#4CAF50',
+    marginBottom: 4,
+  },
+  okoinsBalance: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FF9800',
     marginBottom: 4,
   },
   walletSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
+    fontSize: 12,
+    color: '#999',
   },
-  addCreditsButton: {
-    backgroundColor: '#D81B60',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  addCreditsText: {
-    color: 'white',
-    fontWeight: '600',
+  okoinsSubtitle: {
+    fontSize: 12,
+    color: '#999',
   },
   statsCard: {
     backgroundColor: 'white',
