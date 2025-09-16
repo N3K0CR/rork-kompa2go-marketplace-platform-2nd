@@ -55,7 +55,7 @@ export default function ProfileScreen() {
         if (user?.userType === 'provider') {
           router.push('/provider/edit-profile');
         } else {
-          Alert.alert(t('edit_profile'), 'Funcionalidad en desarrollo');
+          router.push('/client/edit-profile');
         }
         break;
       case 'wallet':
@@ -271,7 +271,6 @@ export default function ProfileScreen() {
     { icon: User, title: t('edit_profile'), subtitle: t('update_personal_info'), action: 'edit_profile' },
     { icon: History, title: t('historical'), subtitle: t('view_previous_bookings'), action: 'history' },
     { icon: Lock, title: 'Cambiar Contraseña', subtitle: 'Actualizar tu contraseña de acceso', action: 'change_password' },
-    { icon: Key, title: 'Recuperar Contraseña', subtitle: 'Enviar correo de recuperación', action: 'reset_password' },
     ...(user?.userType !== 'provider' ? [{ icon: Settings, title: t('configurations'), subtitle: t('app_preferences'), action: 'settings' }] : []),
   ];
 
