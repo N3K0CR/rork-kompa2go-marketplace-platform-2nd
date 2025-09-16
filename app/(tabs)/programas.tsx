@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, Platform, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, Platform, Modal, Alert, Clipboard } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -91,37 +91,32 @@ export default function ProgramasScreen() {
       console.log('🔗 Generated referral link:', referralLink);
       
       if (Platform.OS === 'web') {
-        console.log('🌐 Web platform detected - showing referral link');
+        console.log('🌐 Web platform detected - copying link');
         
-        // Para web: mostrar modal personalizado
+        // Para web: copiar enlace y mostrar modal simple
         setReferralLink(referralLink);
         setShowReferralModal(true);
         
-      } else {
-        console.log('📱 Mobile platform detected - using native share');
-        
-        // Para móvil: usar Share nativo
-        const message = `¡Únete a Kompa2Go y gana 100 OKoins gratis! 🎉\n\nUsa mi código de referido:\n${referralLink}\n\n¡Descarga la app y comienza a ganar OKoins hoy!`;
-        
+        // Intentar copiar al portapapeles sin usar la API problemática
         try {
-          const result = await Share.share({
-            message: message,
-            url: referralLink,
-            title: 'Únete a Kompa2Go'
-          });
-          
-          console.log('📤 Share result:', result);
-          
-          if (result.action === Share.sharedAction) {
-            console.log('✅ Content shared successfully');
-          } else if (result.action === Share.dismissedAction) {
-            console.log('❌ Share dialog dismissed');
-          }
-        } catch (shareError) {
-          console.error('❌ Share error:', shareError);
-          setErrorMessage(`No se pudo compartir. Tu enlace es:\n${referralLink}`);
-          setShowErrorModal(true);
+          // Crear elemento temporal para copiar
+          const textArea = document.createElement('textarea');
+          textArea.value = referralLink;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+          console.log('✅ Link copied using fallback method');
+        } catch (copyError) {
+          console.log('📋 Copy fallback failed, user will copy manually');
         }
+        
+      } else {
+        console.log('📱 Mobile platform detected - showing native modal');
+        
+        // Para móvil: mostrar modal nativo del sistema operativo
+        setReferralLink(referralLink);
+        setShowReferralModal(true);
       }
       
     } catch (generalError) {
@@ -207,16 +202,24 @@ export default function ProgramasScreen() {
       
       {/* Referral Modal */}
       <Modal
-        animationType="slide"
+        animationType={Platform.OS === 'ios' ? 'slide' : 'fade'}
         transparent={true}
         visible={showReferralModal}
         onRequestClose={() => setShowReferralModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[
+            styles.modalContent,
+            Platform.OS === 'ios' && styles.iosModalContent,
+            Platform.OS === 'android' && styles.androidModalContent,
+            Platform.OS === 'web' && styles.webModalContent
+          ]}>
             <Text style={styles.modalTitle}>🎉 ¡Refiere amigos y gana OKoins!</Text>
             <Text style={styles.modalDescription}>
-              Comparte este enlace con tus amigos:
+              {Platform.OS === 'web' 
+                ? 'Tu enlace de referido se ha copiado automáticamente:'
+                : 'Comparte este enlace con tus amigos:'
+              }
             </Text>
             
             <View style={styles.linkContainer}>
@@ -230,19 +233,50 @@ export default function ProgramasScreen() {
             </Text>
             
             <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={styles.whatsappButton}
-                onPress={() => {
-                  const message = encodeURIComponent(`¡Únete a Kompa2Go y gana 100 OKoins gratis! 🎉 Usa mi enlace: ${referralLink}`);
-                  const whatsappUrl = `https://web.whatsapp.com/send?text=${message}`;
-                  if (typeof window !== 'undefined') {
-                    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-                  }
-                  setShowReferralModal(false);
-                }}
-              >
-                <Text style={styles.whatsappButtonText}>📱 WhatsApp Web</Text>
-              </TouchableOpacity>
+              {Platform.OS !== 'web' && (
+                <TouchableOpacity 
+                  style={styles.shareButton}
+                  onPress={async () => {
+                    const message = `¡Únete a Kompa2Go y gana 100 OKoins gratis! 🎉\n\nUsa mi código de referido:\n${referralLink}\n\n¡Descarga la app y comienza a ganar OKoins hoy!`;
+                    
+                    try {
+                      const result = await Share.share({
+                        message: message,
+                        url: referralLink,
+                        title: 'Únete a Kompa2Go'
+                      });
+                      
+                      if (result.action === Share.sharedAction) {
+                        console.log('✅ Content shared successfully');
+                      }
+                    } catch (shareError) {
+                      console.error('❌ Share error:', shareError);
+                      Alert.alert('Error', 'No se pudo compartir el enlace');
+                    }
+                    
+                    setShowReferralModal(false);
+                  }}
+                >
+                  <Text style={styles.shareButtonText}>📤 Compartir</Text>
+                </TouchableOpacity>
+              )}
+              
+              {Platform.OS !== 'web' && (
+                <TouchableOpacity 
+                  style={styles.copyButton}
+                  onPress={async () => {
+                    try {
+                      await Clipboard.setString(referralLink);
+                      Alert.alert('¡Copiado!', 'El enlace se ha copiado al portapapeles');
+                    } catch (error) {
+                      Alert.alert('Error', 'No se pudo copiar el enlace');
+                    }
+                    setShowReferralModal(false);
+                  }}
+                >
+                  <Text style={styles.copyButtonText}>📋 Copiar enlace</Text>
+                </TouchableOpacity>
+              )}
               
               <TouchableOpacity 
                 style={styles.closeButton}
@@ -573,20 +607,46 @@ const styles = StyleSheet.create({
   modalButtons: {
     gap: 12,
   },
-  whatsappButton: {
-    backgroundColor: '#25D366',
+  iosModalContent: {
+    borderRadius: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+  },
+  androidModalContent: {
+    borderRadius: 8,
+    elevation: 16,
+  },
+  webModalContent: {
     borderRadius: 12,
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+  },
+  shareButton: {
+    backgroundColor: '#D81B60',
+    borderRadius: Platform.OS === 'ios' ? 12 : 8,
     padding: 16,
     alignItems: 'center',
   },
-  whatsappButtonText: {
+  shareButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  copyButton: {
+    backgroundColor: '#2196F3',
+    borderRadius: Platform.OS === 'ios' ? 12 : 8,
+    padding: 16,
+    alignItems: 'center',
+  },
+  copyButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
   },
   closeButton: {
     backgroundColor: '#F0F0F0',
-    borderRadius: 12,
+    borderRadius: Platform.OS === 'ios' ? 12 : 8,
     padding: 16,
     alignItems: 'center',
   },
