@@ -88,31 +88,29 @@ export default function ProgramasScreen() {
       console.log('🔗 Generated referral link:', referralLink);
       
       if (Platform.OS === 'web') {
-        console.log('🌐 Web platform detected - showing simple alert');
+        console.log('🌐 Web platform detected - showing referral link');
         
-        // Para web: mostrar enlace simple y copiar automáticamente
-        try {
-          if (navigator.clipboard) {
-            await navigator.clipboard.writeText(referralLink);
-            console.log('✅ Link copied to clipboard');
-            Alert.alert(
-              'Enlace copiado', 
-              `¡Tu enlace de referido se copió al portapapeles!\n\n${referralLink}\n\n¡Compártelo para ganar 100 OKoins por cada amigo!`
-            );
-          } else {
-            console.log('📋 Clipboard not available - showing manual copy');
-            Alert.alert(
-              'Tu enlace de referido', 
-              `Copia este enlace y compártelo:\n\n${referralLink}\n\n¡Gana 100 OKoins por cada amigo que se registre!`
-            );
-          }
-        } catch (clipboardError) {
-          console.error('❌ Clipboard error:', clipboardError);
-          Alert.alert(
-            'Tu enlace de referido', 
-            `Copia este enlace y compártelo:\n\n${referralLink}\n\n¡Gana 100 OKoins por cada amigo que se registre!`
-          );
-        }
+        // Para web: solo mostrar el enlace sin intentar copiarlo
+        Alert.alert(
+          '🎉 ¡Refiere amigos y gana OKoins!', 
+          `Comparte este enlace con tus amigos:\n\n${referralLink}\n\n¡Gana 100 OKoins por cada amigo que se registre usando tu enlace!\n\nPuedes copiarlo manualmente y compartirlo en WhatsApp, redes sociales o donde prefieras.`,
+          [
+            {
+              text: 'WhatsApp Web',
+              onPress: () => {
+                const message = encodeURIComponent(`¡Únete a Kompa2Go y gana 100 OKoins gratis! 🎉 Usa mi enlace: ${referralLink}`);
+                const whatsappUrl = `https://web.whatsapp.com/send?text=${message}`;
+                if (typeof window !== 'undefined') {
+                  window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+                }
+              }
+            },
+            {
+              text: 'Cerrar',
+              style: 'cancel'
+            }
+          ]
+        );
         
       } else {
         console.log('📱 Mobile platform detected - using native share');
