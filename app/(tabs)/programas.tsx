@@ -1,18 +1,18 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Share, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, Alert, Platform, Clipboard } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
-import { useLanguage } from '@/contexts/LanguageContext';
+
 import { useOKoins } from '@/contexts/OKoinsContext';
-import { TrendingUp, DollarSign, Users, Calendar, Gift, History, Star, Coins } from 'lucide-react-native';
+import { TrendingUp, DollarSign, Gift, History, Star, Coins } from 'lucide-react-native';
 import FloatingKompi from '@/components/FloatingKompi';
 import { router } from 'expo-router';
 
-const { width } = Dimensions.get('window');
+
 
 export default function ProgramasScreen() {
   const { user } = useAuth();
-  const { t } = useLanguage();
+
   const { balance, getTransactionHistory, isLoading } = useOKoins();
 
   // Only show for clients
@@ -88,22 +88,67 @@ export default function ProgramasScreen() {
                     
                     console.log('About to share:', { message, referralLink });
                     
-                    const result = await Share.share({
-                      message: message,
-                      url: referralLink,
-                      title: 'Únete a Kompa2Go'
-                    });
-                    
-                    console.log('Share result:', result);
-                    
-                    if (result.action === Share.sharedAction) {
-                      console.log('Content was shared successfully');
-                    } else if (result.action === Share.dismissedAction) {
-                      console.log('Share dialog was dismissed');
+                    if (Platform.OS === 'web') {
+                      // Web fallback: Check if Web Share API is available and supported
+                      if (navigator.share && navigator.canShare && navigator.canShare({ text: message, url: referralLink })) {
+                        try {
+                          await navigator.share({
+                            title: 'Únete a Kompa2Go',
+                            text: message,
+                            url: referralLink
+                          });
+                          console.log('Content was shared successfully via Web Share API');
+                        } catch (shareError) {
+                          console.log('Web Share API failed, falling back to clipboard:', shareError);
+                          // Fallback to clipboard
+                          await Clipboard.setString(`${message}\n\n${referralLink}`);
+                          Alert.alert(
+                            'Enlace copiado',
+                            'El enlace de referido se ha copiado al portapapeles. Puedes pegarlo en cualquier aplicación para compartirlo.',
+                            [{ text: 'OK' }]
+                          );
+                        }
+                      } else {
+                        // No Web Share API support, use clipboard
+                        await Clipboard.setString(`${message}\n\n${referralLink}`);
+                        Alert.alert(
+                          'Enlace copiado',
+                          'El enlace de referido se ha copiado al portapapeles. Puedes pegarlo en cualquier aplicación para compartirlo.',
+                          [{ text: 'OK' }]
+                        );
+                      }
+                    } else {
+                      // Native mobile platforms
+                      const result = await Share.share({
+                        message: message,
+                        url: referralLink,
+                        title: 'Únete a Kompa2Go'
+                      });
+                      
+                      console.log('Share result:', result);
+                      
+                      if (result.action === Share.sharedAction) {
+                        console.log('Content was shared successfully');
+                      } else if (result.action === Share.dismissedAction) {
+                        console.log('Share dialog was dismissed');
+                      }
                     }
                   } catch (error) {
                     console.error('Share error:', error);
-                    Alert.alert('Error', 'No se pudo compartir el enlace de referido. Por favor, inténtalo de nuevo.');
+                    // Final fallback for any platform
+                    try {
+                      const referralLink = `https://kompa2go.com/referral/${user?.id || 'guest'}`;
+                      const message = `¡Únete a Kompa2Go y gana 100 OKoins gratis! 🎉\n\nUsa mi código de referido para obtener beneficios exclusivos:\n${referralLink}\n\n¡Descarga la app y comienza a ganar OKoins hoy!`;
+                      await Clipboard.setString(`${message}\n\n${referralLink}`);
+                      Alert.alert(
+                        'Enlace copiado',
+                        'El enlace de referido se ha copiado al portapapeles. Puedes pegarlo en cualquier aplicación para compartirlo.',
+                        [{ text: 'OK' }]
+                      );
+                    } catch (clipboardError) {
+                      console.error('Clipboard error:', clipboardError);
+                      Alert.alert('Error', 'No se pudo compartir el enlace de referido. Por favor, inténtalo de nuevo.');
+                    }
                   }
                 }}
               >
