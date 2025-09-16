@@ -1,4 +1,4 @@
-// ID: ReservationDetailCard_v9_reschedule
+// ID: ReservationDetailCard_v10_stable
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal } from 'react-native';
 import { XCircle, MessageCircle, Calendar, CheckCircle, Bell, TimerOff, AlertTriangle, X } from 'lucide-react-native';
