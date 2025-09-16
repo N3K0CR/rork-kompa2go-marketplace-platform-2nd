@@ -39,7 +39,10 @@ interface AppointmentsContextType {
   loading: boolean;
   addAppointment: (appointment: Omit<Appointment, 'id' | 'confirmationPostpones'>) => Promise<void>;
   updateAppointment: (id: string, updates: Partial<Appointment>) => Promise<void>;
+  deleteAppointment: (id: string) => Promise<void>;
   getAppointmentsForDate: (date: string) => Appointment[];
+  getTodayAppointments: () => Appointment[];
+  getUpcomingAppointments: () => Appointment[];
   getConfirmationState: (appointment: Appointment) => ConfirmationState;
   refreshAppointments: () => Promise<void>;
   setUserTypeAndReload: (userType: string) => Promise<void>;
@@ -81,6 +84,14 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
     });
   }, [saveAppointments]);
 
+  const deleteAppointment = useCallback(async (id: string) => {
+    setAppointments(prev => {
+      const updated = prev.filter(app => app.id !== id);
+      saveAppointments(updated);
+      return updated;
+    });
+  }, [saveAppointments]);
+
   // --- EL CEREBRO DE LA LÓGICA DE CONFIRMACIÓN ---
   const getConfirmationState = (appointment: Appointment): ConfirmationState => {
     const appointmentDateTime = new Date(`${appointment.date}T${appointment.time}`);
@@ -112,12 +123,45 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
     return { ...baseState, status: 'default', message: "Has pospuesto la confirmación. Recibirás un nuevo recordatorio pronto." };
   };
 
-  // ... (resto de funciones del contexto sin cambios) ...
-  const getAppointmentsForDate = (date: string) => appointments.filter(a => a.date === date);
-  const refreshAppointments = async () => {};
-  const setUserTypeAndReload = async (type: string) => { setUserType(type); };
+  const getAppointmentsForDate = useCallback((date: string): Appointment[] => {
+    return appointments.filter(appointment => appointment.date === date);
+  }, [appointments]);
 
-  const value = { appointments, loading: false, addAppointment, updateAppointment, getAppointmentsForDate, getConfirmationState, refreshAppointments, setUserTypeAndReload };
+  const getTodayAppointments = useCallback((): Appointment[] => {
+    const today = new Date().toISOString().split('T')[0];
+    return getAppointmentsForDate(today);
+  }, [getAppointmentsForDate]);
+
+  const getUpcomingAppointments = useCallback((): Appointment[] => {
+    const today = new Date().toISOString().split('T')[0];
+    return appointments
+      .filter(appointment => appointment.date > today && appointment.status === 'confirmed')
+      .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+  }, [appointments]);
+
+  const refreshAppointments = useCallback(async () => {
+    // Reload appointments from storage or API
+  }, []);
+
+  const setUserTypeAndReload = useCallback(async (newUserType: string) => {
+    if (newUserType !== userType) {
+      setUserType(newUserType);
+    }
+  }, [userType]);
+
+  const value = {
+    appointments,
+    loading: false,
+    addAppointment,
+    updateAppointment,
+    deleteAppointment,
+    getAppointmentsForDate,
+    getTodayAppointments,
+    getUpcomingAppointments,
+    getConfirmationState,
+    refreshAppointments,
+    setUserTypeAndReload
+  };
 
   return <AppointmentsContext.Provider value={value}>{children}</AppointmentsContext.Provider>;
 }
