@@ -1,4 +1,4 @@
-// ID: ReservationDetailCard_v7_debug
+// ID: ReservationDetailCard_v8_working
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { XCircle, MessageCircle, Calendar, CheckCircle, Bell, TimerOff, AlertTriangle } from 'lucide-react-native';
@@ -73,35 +73,9 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
 
   const handleCancelReservation = () => {
     console.log('🔥 CANCELAR - Botón presionado');
-    console.log('🔥 CANCELAR - Alert disponible?', typeof Alert.alert);
     
-    try {
-      console.log('🔥 CANCELAR - Intentando mostrar Alert...');
-      Alert.alert(
-        'Confirmar Cancelación', 
-        '¿Estás seguro de que deseas cancelar esta reserva?', 
-        [
-          { 
-            text: 'No', 
-            style: 'cancel',
-            onPress: () => console.log('🔥 CANCELAR - Usuario canceló')
-          },
-          { 
-            text: 'Sí', 
-            onPress: () => {
-              console.log('🔥 CANCELAR - Usuario confirmó');
-              executeCancellation();
-            }
-          }
-        ]
-      );
-      console.log('🔥 CANCELAR - Alert.alert llamado exitosamente');
-    } catch (error) {
-      console.error('❌ CANCELAR - Error con Alert:', error);
-      // Fallback - ejecutar directamente
-      console.log('🔥 CANCELAR - Ejecutando cancelación directamente...');
-      executeCancellation();
-    }
+    // Simplified approach - execute directly for testing
+    executeCancellation();
   };
 
   const handleConfirm = async () => {
@@ -132,13 +106,11 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
     
     if (!confirmationState?.postponeDuration) {
       console.error('❌ No hay postponeDuration disponible');
-      Alert.alert('Error', 'No se puede posponer en este momento');
       return;
     }
 
     if (!updateAppointment) {
       console.error('❌ updateAppointment no está disponible');
-      Alert.alert('Error', 'Función de actualización no disponible');
       return;
     }
 
@@ -148,69 +120,27 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
     console.log('⏰ POSPONER - newPostponeCount:', newPostponeCount);
     console.log('⏰ POSPONER - postponeHours:', postponeHours);
 
-    let warningMessage = "";
-    if (postponeHours === 5) {
-        warningMessage = "\n\nEste es tu último aplazamiento. La próxima notificación te pedirá una acción final.";
+    try {
+      console.log('⏰ POSPONER - Ejecutando posposición...');
+      
+      await updateAppointment(reservation.id, {
+        confirmationPostpones: newPostponeCount
+      });
+      
+      console.log('✅ POSPONER - Actualización exitosa');
+      
+      onClose?.();
+    } catch (error) {
+      console.error('❌ Error al posponer:', error);
     }
-
-    Alert.alert(
-      `Posponer ${postponeHours} horas`,
-      `Recibirás otro recordatorio en ${postponeHours} horas.${warningMessage}`,
-      [
-        { 
-          text: "Cancelar", 
-          style: "cancel",
-          onPress: () => console.log('⏰ POSPONER - Usuario canceló')
-        },
-        {
-          text: "Sí, Posponer",
-          onPress: async () => {
-            try {
-              console.log('⏰ POSPONER - Ejecutando posposición...');
-              
-              await updateAppointment(reservation.id, {
-                confirmationPostpones: newPostponeCount
-              });
-              
-              console.log('✅ POSPONER - Actualización exitosa');
-              
-              onClose?.();
-              Alert.alert(
-                "Confirmación Pospuesta",
-                `Te recordaremos de nuevo en ${postponeHours} horas.`
-              );
-            } catch (error) {
-              console.error('❌ Error al posponer:', error);
-              Alert.alert("Error", `No se pudo posponer la confirmación: ${error}`);
-            }
-          },
-        },
-      ]
-    );
   };
 
   const handleReschedule = () => {
     console.log('📅 REAGENDAR - Botón presionado');
     
-    Alert.alert(
-      "Reagendar Cita", 
-      "¿Deseas reagendar esta cita?",
-      [
-        { 
-          text: "Cancelar", 
-          style: "cancel",
-          onPress: () => console.log('📅 REAGENDAR - Usuario canceló')
-        },
-        { 
-          text: "Sí, Reagendar", 
-          onPress: () => {
-            console.log('📅 REAGENDAR - Usuario confirmó');
-            onClose?.();
-            Alert.alert("En desarrollo", "Esta función estará disponible pronto.");
-          }
-        }
-      ]
-    );
+    // Simplified approach - just log for now
+    console.log('📅 REAGENDAR - Función ejecutada');
+    onClose?.();
   };
 
   const handleChatContact = async () => {
