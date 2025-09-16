@@ -88,37 +88,62 @@ export default function ProgramasScreen() {
                   console.log('About to share:', { message, referralLink });
                   
                   if (Platform.OS === 'web') {
-                    // For web, create a shareable URL and show it in a modal
-                    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
-                    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-                    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralLink)}&quote=${encodeURIComponent(message)}`;
+                    // For web, show options to share on different platforms
+                    const shortMessage = `¡Únete a Kompa2Go y gana 100 OKoins gratis! 🎉 ${referralLink}`;
+                    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shortMessage)}`;
+                    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shortMessage)}`;
+                    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralLink)}`;
+                    const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent('¡Únete a Kompa2Go y gana 100 OKoins gratis! 🎉')}`;
                     
                     Alert.alert(
                       'Compartir enlace de referido',
-                      `Tu enlace de referido:\n${referralLink}\n\nMensaje para compartir:\n${message}`,
+                      `Tu enlace de referido: ${referralLink}\n\n¡Compártelo en tus redes sociales para ganar 100 OKoins por cada amigo que se registre!`,
                       [
                         {
                           text: 'WhatsApp',
                           onPress: () => {
+                            console.log('Opening WhatsApp share');
                             if (typeof window !== 'undefined') {
-                              window.open(whatsappUrl, '_blank');
+                              window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
                             }
                           }
                         },
                         {
                           text: 'Twitter',
                           onPress: () => {
+                            console.log('Opening Twitter share');
                             if (typeof window !== 'undefined') {
-                              window.open(shareUrl, '_blank');
+                              window.open(twitterUrl, '_blank', 'noopener,noreferrer');
                             }
                           }
                         },
                         {
                           text: 'Facebook',
                           onPress: () => {
+                            console.log('Opening Facebook share');
                             if (typeof window !== 'undefined') {
-                              window.open(facebookUrl, '_blank');
+                              window.open(facebookUrl, '_blank', 'noopener,noreferrer');
                             }
+                          }
+                        },
+                        {
+                          text: 'Telegram',
+                          onPress: () => {
+                            console.log('Opening Telegram share');
+                            if (typeof window !== 'undefined') {
+                              window.open(telegramUrl, '_blank', 'noopener,noreferrer');
+                            }
+                          }
+                        },
+                        {
+                          text: 'Copiar enlace',
+                          onPress: () => {
+                            console.log('Copying link to show in alert');
+                            Alert.alert(
+                              'Enlace copiado',
+                              `Copia este enlace y compártelo:\n\n${referralLink}\n\nMensaje sugerido:\n${shortMessage}`,
+                              [{ text: 'OK' }]
+                            );
                           }
                         },
                         { text: 'Cerrar', style: 'cancel' }
