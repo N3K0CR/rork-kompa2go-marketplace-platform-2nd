@@ -12,24 +12,25 @@ import { useK2GProducts } from '@/contexts/K2GProductsContext';
 const { width } = Dimensions.get('window');
 
 const baseServiceCategories = [
-  { id: 2, name: 'Limpieza', icon: '🧹', providers: 45 },
-  { id: 3, name: 'Plomería', icon: '🔧', providers: 32 },
-  { id: 4, name: 'Electricidad', icon: '⚡', providers: 28 },
-  { id: 5, name: 'Jardinería', icon: '🌱', providers: 23 },
-  { id: 6, name: 'Pintura', icon: '🎨', providers: 19 },
-  { id: 7, name: 'Carpintería', icon: '🔨', providers: 15 },
-  { id: 8, name: 'Mecánica', icon: '🔧', providers: 18 },
-  { id: 9, name: 'Belleza', icon: '💄', providers: 35 },
-  { id: 10, name: 'Masajes', icon: '💆', providers: 22 },
-  { id: 11, name: 'Veterinaria', icon: '🐕', providers: 12 },
-  { id: 12, name: 'Tecnología', icon: '💻', providers: 25 },
-  { id: 13, name: 'Educación', icon: '📚', providers: 30 },
-  { id: 14, name: 'Transporte', icon: '🚗', providers: 20 },
-  { id: 15, name: 'Catering', icon: '🍽️', providers: 16 },
-  { id: 16, name: 'Fotografía', icon: '📸', providers: 14 },
-  { id: 17, name: 'Música', icon: '🎵', providers: 8 },
-  { id: 18, name: 'Fitness', icon: '💪', providers: 26 },
-  { id: 19, name: 'Consultoría', icon: '💼', providers: 11 },
+  { id: 2, name: 'Ambulantes', icon: '🚚', providers: 8, isAmbulante: true },
+  { id: 3, name: 'Limpieza', icon: '🧹', providers: 45 },
+  { id: 4, name: 'Plomería', icon: '🔧', providers: 32 },
+  { id: 5, name: 'Electricidad', icon: '⚡', providers: 28 },
+  { id: 6, name: 'Jardinería', icon: '🌱', providers: 23 },
+  { id: 7, name: 'Pintura', icon: '🎨', providers: 19 },
+  { id: 8, name: 'Carpintería', icon: '🔨', providers: 15 },
+  { id: 9, name: 'Mecánica', icon: '🔧', providers: 18 },
+  { id: 10, name: 'Belleza', icon: '💄', providers: 35 },
+  { id: 11, name: 'Masajes', icon: '💆', providers: 22 },
+  { id: 12, name: 'Veterinaria', icon: '🐕', providers: 12 },
+  { id: 13, name: 'Tecnología', icon: '💻', providers: 25 },
+  { id: 14, name: 'Educación', icon: '📚', providers: 30 },
+  { id: 15, name: 'Transporte', icon: '🚗', providers: 20 },
+  { id: 16, name: 'Catering', icon: '🍽️', providers: 16 },
+  { id: 17, name: 'Fotografía', icon: '📸', providers: 14 },
+  { id: 18, name: 'Música', icon: '🎵', providers: 8 },
+  { id: 19, name: 'Fitness', icon: '💪', providers: 26 },
+  { id: 20, name: 'Consultoría', icon: '💼', providers: 11 },
 ];
 
 const featuredProviders = [
@@ -44,6 +45,7 @@ const featuredProviders = [
     price: '₡15,000/sesión',
     image: '🌸',
     isSpecialProvider: true,
+    isAmbulante: false,
   },
   {
     id: '998',
@@ -56,6 +58,7 @@ const featuredProviders = [
     price: '₡25,000/sesión',
     image: '📸',
     isSpecialProvider: true,
+    isAmbulante: false,
   },
   {
     id: '1',
@@ -68,6 +71,7 @@ const featuredProviders = [
     price: '₡8,000/hora',
     image: '👩‍💼',
     isSpecialProvider: false,
+    isAmbulante: false,
   },
   {
     id: '2',
@@ -80,6 +84,7 @@ const featuredProviders = [
     price: '₡12,000/visita',
     image: '👨‍🔧',
     isSpecialProvider: false,
+    isAmbulante: false,
   },
   {
     id: '3',
@@ -92,6 +97,46 @@ const featuredProviders = [
     price: '₡15,000/día',
     image: '👩‍🌾',
     isSpecialProvider: false,
+    isAmbulante: false,
+  },
+  {
+    id: '4',
+    name: 'Luis',
+    fullName: 'Luis Morales',
+    service: 'Comida Rápida Ambulante',
+    rating: 4.6,
+    reviews: 95,
+    location: 'Móvil - San José',
+    price: '₡2,500/combo',
+    image: '🚚',
+    isSpecialProvider: false,
+    isAmbulante: true,
+  },
+  {
+    id: '5',
+    name: 'Carmen',
+    fullName: 'Carmen Vega',
+    service: 'Reparación de Celulares Móvil',
+    rating: 4.8,
+    reviews: 73,
+    location: 'Móvil - Área Metropolitana',
+    price: '₡8,000/reparación',
+    image: '📱',
+    isSpecialProvider: false,
+    isAmbulante: true,
+  },
+  {
+    id: '6',
+    name: 'Roberto',
+    fullName: 'Roberto Jiménez',
+    service: 'Lavado de Autos a Domicilio',
+    rating: 4.5,
+    reviews: 112,
+    location: 'Móvil - Todo San José',
+    price: '₡5,000/lavado',
+    image: '🚐',
+    isSpecialProvider: false,
+    isAmbulante: true,
   },
 ];
 
@@ -103,6 +148,7 @@ export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [showK2GProducts, setShowK2GProducts] = useState(false);
+  const [showAmbulanteProviders, setShowAmbulanteProviders] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const resultsRef = useRef<View>(null);
   
@@ -144,12 +190,22 @@ export default function SearchScreen() {
     if (categoryId === 1) {
       // K2G Products category
       setShowK2GProducts(true);
+      setShowAmbulanteProviders(false);
+      // Scroll to results after state update
+      setTimeout(() => {
+        scrollToResults();
+      }, 100);
+    } else if (categoryId === 2) {
+      // Ambulantes category
+      setShowAmbulanteProviders(true);
+      setShowK2GProducts(false);
       // Scroll to results after state update
       setTimeout(() => {
         scrollToResults();
       }, 100);
     } else {
       setShowK2GProducts(false);
+      setShowAmbulanteProviders(false);
       await searchProviders(sanitizedName);
     }
   };
@@ -373,7 +429,9 @@ export default function SearchScreen() {
 
         <View ref={resultsRef} style={styles.section}>
           <Text style={styles.sectionTitle}>
-            {showK2GProducts ? 'K2G Products' : foundProviders.length > 0 ? 'Proveedores Encontrados' : t('featured_providers')}
+            {showK2GProducts ? 'K2G Products' : 
+             showAmbulanteProviders ? 'Proveedores Ambulantes' :
+             foundProviders.length > 0 ? 'Proveedores Encontrados' : t('featured_providers')}
           </Text>
           
           {/* Show K2G Products if selected */}
@@ -406,6 +464,42 @@ export default function SearchScreen() {
                 <Text style={styles.emptyStateText}>No hay productos K2G disponibles</Text>
               </View>
             )
+          ) : showAmbulanteProviders ? (
+            /* Show Ambulante Providers */
+            featuredProviders
+              .filter(provider => provider.isAmbulante)
+              .map((provider) => (
+                <TouchableOpacity
+                  key={provider.id}
+                  style={[styles.providerCard, styles.ambulanteProviderCard]}
+                  onPress={() => router.push(`/provider/${provider.id}`)}
+                >
+                  <View style={styles.providerHeader}>
+                    <Text style={styles.providerImage}>{provider.image}</Text>
+                    <View style={styles.providerInfo}>
+                      <Text style={styles.providerName}>{provider.name}</Text>
+                      <Text style={styles.providerService}>{provider.service}</Text>
+                      <View style={styles.providerMeta}>
+                        <View style={styles.rating}>
+                          <Star size={14} color="#FFD700" fill="#FFD700" />
+                          <Text style={styles.ratingText}>{provider.rating}</Text>
+                          <Text style={styles.reviewsText}>({provider.reviews})</Text>
+                        </View>
+                        <View style={styles.location}>
+                          <MapPin size={14} color="#666" />
+                          <Text style={styles.locationText}>{provider.location}</Text>
+                        </View>
+                      </View>
+                    </View>
+                    <View style={styles.providerPrice}>
+                      <Text style={styles.priceText}>{provider.price}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.ambulanteBadge}>
+                    <Text style={styles.ambulanteBadgeText}>🚚 Servicio Móvil</Text>
+                  </View>
+                </TouchableOpacity>
+              ))
           ) : (
             /* Show search results or featured providers */
             foundProviders.length > 0 ? (
@@ -425,12 +519,13 @@ export default function SearchScreen() {
         </View>
 
         {/* Reset Search Button */}
-        {(foundProviders.length > 0 || showK2GProducts) && (
+        {(foundProviders.length > 0 || showK2GProducts || showAmbulanteProviders) && (
           <TouchableOpacity 
             style={styles.resetButton}
             onPress={() => {
               resetSearch();
               setShowK2GProducts(false);
+              setShowAmbulanteProviders(false);
               setSelectedCategory(null);
             }}
           >
@@ -819,5 +914,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
+  },
+  ambulanteProviderCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF9500',
+  },
+  ambulanteBadge: {
+    backgroundColor: '#FF9500',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+  },
+  ambulanteBadgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

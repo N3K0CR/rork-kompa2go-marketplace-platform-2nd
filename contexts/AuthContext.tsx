@@ -14,6 +14,7 @@ interface User {
   uniqueId?: string;
   alias?: string;
   isSpecialProvider?: boolean;
+  isAmbulante?: boolean;
 }
 
 interface AuthContextType {

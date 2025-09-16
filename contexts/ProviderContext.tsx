@@ -85,6 +85,7 @@ interface ProviderData {
   businessHours: BusinessHours;
   serviceAreas: ServiceArea[];
   profile: ProviderProfile;
+  isAmbulante: boolean;
   lastSyncTimestamp?: number;
   version?: number;
 }
@@ -201,7 +202,8 @@ const defaultProviderData: ProviderData = {
     languages: ['Español'],
     rating: 0,
     totalReviews: 0
-  }
+  },
+  isAmbulante: false
 };
 
 export const [ProviderProvider, useProvider] = createContextHook(() => {
@@ -655,6 +657,15 @@ export const [ProviderProvider, useProvider] = createContextHook(() => {
     await saveToStorage(updatedData);
   }, [providerData, saveToStorage]);
 
+  const updateAmbulanteStatus = useCallback(async (isAmbulante: boolean) => {
+    const updatedData = {
+      ...providerData,
+      isAmbulante
+    };
+    setProviderData(updatedData);
+    await saveToStorage(updatedData);
+  }, [providerData, saveToStorage]);
+
   // Force sync function for manual retry
   const forceSync = useCallback(async () => {
     setContextState(prev => ({ ...prev, syncStatus: 'syncing' }));
@@ -701,6 +712,7 @@ export const [ProviderProvider, useProvider] = createContextHook(() => {
     businessHours: providerData.businessHours,
     serviceAreas: providerData.serviceAreas,
     profile: providerData.profile,
+    isAmbulante: providerData.isAmbulante,
     isLoading,
     
     // Context state
@@ -725,6 +737,7 @@ export const [ProviderProvider, useProvider] = createContextHook(() => {
     updateServiceArea,
     removeServiceArea,
     updateProfile,
+    updateAmbulanteStatus,
     
     // Utility
     refreshData: loadProviderData,
@@ -741,6 +754,7 @@ export const [ProviderProvider, useProvider] = createContextHook(() => {
     providerData.businessHours,
     providerData.serviceAreas,
     providerData.profile,
+    providerData.isAmbulante,
     isLoading,
     contextState.isOnline,
     contextState.syncStatus,
@@ -761,6 +775,7 @@ export const [ProviderProvider, useProvider] = createContextHook(() => {
     updateServiceArea,
     removeServiceArea,
     updateProfile,
+    updateAmbulanteStatus,
     loadProviderData,
     forceSync,
     clearAllData
