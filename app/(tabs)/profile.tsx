@@ -5,7 +5,7 @@ import { useWallet } from '@/contexts/WalletContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useReservationPlans } from '@/contexts/ReservationPlansContext';
 import { usePendingPayments } from '@/contexts/PendingPaymentsContext';
-import { User, Settings, CreditCard, History, LogOut, Shield, Calendar, Users, BarChart3, Star, TrendingUp, Lock, X, Key, Camera, Upload, Package, Check } from 'lucide-react-native';
+import { User, Settings, CreditCard, History, LogOut, Shield, Calendar, Users, BarChart3, Star, TrendingUp, Lock, X, Key, Camera, Upload, Package, Check, AlertTriangle } from 'lucide-react-native';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -75,6 +75,8 @@ export default function ProfileScreen() {
       case 'history':
         if (user?.userType === 'provider') {
           router.push('/provider/history');
+        } else if (user?.userType === 'client') {
+          router.push('/client/history');
         } else {
           Alert.alert(t('historical'), 'Historial de servicios en desarrollo');
         }
@@ -108,6 +110,9 @@ export default function ProfileScreen() {
           t('revenue_breakdown'),
           `Ingresos del mes: ₡450,000\n\n${t('filter_by_week')}:\n• Semana 1: ₡120,000\n• Semana 2: ₡110,000\n• Semana 3: ₡105,000\n• Semana 4: ₡115,000\n\n${t('revenue_improvement_guide')}:\n• Agrega promociones\n• Mejora tu calificación\n• Actualiza tu galería de trabajos`
         );
+        break;
+      case 'reported_problems':
+        router.push('/reported-problems');
         break;
       default:
         Alert.alert('Funcionalidad', 'En desarrollo');
@@ -279,7 +284,8 @@ export default function ProfileScreen() {
 
   if (user?.userType === 'admin') {
     menuItems.splice(1, 0,
-      { icon: Shield, title: t('admin_panel'), subtitle: t('manage_platform'), action: 'admin_panel' }
+      { icon: Shield, title: t('admin_panel'), subtitle: t('manage_platform'), action: 'admin_panel' },
+      { icon: AlertTriangle, title: 'Problemas Reportados', subtitle: 'Gestionar reportes de clientes', action: 'reported_problems' }
     );
   }
 

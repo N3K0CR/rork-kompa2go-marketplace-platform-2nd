@@ -18,6 +18,7 @@ import { LocationSearchProvider } from "@/contexts/LocationSearchContext";
 import { PaymentBackendProvider } from "@/contexts/PaymentBackendContext";
 import { ChatProvider } from "@/contexts/ChatContext";
 import { K2GProductsProvider } from "@/contexts/K2GProductsContext";
+import { ReportedProblemsProvider } from "@/contexts/ReportedProblemsContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ReservationAlertModal } from "@/components/ReservationAlertModal";
 import { trpc, trpcClient } from "@/lib/trpc";
@@ -56,6 +57,8 @@ function RootLayoutNav() {
       <Stack.Screen name="provider/[id]" options={{ title: "Detalles del Proveedor" }} />
       <Stack.Screen name="purchase-plan" options={{ headerShown: false }} />
       <Stack.Screen name="admin-products" options={{ title: "Administrar Productos K2G" }} />
+      <Stack.Screen name="reported-problems" options={{ headerShown: false }} />
+      <Stack.Screen name="client/history" options={{ headerShown: false }} />
     </Stack>
   );
 }
@@ -82,10 +85,12 @@ export default function RootLayout() {
                             <PaymentBackendProvider>
                               <ChatProvider>
                                 <K2GProductsProvider>
-                                  <GestureHandlerRootView style={styles.container}>
-                                    <RootLayoutNav />
-                                    <ReservationAlertModal />
-                                  </GestureHandlerRootView>
+                                  <ReportedProblemsProvider>
+                                    <GestureHandlerRootView style={styles.container}>
+                                      <RootLayoutNav />
+                                      <ReservationAlertModal />
+                                    </GestureHandlerRootView>
+                                  </ReportedProblemsProvider>
                                 </K2GProductsProvider>
                               </ChatProvider>
                             </PaymentBackendProvider>
