@@ -188,6 +188,16 @@ export default function TabLayout() {
         />
       )}
       
+      {/* Hide analytics tab for client users */}
+      {userType === 'client' && (
+        <Tabs.Screen
+          name="analytics"
+          options={{
+            href: null,
+          }}
+        />
+      )}
+      
       {/* Hide chat tab for admin users */}
       {userType === 'admin' && (
         <Tabs.Screen
