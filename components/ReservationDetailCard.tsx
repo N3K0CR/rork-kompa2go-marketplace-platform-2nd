@@ -1,4 +1,4 @@
-// ID: ReservationDetailCard_v6
+// ID: ReservationDetailCard_v6_fixed
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { XCircle, MessageCircle, Calendar, CheckCircle, Bell, TimerOff, AlertTriangle } from 'lucide-react-native';
@@ -98,7 +98,25 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
   };
 
   const handleReschedule = () => {
-    Alert.alert("Reagendar Cita", "Esta funcion aun esta en desarrollo.");
+    // Implementar funcionalidad de reagendar
+    Alert.alert(
+      "Reagendar Cita", 
+      "¿Deseas reagendar esta cita?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { 
+          text: "Si, Reagendar", 
+          onPress: () => {
+            // Aquí puedes implementar la navegación a una pantalla de reagendamiento
+            // o abrir un modal para seleccionar nueva fecha/hora
+            console.log('Reagendar cita:', reservation.id);
+            onClose?.();
+            // Ejemplo: router.push(`/reschedule/${reservation.id}`);
+            Alert.alert("En desarrollo", "Esta función estará disponible pronto.");
+          }
+        }
+      ]
+    );
   };
 
   const handleChatContact = async () => {
@@ -132,6 +150,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
               <CheckCircle size={20} color="white" />
               <Text style={styles.actionButtonText}>Confirmar Asistencia</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity style={[styles.actionButton, styles.postponeButton]} onPress={handlePostpone}>
               <TimerOff size={20} color="white" />
               <Text style={styles.actionButtonText}>Posponer {confirmationState.postponeDuration} hrs</Text>
@@ -150,10 +169,12 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
               <CheckCircle size={20} color="white" />
               <Text style={styles.actionButtonText}>Confirmar</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity style={[styles.actionButton, styles.rescheduleButton]} onPress={handleReschedule}>
               <Calendar size={20} color="white" />
               <Text style={styles.actionButtonText}>Reagendar</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity style={[styles.actionButton, styles.cancelButton]} onPress={handleCancelReservation}>
               <XCircle size={20} color="white" />
               <Text style={styles.actionButtonText}>Cancelar</Text>
@@ -170,6 +191,7 @@ export default function ReservationDetailCard({ reservation, onClose, showHeader
               <Calendar size={20} color="white" />
               <Text style={styles.actionButtonText}>Reagendar</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity style={[styles.actionButton, styles.cancelButton]} onPress={handleCancelReservation}>
               <XCircle size={20} color="white" />
               <Text style={styles.actionButtonText}>Cancelar Reserva</Text>

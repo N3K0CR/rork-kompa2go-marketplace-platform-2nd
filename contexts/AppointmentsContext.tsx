@@ -135,7 +135,7 @@ export function AppointmentsProvider({ children }: { children: ReactNode }) {
   const getUpcomingAppointments = useCallback((): Appointment[] => {
     const today = new Date().toISOString().split('T')[0];
     return appointments
-      .filter(appointment => appointment.date > today && appointment.status === 'confirmed')
+      .filter(appointment => appointment.date >= today && (appointment.status === 'confirmed' || appointment.status === 'pending'))
       .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
   }, [appointments]);
 
