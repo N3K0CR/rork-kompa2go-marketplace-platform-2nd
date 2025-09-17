@@ -32,47 +32,41 @@ export default function ProfileScreen() {
   const [proofImage, setProofImage] = useState<string | null>(null);
   const [purchaseLoading, setPurchaseLoading] = useState(false);
   const [showReferralModal, setShowReferralModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  const handleSignOut = async () => {
-    Alert.alert(
-      t('sign_out'),
-      t('sign_out_confirm'),
-      [
-        { text: t('cancel'), style: 'cancel' },
-        { 
-          text: t('sign_out'), 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              console.log('🔄 Starting logout process...');
-              console.log('🔍 Current user before logout:', user);
-              
-              // Clear user state first
-              await signOut();
-              
-              console.log('✅ Logout successful, redirecting to auth...');
-              
-              // Force navigation to auth screen and reset navigation stack
-              router.replace('/auth');
-              
-              // Additional cleanup - force a small delay to ensure state is cleared
-              setTimeout(() => {
-                console.log('✅ Navigation completed');
-                // Double-check navigation if needed
-                if (user) {
-                  console.log('⚠️ User still exists after logout, forcing navigation again');
-                  router.replace('/onboarding');
-                }
-              }, 200);
-              
-            } catch (error) {
-              console.error('❌ Error during logout:', error);
-              Alert.alert('Error', 'No se pudo cerrar sesión. Inténtalo de nuevo.');
-            }
-          }
-        },
-      ]
-    );
+  const handleSignOut = () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmSignOut = async () => {
+    try {
+      console.log('🔄 Starting logout process...');
+      console.log('🔍 Current user before logout:', user);
+      
+      setShowLogoutModal(false);
+      
+      // Clear user state first
+      await signOut();
+      
+      console.log('✅ Logout successful, redirecting to auth...');
+      
+      // Force navigation to auth screen and reset navigation stack
+      router.replace('/auth');
+      
+      // Additional cleanup - force a small delay to ensure state is cleared
+      setTimeout(() => {
+        console.log('✅ Navigation completed');
+        // Double-check navigation if needed
+        if (user) {
+          console.log('⚠️ User still exists after logout, forcing navigation again');
+          router.replace('/onboarding');
+        }
+      }, 200);
+      
+    } catch (error) {
+      console.error('❌ Error during logout:', error);
+      Alert.alert('Error', 'No se pudo cerrar sesión. Inténtalo de nuevo.');
+    }
   };
 
   const handleMenuPress = (action: string) => {
@@ -613,6 +607,54 @@ export default function ProfileScreen() {
               >
                 <Text style={styles.referralCloseButtonText}>Entendido</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        visible={showLogoutModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{t('sign_out')}</Text>
+              <TouchableOpacity
+                onPress={() => setShowLogoutModal(false)}
+                style={styles.closeButton}
+              >
+                <X size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.logoutModalContent}>
+              <LogOut size={48} color="#FF4444" style={styles.logoutIcon} />
+              <Text style={styles.logoutConfirmText}>
+                {t('sign_out_confirm') || '¿Estás seguro de que quieres cerrar sesión?'}
+              </Text>
+              <Text style={styles.logoutWarningText}>
+                Tendrás que iniciar sesión nuevamente para acceder a tu cuenta.
+              </Text>
+              
+              <View style={styles.logoutButtonsContainer}>
+                <TouchableOpacity
+                  style={styles.cancelLogoutButton}
+                  onPress={() => setShowLogoutModal(false)}
+                >
+                  <Text style={styles.cancelLogoutButtonText}>{t('cancel') || 'Cancelar'}</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.confirmLogoutButton}
+                  onPress={confirmSignOut}
+                >
+                  <Text style={styles.confirmLogoutButtonText}>{t('sign_out') || 'Cerrar Sesión'}</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
@@ -1229,6 +1271,56 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   referralCloseButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  logoutModalContent: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  logoutIcon: {
+    marginBottom: 16,
+  },
+  logoutConfirmText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  logoutWarningText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  logoutButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  cancelLogoutButton: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelLogoutButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  confirmLogoutButton: {
+    flex: 1,
+    backgroundColor: '#FF4444',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  confirmLogoutButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
