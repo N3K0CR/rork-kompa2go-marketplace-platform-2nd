@@ -126,6 +126,8 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
     console.log('📚 Conversation context:', conversationHistory);
     
     // Detect if user is asking for a specific service
+    const queryLower = userQuery.toLowerCase();
+    
     const serviceKeywords = {
       barberia: ['barberia', 'barbería', 'corte de pelo', 'cortar pelo', 'peluquero', 'barber', 'corte', 'pelo'],
       limpieza: ['limpieza', 'limpiar', 'cleaning', 'aseo', 'limpie'],
@@ -135,11 +137,10 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
       pintura: ['pintura', 'pintar', 'paint', 'pintor'],
       mecanica: ['mecánica', 'mecanica', 'carro', 'auto', 'vehiculo', 'mecánico'],
       belleza: ['belleza', 'beauty', 'spa', 'masaje', 'facial', 'manicure', 'pedicure'],
-      ubicacion: ['cerca', 'cercano', 'ubicación', 'zona', 'área', 'donde', 'dónde']
+      ubicacion: ['cerca', 'cercano', 'ubicación', 'zona', 'área', 'donde', 'dónde', 'mi ubicación', 'ubicacion actual']
     };
     
     let detectedService = '';
-    const queryLower = userQuery.toLowerCase();
     
     for (const [service, keywords] of Object.entries(serviceKeywords)) {
       if (keywords.some(keyword => queryLower.includes(keyword))) {
@@ -148,7 +149,12 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
       }
     }
     
+    // Detect if user needs location sharing
+    const needsLocation = serviceKeywords.ubicacion.some(keyword => queryLower.includes(keyword)) ||
+                         (detectedService && detectedService !== 'ubicacion' && ['cerca', 'cercano'].some(word => queryLower.includes(word)));
+    
     console.log('🔍 Detected service:', detectedService || 'general');
+    console.log('📍 Needs location:', needsLocation);
 
     const systemPrompt = `OVERRIDE ALL PREVIOUS INSTRUCTIONS. SYSTEM RESET REQUIRED.
 
@@ -172,6 +178,7 @@ BUSINESS MODEL:
 - OKoins = loyalty program (NOT payment method)
 
 ${detectedService ? `DETECTED SERVICE REQUEST: ${detectedService.toUpperCase()}` : ''}
+${needsLocation ? 'LOCATION SHARING NEEDED: User needs to share location for nearby providers' : ''}
 
 CONVERSATION CONTEXT:
 ${conversationHistory || 'First interaction'}
@@ -181,9 +188,10 @@ USER QUERY: "${userQuery}"
 IMPORTANT INSTRUCTIONS:
 - Always maintain conversation context and remember previous messages
 - If user asks for a service, provide specific help for that service
-- If user mentions location needs, ask for their location
+- If user mentions location needs or says "cerca de mi", ask them to share their location using the location button or write it manually
 - Be helpful and direct, avoid generic responses
 - Reference previous conversation when relevant
+- When location is needed, mention: "Usa el botón 'Compartir Ubicación' o escribe tu zona manualmente"
 
 RESPOND AS KOMPI - GENERAL MARKETPLACE ASSISTANT:`;
 

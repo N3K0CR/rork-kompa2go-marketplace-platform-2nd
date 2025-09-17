@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,13 @@ import {
   TextInput,
   Alert,
   SafeAreaView,
+  Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { useKompiBrain } from '@/contexts/KompiBrainContext';
-import { MessageCircle, Plus, Trash2, Settings, Power, PowerOff } from 'lucide-react-native';
+import { MessageCircle, Plus, Trash2, Settings, Power, PowerOff, MapPin, Send, Navigation } from 'lucide-react-native';
+import * as Location from 'expo-location';
 
 export default function TestKompiScreen() {
   const {
@@ -33,6 +36,10 @@ export default function TestKompiScreen() {
 
   const [messageInput, setMessageInput] = useState('');
   const [conversationTitle, setConversationTitle] = useState('');
+  const [currentLocation, setCurrentLocation] = useState<Location.LocationObject | null>(null);
+  const [locationPermission, setLocationPermission] = useState<Location.PermissionStatus | null>(null);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [showLocationOptions, setShowLocationOptions] = useState(false);
 
   const currentConversation = useMemo(() => {
     if (!currentConversationId) {
@@ -40,6 +47,138 @@ export default function TestKompiScreen() {
     }
     return conversations.find(conv => conv.id === currentConversationId) || null;
   }, [currentConversationId, conversations]);
+
+  // Check location permission on mount
+  useEffect(() => {
+    (async () => {
+      if (Platform.OS !== 'web') {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        setLocationPermission(status);
+      }
+    })();
+  }, []);
+
+  const requestLocationPermission = async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert('Ubicación', 'La ubicación automática no está disponible en web. Por favor, escribe tu ubicación manualmente.');
+      return false;
+    }
+
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      setLocationPermission(status);
+      
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permisos de ubicación',
+          'Para mostrarte proveedores cercanos, necesitamos acceso a tu ubicación. Puedes habilitarlo en configuración o escribir tu ubicación manualmente.'
+        );
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Error requesting location permission:', error);
+      Alert.alert('Error', 'No se pudo solicitar permisos de ubicación');
+      return false;
+    }
+  };
+
+  const getCurrentLocation = async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert('Ubicación', 'La ubicación automática no está disponible en web. Por favor, escribe tu ubicación manualmente.');
+      return;
+    }
+
+    setIsGettingLocation(true);
+    
+    try {
+      // Check permission first
+      if (locationPermission !== 'granted') {
+        const hasPermission = await requestLocationPermission();
+        if (!hasPermission) {
+          setIsGettingLocation(false);
+          return;
+        }
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+        timeInterval: 10000,
+      });
+      
+      setCurrentLocation(location);
+      
+      // Get address from coordinates
+      const [address] = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+      
+      const locationText = `${address.city || address.district || address.subregion}, ${address.region || address.country}`;
+      
+      // Add location to message input
+      const locationMessage = `Mi ubicación actual: ${locationText} (${location.coords.latitude.toFixed(6)}, ${location.coords.longitude.toFixed(6)})`;
+      
+      if (currentConversationId) {
+        await sendMessage(currentConversationId, locationMessage);
+      } else {
+        setMessageInput(prev => prev + (prev ? '\n' : '') + locationMessage);
+      }
+      
+      Alert.alert('Ubicación compartida', `Se ha compartido tu ubicación: ${locationText}`);
+      
+    } catch (error) {
+      console.error('Error getting location:', error);
+      Alert.alert(
+        'Error de ubicación',
+        'No se pudo obtener tu ubicación actual. Puedes escribir tu ubicación manualmente.'
+      );
+    } finally {
+      setIsGettingLocation(false);
+      setShowLocationOptions(false);
+    }
+  };
+
+  const showLocationDialog = () => {
+    Alert.alert(
+      'Compartir ubicación',
+      '¿Cómo quieres compartir tu ubicación?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Ubicación actual',
+          onPress: getCurrentLocation,
+        },
+        {
+          text: 'Escribir manualmente',
+          onPress: () => {
+            setMessageInput(prev => prev + (prev ? '\n' : '') + 'Mi ubicación: ');
+          },
+        },
+      ]
+    );
+  };
+
+  const sendLocationSuggestions = async () => {
+    if (!currentConversationId) return;
+    
+    const suggestions = [
+      'San José centro',
+      'Heredia',
+      'Alajuela',
+      'Cartago',
+      'Puntarenas',
+      'Guanacaste',
+      'Limón'
+    ];
+    
+    const suggestionText = `Puedes elegir una de estas zonas principales de Costa Rica:\n\n${suggestions.map((zone, index) => `${index + 1}. ${zone}`).join('\n')}\n\nO escribe tu ubicación específica (barrio, residencial, etc.)`;
+    
+    await sendMessage(currentConversationId, suggestionText);
+  };
 
   const handleSendMessage = async () => {
     if (!messageInput.trim() || !currentConversationId) return;
@@ -90,8 +229,11 @@ export default function TestKompiScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Test KompiBrain', headerShown: true }} />
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <Stack.Screen options={{ title: 'Chat Kompi - Test', headerShown: true }} />
       
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Status Section */}
@@ -265,28 +407,77 @@ export default function TestKompiScreen() {
         {currentConversationId && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Enviar Mensaje</Text>
+            
+            {/* Location Options */}
+            <View style={styles.locationContainer}>
+              <TouchableOpacity
+                style={[styles.locationButton, styles.primaryLocationButton]}
+                onPress={showLocationDialog}
+                disabled={isGettingLocation}
+              >
+                <MapPin size={16} color="white" />
+                <Text style={styles.locationButtonText}>
+                  {isGettingLocation ? 'Obteniendo...' : 'Compartir Ubicación'}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.locationButton, styles.secondaryLocationButton]}
+                onPress={sendLocationSuggestions}
+              >
+                <Navigation size={16} color="#2196F3" />
+                <Text style={[styles.locationButtonText, { color: '#2196F3' }]}>
+                  Zonas CR
+                </Text>
+              </TouchableOpacity>
+            </View>
+            
             <TextInput
               style={[styles.input, styles.messageInput]}
-              placeholder="Escribe tu mensaje aquí..."
+              placeholder="Escribe tu mensaje aquí... \n\nEjemplos:\n• 'necesito una barbería cerca de mi'\n• 'Mi ubicación: Cartago, Tejar'\n• 'busco limpieza en San José centro'"
               value={messageInput}
               onChangeText={setMessageInput}
               multiline
-              numberOfLines={3}
+              numberOfLines={4}
             />
-            <TouchableOpacity
-              style={[
-                styles.button,
-                styles.sendButton,
-                (!messageInput.trim() || isLoading) && styles.disabledButton
-              ]}
-              onPress={handleSendMessage}
-              disabled={!messageInput.trim() || isLoading}
-            >
-              <MessageCircle size={16} color="white" />
-              <Text style={styles.buttonText}>
-                {isLoading ? 'Enviando...' : 'Enviar Mensaje'}
-              </Text>
-            </TouchableOpacity>
+            
+            <View style={styles.messageActions}>
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  styles.sendButton,
+                  (!messageInput.trim() || isLoading) && styles.disabledButton
+                ]}
+                onPress={handleSendMessage}
+                disabled={!messageInput.trim() || isLoading}
+              >
+                <Send size={16} color="white" />
+                <Text style={styles.buttonText}>
+                  {isLoading ? 'Enviando...' : 'Enviar'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Quick Location Examples */}
+            <View style={styles.quickExamples}>
+              <Text style={styles.quickExamplesTitle}>Ejemplos rápidos:</Text>
+              <View style={styles.quickExamplesContainer}>
+                {[
+                  'Cartago, Tejar',
+                  'San José centro',
+                  'Heredia, Mercedes',
+                  'Alajuela centro'
+                ].map((example, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.quickExampleButton}
+                    onPress={() => setMessageInput(`Mi ubicación: ${example}`)}
+                  >
+                    <Text style={styles.quickExampleText}>{example}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
           </View>
         )}
 
@@ -301,7 +492,7 @@ export default function TestKompiScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -406,6 +597,65 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     backgroundColor: '#ccc',
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 6,
+    flex: 1,
+  },
+  primaryLocationButton: {
+    backgroundColor: '#4CAF50',
+  },
+  secondaryLocationButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#2196F3',
+  },
+  locationButtonText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  messageActions: {
+    marginTop: 8,
+  },
+  quickExamples: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  quickExamplesTitle: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  quickExamplesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  quickExampleButton: {
+    backgroundColor: '#f0f0f0',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  quickExampleText: {
+    fontSize: 12,
+    color: '#666',
   },
   settingsContainer: {
     marginBottom: 16,
