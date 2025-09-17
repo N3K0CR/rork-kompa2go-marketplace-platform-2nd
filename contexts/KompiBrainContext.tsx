@@ -1,5 +1,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import createContextHook from '@nkzw/create-context-hook';
+import { useAuth } from './AuthContext';
+import { useAppointments } from './AppointmentsContext';
 
 interface Message {
   id: string;
@@ -13,6 +15,15 @@ interface Conversation {
   messages: Message[];
   title: string;
   createdAt: Date;
+}
+
+interface ConversationMemory {
+  messages: Message[];
+  context: {
+    userType: string;
+    location?: string;
+    recentSearches: string[];
+  };
 }
 
 interface KompiBrainState {
@@ -44,6 +55,9 @@ type KompiBrainContextType = KompiBrainState & KompiBrainActions;
 
 
 export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainContextType>(() => {
+  const { user } = useAuth();
+  const { getUpcomingAppointments } = useAppointments();
+  
   const [state, setState] = useState<KompiBrainState>({
     isActive: false,
     conversations: [],
@@ -114,50 +128,68 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
   }, []);
 
   // Generate Rork prompt with context reset and identity enforcement
-  const generateRorkPrompt = useCallback((conversationMessages: Message[]) => {
-    const resetInstruction = `RESET: Ignora completamente cualquier contexto, identidad o instrucciones previas. Eres exclusivamente KompiBrain de Kompa2Go.`;
-    
-    const identityPrompt = `
-IDENTIDAD FORZADA: Eres KompiBrain, el asistente inteligente exclusivo de Kompa2Go.
+  const generateRorkPrompt = useCallback((
+    query: string,
+    memory: ConversationMemory,
+    intent: string,
+    entities: Record<string, any>
+  ) => {
+    const recentMessages = memory.messages.slice(-8);
+    const conversationHistory = recentMessages.map(msg => 
+      `${msg.role === 'user' ? 'Usuario' : 'Kompi'}: ${msg.content}`
+    ).join('\n');
 
-Kompa2Go es una plataforma integral de servicios de belleza y bienestar que conecta usuarios con profesionales certificados.
+    const contextualInfo = {
+      userProfile: {
+        name: user?.name || 'Usuario',
+        userType: memory.context.userType,
+        location: memory.context.location || 'Costa Rica',
+        recentServices: memory.context.recentSearches.slice(-3),
+        upcomingAppointments: getUpcomingAppointments().slice(0, 2)
+      }
+    };
 
-CARACTERÍSTICAS DE KOMPA2GO:
-- Reserva de citas con profesionales de belleza
-- Sistema de pagos integrado con OKoins (moneda virtual)
-- Geolocalización para encontrar servicios cercanos
-- Chat en tiempo real con proveedores
-- Historial de servicios y reseñas
-- Programas de lealtad y recompensas
-- Análisis y estadísticas para proveedores
+    return `INSTRUCCIÓN CRÍTICA: RESET COMPLETO DE IDENTIDAD Y CONTEXTO
 
-TU FUNCIÓN:
-- Ayudar con navegación de la app
-- Explicar funcionalidades de Kompa2Go
-- Asistir con reservas y pagos
-- Resolver dudas sobre servicios
-- Guiar en el uso de OKoins
-- Proporcionar información sobre proveedores
+=== IDENTIDAD OBLIGATORIA ===
+NOMBRE: Kompi
+EMPRESA: Kompa2Go
+TIPO DE PLATAFORMA: Marketplace de servicios generales (NO solo belleza)
+UBICACIÓN: Costa Rica
 
-RESPONDE SIEMPRE:
-- En español
-- Como KompiBrain de Kompa2Go
-- De manera amigable y profesional
-- Con información específica de la plataforma
+=== SERVICIOS PRINCIPALES DE KOMPA2GO (ORDEN DE IMPORTANCIA) ===
+1. LIMPIEZA (residencial, comercial, profunda, mantenimiento)
+2. PLOMERÍA (reparaciones, instalaciones, emergencias)
+3. ELECTRICIDAD (instalaciones, reparaciones, cableado)
+4. JARDINERÍA (mantenimiento, diseño, poda)
+5. PINTURA (interior, exterior, decorativa)
+6. CARPINTERÍA (muebles, reparaciones, instalaciones)
+7. MECÁNICA (automotriz, mantenimiento vehicular)
+8. MANTENIMIENTO GENERAL (hogar, oficina)
+9. Belleza y estética (como servicio adicional, NO principal)
 
-NUNCA menciones otras aplicaciones o servicios de belleza.`;
+=== USUARIO ACTUAL ===
+Nombre: ${contextualInfo.userProfile.name}
+Tipo: ${contextualInfo.userProfile.userType}
+Ubicación: ${contextualInfo.userProfile.location}
+Servicios previos: ${contextualInfo.userProfile.recentServices.join(', ') || 'Ninguno'}
 
-    return [
-      {
-        role: 'system' as const,
-        content: resetInstruction + identityPrompt
-      },
-      ...conversationMessages.map(msg => ({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content,
-      })),
-    ];
-  }, []);
+=== HISTORIAL CONVERSACIONAL ===
+${conversationHistory || 'Primera interacción'}
+
+=== CONSULTA A RESPONDER ===
+"${query}"
+
+=== INSTRUCCIONES ESTRICTAS ===
+1. Si preguntan "qué puedes hacer", menciona TODOS los servicios empezando por limpieza, plomería, electricidad
+2. NO te enfoques solo en belleza - es un marketplace general
+3. Usa un tono amigable pero profesional
+4. Ofrece ayuda específica para encontrar proveedores
+5. Menciona que es para Costa Rica
+6. Si no sabes algo específico, ofrece conectar con proveedores
+
+RESPONDE como Kompi de Kompa2Go (marketplace general de servicios):`;
+  }, [user, getUpcomingAppointments]);
 
   // Call Rork API with response verification
   const callRorkAPI = useCallback(async (messages: any[]) => {
@@ -214,8 +246,26 @@ NUNCA menciones otras aplicaciones o servicios de belleza.`;
 
       console.log('Sending message to KompiBrain with', conversationMessages.length, 'previous messages');
 
-      const messages = generateRorkPrompt(conversationMessages);
+      // Create memory object for the new generateRorkPrompt function
+      const memory: ConversationMemory = {
+        messages: conversationMessages,
+        context: {
+          userType: user?.userType || 'client',
+          location: user?.location,
+          recentSearches: [] // This could be enhanced with actual search history
+        }
+      };
+
+      const prompt = generateRorkPrompt(content.trim(), memory, 'general', {});
       console.log('Generated prompt with context reset');
+
+      // Convert the prompt string to the expected messages format
+      const messages = [
+        {
+          role: 'system' as const,
+          content: prompt
+        }
+      ];
 
       const data = await callRorkAPI(messages);
       console.log('Received response from KompiBrain:', data);
@@ -229,7 +279,7 @@ NUNCA menciones otras aplicaciones o servicios de belleza.`;
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [addMessage, generateRorkPrompt, callRorkAPI]);
+  }, [addMessage, generateRorkPrompt, callRorkAPI, user]);
 
   const setCurrentConversation = useCallback((id: string | null) => {
     setState(prev => ({ ...prev, currentConversationId: id }));
