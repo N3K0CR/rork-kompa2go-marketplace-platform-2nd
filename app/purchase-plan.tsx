@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, TextInput, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { useReservationPlans } from '@/contexts/ReservationPlansContext';
 import { usePaymentBackend } from '@/contexts/PaymentBackendContext';
-import { CreditCard, Check, Star, ArrowLeft, Upload, DollarSign, Info, X } from 'lucide-react-native';
+
+import { Check, ArrowLeft, Upload, Info, X } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 export default function PurchasePlanScreen() {
@@ -22,15 +23,12 @@ export default function PurchasePlanScreen() {
     formatAmount,
     isPaymentMethodSupported
   } = usePaymentBackend();
+
   
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'sinpe' | 'kash' | 'card' | 'bank_transfer'>('sinpe');
+  const [paymentMethod, setPaymentMethod] = useState<'sinpe' | 'kash' | 'card' | 'bank_transfer'>('card');
   const [proofImage, setProofImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [cardNumber, setCardNumber] = useState('');
-  const [expiryDate, setExpiryDate] = useState('');
-  const [cvv, setCvv] = useState('');
-  const [cardholderName, setCardholderName] = useState('');
   const [hoveredMethod, setHoveredMethod] = useState<string | null>(null);
   
   const plans = useMemo(() => getAvailablePlans(), [getAvailablePlans]);
@@ -88,50 +86,28 @@ export default function PurchasePlanScreen() {
       return;
     }
     
-    // Validate payment method requirements
+    // Para métodos tradicionales (SINPE, Kash)
     if (['sinpe', 'kash'].includes(paymentMethod) && !proofImage) {
       Alert.alert('Error', 'Debes subir el comprobante de pago');
       return;
     }
     
-    if (paymentMethod === 'card') {
-      if (!cardNumber || !expiryDate || !cvv || !cardholderName) {
-        Alert.alert('Error', 'Completa todos los datos de la tarjeta');
-        return;
-      }
-      
-      // Basic card validation
-      if (cardNumber.replace(/\s/g, '').length < 13) {
-        Alert.alert('Error', 'Número de tarjeta inválido');
-        return;
-      }
-      
-      if (!/^\d{2}\/\d{2}$/.test(expiryDate)) {
-        Alert.alert('Error', 'Fecha de vencimiento inválida (MM/YY)');
-        return;
-      }
-      
-      if (cvv.length < 3) {
-        Alert.alert('Error', 'CVV inválido');
-        return;
-      }
-    }
-    
     try {
-      // Create payment through backend
+      if (paymentMethod === 'card') {
+        // El pago con tarjeta se maneja en CardPaymentCheckout
+        return;
+      }
+
+      // Crear payment para métodos tradicionales
       const payment = await createPayment({
         amount: selectedPlanData.price,
         paymentMethod: paymentMethod as any,
         description: `Plan ${selectedPlanData.name} - ${selectedPlanData.reservations} reservas`,
         planId: selectedPlanData.id,
         proofImage: proofImage || undefined,
-        metadata: {
-          cardLast4: paymentMethod === 'card' ? cardNumber.slice(-4) : undefined,
-          cardholderName: paymentMethod === 'card' ? cardholderName : undefined,
-        }
       });
       
-      // Also create through old system for compatibility
+      // También crear en el sistema anterior para compatibilidad
       if (['sinpe', 'kash'].includes(paymentMethod) && proofImage) {
         await purchasePlan(selectedPlanData.id, paymentMethod as 'sinpe' | 'kash', proofImage);
       }
@@ -153,36 +129,52 @@ export default function PurchasePlanScreen() {
     }
   };
   
-  const formatCardNumber = (text: string) => {
-    const cleaned = text.replace(/\s/g, '');
-    const match = cleaned.match(/.{1,4}/g);
-    return match ? match.join(' ') : cleaned;
-  };
-  
-  const formatExpiryDate = (text: string) => {
-    const cleaned = text.replace(/\D/g, '');
-    if (cleaned.length >= 2) {
-      return cleaned.substring(0, 2) + '/' + cleaned.substring(2, 4);
-    }
-    return cleaned;
-  };
+
   
   const getPaymentMethods = () => {
-    return ['sinpe', 'kash', 'card', 'bank_transfer'];
+    return ['card', 'sinpe', 'kash', 'bank_transfer'];
   };
-  
+
   const isMethodEnabled = (method: string) => {
+    if (method === 'card') return true;
     return ['sinpe', 'kash'].includes(method);
   };
-  
+
   const getMethodTooltip = (method: string) => {
-    if (method === 'card') {
-      return 'Próximamente disponible - Estamos trabajando para traer esta funcionalidad pronto';
-    }
     if (method === 'bank_transfer') {
       return 'Próximamente disponible - Estamos trabajando para traer esta funcionalidad pronto';
     }
     return null;
+  };
+
+  const getMethodDetails = (method: string) => {
+    const details = {
+      card: {
+        emoji: '💳',
+        name: 'Tarjeta de Crédito/Débito',
+        description: 'Pago seguro internacional',
+        badge: '🌍 Global'
+      },
+      sinpe: {
+        emoji: '📱',
+        name: 'SINPE Móvil',
+        description: 'Transferencia inmediata Costa Rica',
+        badge: '🇨🇷 CR'
+      },
+      kash: {
+        emoji: '💰',
+        name: 'Kash',
+        description: 'Billetera digital Costa Rica',
+        badge: '🇨🇷 CR'
+      },
+      bank_transfer: {
+        emoji: '🏦',
+        name: 'Transferencia Bancaria',
+        description: 'Próximamente disponible',
+        badge: ''
+      }
+    };
+    return details[method as keyof typeof details];
   };
   
   return (
@@ -215,33 +207,30 @@ export default function PurchasePlanScreen() {
         
         <View style={styles.content}>
           {/* Plan Selection */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Selecciona tu Plan</Text>
-            
+          <Text style={styles.sectionTitle}>Selecciona tu Plan</Text>
+          <View style={styles.plansGrid}>
             {plans.map((plan) => (
               <TouchableOpacity
                 key={plan.id}
                 style={[
                   styles.planCard,
-                  selectedPlan === plan.id && styles.selectedPlanCard,
-                  plan.popular && styles.popularPlanCard
+                  selectedPlan === plan.id && styles.selectedPlan
                 ]}
                 onPress={() => setSelectedPlan(plan.id)}
               >
                 {plan.popular && (
                   <View style={styles.popularBadge}>
-                    <Star size={12} color="white" fill="white" />
-                    <Text style={styles.popularText}>MÁS POPULAR</Text>
+                    <Text style={styles.popularText}>Popular</Text>
                   </View>
                 )}
-                
-                <View style={styles.planHeader}>
-                  <Text style={styles.planName}>{plan.name}</Text>
-                  <Text style={styles.planPrice}>₡{plan.price.toLocaleString()}</Text>
-                </View>
-                
+                {selectedPlan === plan.id && (
+                  <View style={styles.selectedIndicator}>
+                    <Check size={16} color="white" />
+                  </View>
+                )}
+                <Text style={styles.planName}>{plan.name}</Text>
+                <Text style={styles.planPrice}>₡{plan.price.toLocaleString()}</Text>
                 <Text style={styles.planDescription}>{plan.description}</Text>
-                
                 <View style={styles.planBenefits}>
                   {plan.benefits.map((benefit, index) => (
                     <View key={index} style={styles.benefitItem}>
@@ -250,232 +239,171 @@ export default function PurchasePlanScreen() {
                     </View>
                   ))}
                 </View>
-                
-                {selectedPlan === plan.id && (
-                  <View style={styles.selectedIndicator}>
-                    <Check size={20} color="white" fill="white" />
-                  </View>
-                )}
               </TouchableOpacity>
             ))}
           </View>
           
           {/* Payment Method Selection */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Método de Pago</Text>
-            
-            <View style={styles.paymentMethods}>
-              {getPaymentMethods().map((method) => {
-                const isEnabled = isMethodEnabled(method);
-                const tooltip = getMethodTooltip(method);
-                
-                return (
-                  <View key={method} style={styles.paymentMethodContainer}>
-                    <TouchableOpacity
-                      style={[
-                        styles.paymentMethodCard,
-                        paymentMethod === method && styles.selectedPaymentMethod,
-                        !isEnabled && styles.disabledPaymentMethod
-                      ]}
-                      onPress={() => isEnabled && setPaymentMethod(method as any)}
-                      disabled={!isEnabled}
-                      {...(Platform.OS === 'web' && {
-                        onMouseEnter: () => setHoveredMethod(method),
-                        onMouseLeave: () => setHoveredMethod(null)
-                      })}
-                    >
-                      <View style={styles.paymentMethodIcon}>
-                        {method === 'sinpe' && <Text style={styles.methodEmoji}>📱</Text>}
-                        {method === 'kash' && <Text style={styles.methodEmoji}>💳</Text>}
-                        {method === 'card' && <CreditCard size={24} color={isEnabled && paymentMethod === method ? '#D81B60' : '#999'} />}
-                        {method === 'bank_transfer' && <Text style={styles.methodEmoji}>🏦</Text>}
-                      </View>
+          <Text style={styles.sectionTitle}>Método de Pago</Text>
+          <View style={styles.paymentMethods}>
+            {getPaymentMethods().map((method) => {
+              const methodDetails = getMethodDetails(method);
+              const isEnabled = isMethodEnabled(method);
+              const tooltip = getMethodTooltip(method);
+              
+              return (
+                <View key={method} style={styles.paymentMethodContainer}>
+                  <TouchableOpacity
+                    style={[
+                      styles.paymentMethodCard,
+                      paymentMethod === method && styles.selectedPaymentMethod,
+                      !isEnabled && styles.disabledPaymentMethod,
+                    ]}
+                    onPress={() => isEnabled && setPaymentMethod(method as any)}
+                    disabled={!isEnabled}
+                    onPressIn={() => setHoveredMethod(method)}
+                    onPressOut={() => setHoveredMethod(null)}
+                  >
+                    <View style={styles.paymentMethodIcon}>
+                      <Text style={styles.methodEmoji}>{methodDetails.emoji}</Text>
+                    </View>
+                    <View style={styles.paymentMethodContent}>
                       <Text style={[
                         styles.paymentMethodName,
-                        paymentMethod === method && isEnabled && styles.selectedPaymentMethodName,
-                        !isEnabled && styles.disabledPaymentMethodName
+                        paymentMethod === method && styles.selectedPaymentMethodName,
+                        !isEnabled && styles.disabledPaymentMethodName,
                       ]}>
-                        {method === 'sinpe' && 'SINPE Móvil'}
-                        {method === 'kash' && 'KASH'}
-                        {method === 'card' && 'Tarjeta de Crédito/Débito'}
-                        {method === 'bank_transfer' && 'Transferencia Bancaria'}
+                        {methodDetails.name}
                       </Text>
-                      {!isEnabled && (
-                        <Info size={16} color="#999" style={styles.infoIcon} />
+                      <Text style={styles.paymentMethodDescription}>
+                        {methodDetails.description}
+                      </Text>
+                      {methodDetails.badge && (
+                        <Text style={styles.methodBadge}>{methodDetails.badge}</Text>
                       )}
-                    </TouchableOpacity>
-                    
-                    {/* Tooltip for disabled methods */}
-                    {!isEnabled && hoveredMethod === method && tooltip && Platform.OS === 'web' && (
-                      <View style={styles.tooltip}>
-                        <Text style={styles.tooltipText}>{tooltip}</Text>
-                      </View>
+                    </View>
+                    {tooltip && (
+                      <TouchableOpacity style={styles.infoIcon}>
+                        <Info size={16} color="#6B7280" />
+                      </TouchableOpacity>
                     )}
-                  </View>
-                );
-              })}
-            </View>
+                  </TouchableOpacity>
+                  
+                  {tooltip && hoveredMethod === method && (
+                    <View style={styles.tooltip}>
+                      <Text style={styles.tooltipText}>{tooltip}</Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
           </View>
           
           {/* Payment Details */}
-          {paymentMethod === 'card' && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Datos de la Tarjeta</Text>
-              
-              <View style={styles.cardForm}>
-                <View style={styles.formGroup}>
-                  <Text style={styles.label}>Número de Tarjeta</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={cardNumber}
-                    onChangeText={(text) => setCardNumber(formatCardNumber(text))}
-                    placeholder="1234 5678 9012 3456"
-                    keyboardType="numeric"
-                    maxLength={19}
-                  />
+          {selectedPlanData && (
+            <>
+              {/* Card Payment Component */}
+              {paymentMethod === 'card' && (
+                <View style={styles.cardPaymentSection}>
+                  <Text style={styles.sectionTitle}>Pago con Tarjeta</Text>
+                  <Text style={styles.cardPaymentMessage}>
+                    La integración con Lemon Squeezy está en desarrollo.
+                    Por favor, selecciona otro método de pago por ahora.
+                  </Text>
                 </View>
-                
-                <View style={styles.formRow}>
-                  <View style={[styles.formGroup, { flex: 1 }]}>
-                    <Text style={styles.label}>Vencimiento</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={expiryDate}
-                      onChangeText={(text) => setExpiryDate(formatExpiryDate(text))}
-                      placeholder="MM/YY"
-                      keyboardType="numeric"
-                      maxLength={5}
-                    />
-                  </View>
-                  
-                  <View style={[styles.formGroup, { flex: 1, marginLeft: 12 }]}>
-                    <Text style={styles.label}>CVV</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={cvv}
-                      onChangeText={setCvv}
-                      placeholder="123"
-                      keyboardType="numeric"
-                      maxLength={4}
-                      secureTextEntry
-                    />
-                  </View>
-                </View>
-                
-                <View style={styles.formGroup}>
-                  <Text style={styles.label}>Nombre del Titular</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={cardholderName}
-                    onChangeText={setCardholderName}
-                    placeholder="Nombre como aparece en la tarjeta"
-                    autoCapitalize="words"
-                  />
-                </View>
-              </View>
-            </View>
-          )}
+              )}
           
-          {/* Proof Upload for SINPE/Kash */}
-          {['sinpe', 'kash'].includes(paymentMethod) && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Comprobante de Pago</Text>
-              
-              <View style={styles.uploadSection}>
-                <Text style={styles.uploadInstructions}>
-                  {paymentMethod === 'sinpe' 
-                    ? 'Realiza el pago por SINPE Móvil y sube el comprobante'
-                    : 'Realiza el pago por KASH y sube el comprobante'
-                  }
-                </Text>
-                
-                <View style={styles.paymentDetails}>
-                  <Text style={styles.paymentDetailsTitle}>Información de Depósito:</Text>
-                  <Text style={styles.paymentDetailsText}>📱 Número: 8833-2517</Text>
-                  <Text style={styles.paymentDetailsText}>👤 Nombre: Ricardo Narváez Vargas</Text>
-                  <Text style={styles.paymentDetailsText}>🏢 Sakura Beauty Salon TechDev Manager</Text>
-                </View>
-                
-                {selectedPlanData && (
-                  <View style={styles.paymentInfo}>
-                    <Text style={styles.paymentInfoText}>
-                      Monto a pagar: <Text style={styles.paymentAmount}>₡{selectedPlanData.price.toLocaleString()}</Text>
+              {/* Traditional Payment Methods */}
+              {['sinpe', 'kash'].includes(paymentMethod) && (
+                <>
+                  <View style={styles.paymentDetails}>
+                    <Text style={styles.paymentDetailsTitle}>
+                      Detalles del Pago - {getMethodDetails(paymentMethod).name}
+                    </Text>
+                    
+                    {paymentMethod === 'sinpe' && (
+                      <>
+                        <Text style={styles.paymentDetailsText}>
+                          Número SINPE: <Text style={styles.highlight}>8888-8888</Text>
+                        </Text>
+                        <Text style={styles.paymentDetailsText}>
+                          Nombre: <Text style={styles.highlight}>Kompa2Go Costa Rica</Text>
+                        </Text>
+                      </>
+                    )}
+                    
+                    {paymentMethod === 'kash' && (
+                      <>
+                        <Text style={styles.paymentDetailsText}>
+                          Usuario Kash: <Text style={styles.highlight}>@kompa2go</Text>
+                        </Text>
+                        <Text style={styles.paymentDetailsText}>
+                          Nombre: <Text style={styles.highlight}>Kompa2Go CR</Text>
+                        </Text>
+                      </>
+                    )}
+                    
+                    <Text style={styles.paymentDetailsText}>
+                      Monto: <Text style={styles.highlight}>₡{selectedPlanData.price.toLocaleString()}</Text>
                     </Text>
                   </View>
-                )}
-                
-                <TouchableOpacity
-                  style={styles.uploadButton}
-                  onPress={handleImagePicker}
-                  disabled={isUploading}
-                >
-                  {isUploading ? (
-                    <ActivityIndicator size="small" color="#D81B60" />
-                  ) : (
-                    <Upload size={24} color="#D81B60" />
-                  )}
-                  <Text style={styles.uploadButtonText}>
-                    {isUploading ? 'Subiendo...' : proofImage ? 'Cambiar Comprobante' : 'Subir Comprobante'}
-                  </Text>
-                </TouchableOpacity>
-                
-                {proofImage && (
-                  <View style={styles.imagePreview}>
-                    <Image source={{ uri: proofImage }} style={styles.previewImage} />
-                    <Text style={styles.imagePreviewText}>Comprobante subido ✓</Text>
+
+                  <View style={styles.uploadSection}>
+                    <Text style={styles.sectionTitle}>Comprobante de Pago</Text>
+                    <Text style={styles.uploadInstructions}>
+                      Sube una captura de pantalla del comprobante de tu pago
+                    </Text>
+                    
+                    {proofImage ? (
+                      <View style={styles.imagePreview}>
+                        <Image source={{ uri: proofImage }} style={styles.uploadedImage} />
+                        <TouchableOpacity 
+                          style={styles.removeImageButton}
+                          onPress={() => setProofImage(null)}
+                        >
+                          <X size={16} color="white" />
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.uploadButton}
+                        onPress={handleImagePicker}
+                        disabled={isUploading}
+                      >
+                        {isUploading ? (
+                          <ActivityIndicator color="#D81B60" />
+                        ) : (
+                          <Upload size={24} color="#D81B60" />
+                        )}
+                        <Text style={styles.uploadButtonText}>
+                          {isUploading ? 'Subiendo...' : 'Subir Comprobante'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
-                )}
-              </View>
-            </View>
-          )}
-          
-          {/* Fee Breakdown */}
-          {fees && selectedPlanData && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Resumen del Pago</Text>
-              
-              <View style={styles.feeBreakdown}>
-                <View style={styles.feeRow}>
-                  <Text style={styles.feeLabel}>Plan {selectedPlanData.name}</Text>
-                  <Text style={styles.feeValue}>₡{selectedPlanData.price.toLocaleString()}</Text>
-                </View>
-                
-                <View style={[styles.feeRow, styles.totalRow]}>
-                  <Text style={styles.totalLabel}>Total a Pagar</Text>
-                  <Text style={styles.totalValue}>₡{selectedPlanData.price.toLocaleString()}</Text>
-                </View>
-              </View>
-            </View>
-          )}
-          
-          {/* Action Buttons */}
-          <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => router.back()}
-            >
-              <X size={20} color="#6B7280" />
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[
-                styles.purchaseButton,
-                (isCreatingPayment || !selectedPlanData) && styles.disabledButton
-              ]}
-              onPress={handlePurchase}
-              disabled={isCreatingPayment || !selectedPlanData}
-            >
-              {isCreatingPayment ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <DollarSign size={24} color="white" />
+
+                  <TouchableOpacity
+                    style={[
+                      styles.purchaseButton,
+                      !proofImage && styles.purchaseButtonDisabled
+                    ]}
+                    onPress={handlePurchase}
+                    disabled={!proofImage || isCreatingPayment}
+                  >
+                    {isCreatingPayment ? (
+                      <ActivityIndicator color="white" />
+                    ) : (
+                      <Text style={styles.purchaseButtonText}>
+                        Enviar Comprobante
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </>
               )}
-              <Text style={styles.purchaseButtonText}>
-                {isCreatingPayment ? 'Procesando...' : 'Comprar Plan'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+            </>
+          )}
+          
+
         </View>
         </ScrollView>
       </View>
@@ -519,21 +447,21 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     marginBottom: 16,
   },
+  plansGrid: {
+    gap: 12,
+    marginBottom: 24,
+  },
   planCard: {
     backgroundColor: 'white',
     borderRadius: 16,
     padding: 20,
-    marginBottom: 12,
     borderWidth: 2,
     borderColor: '#E5E7EB',
     position: 'relative',
   },
-  selectedPlanCard: {
+  selectedPlan: {
     borderColor: '#D81B60',
     backgroundColor: '#FFF5F8',
-  },
-  popularPlanCard: {
-    borderColor: '#F59E0B',
   },
   popularBadge: {
     position: 'absolute',
@@ -680,7 +608,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#374151',
-    flex: 1,
+  },
+  paymentMethodDescription: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  methodBadge: {
+    fontSize: 10,
+    color: '#10B981',
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  highlight: {
+    fontWeight: 'bold',
+    color: '#D81B60',
   },
   selectedPaymentMethodName: {
     color: '#D81B60',
@@ -749,14 +691,26 @@ const styles = StyleSheet.create({
     color: '#D81B60',
   },
   imagePreview: {
-    marginTop: 16,
+    position: 'relative',
     alignItems: 'center',
-    gap: 8,
+    marginTop: 16,
   },
-  previewImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 8,
+  uploadedImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 12,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 12,
+    padding: 4,
+  },
+  purchaseButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+    opacity: 0.6,
   },
   imagePreviewText: {
     fontSize: 12,
@@ -838,5 +792,22 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  paymentMethodContent: {
+    flex: 1,
+  },
+  cardPaymentSection: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  cardPaymentMessage: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });
