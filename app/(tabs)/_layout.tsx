@@ -17,6 +17,8 @@ export default function TabLayout() {
   console.log('📱 TabLayout - Current user:', user);
   console.log('📱 TabLayout - UserType:', userType);
   console.log('📱 TabLayout - Should show calendar for client?', userType === 'client');
+  console.log('📱 TabLayout - Should show calendar for provider?', userType === 'provider');
+  console.log('📱 TabLayout - Is Sakura Beauty Salon?', user?.name === 'Sakura Beauty Salon');
 
   const headerRight = () => (
     <View style={{ marginRight: 15 }}>

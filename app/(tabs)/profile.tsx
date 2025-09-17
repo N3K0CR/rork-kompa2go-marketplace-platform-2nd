@@ -33,7 +33,7 @@ export default function ProfileScreen() {
   const [purchaseLoading, setPurchaseLoading] = useState(false);
   const [showReferralModal, setShowReferralModal] = useState(false);
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     Alert.alert(
       t('sign_out'),
       t('sign_out_confirm'),
@@ -42,9 +42,23 @@ export default function ProfileScreen() {
         { 
           text: t('sign_out'), 
           style: 'destructive',
-          onPress: () => {
-            signOut();
-            router.replace('/auth');
+          onPress: async () => {
+            try {
+              console.log('🔄 Starting logout process...');
+              console.log('🔍 Current user before logout:', user);
+              
+              // Clear user state immediately to prevent UI issues
+              await signOut();
+              
+              console.log('✅ Logout successful, redirecting to auth...');
+              
+              // Use router.push instead of replace to ensure proper navigation
+              router.push('/auth');
+              
+            } catch (error) {
+              console.error('❌ Error during logout:', error);
+              Alert.alert('Error', 'No se pudo cerrar sesión. Inténtalo de nuevo.');
+            }
           }
         },
       ]
