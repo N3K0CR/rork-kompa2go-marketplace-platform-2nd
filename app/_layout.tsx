@@ -77,10 +77,10 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <LanguageProvider>
           <AuthProvider>
-            <KompiBrainProvider>
-              <PaymentBackendProvider>
-                <OKoinsProvider>
-                  <AppointmentsProvider>
+            <PaymentBackendProvider>
+              <OKoinsProvider>
+                <AppointmentsProvider>
+                  <KompiBrainProvider>
                     <ReservationPlansProvider>
                       <WalletProvider>
                         <TeamCalendarProvider>
@@ -107,10 +107,10 @@ export default function RootLayout() {
                         </TeamCalendarProvider>
                       </WalletProvider>
                     </ReservationPlansProvider>
-                  </AppointmentsProvider>
-                </OKoinsProvider>
-              </PaymentBackendProvider>
-            </KompiBrainProvider>
+                  </KompiBrainProvider>
+                </AppointmentsProvider>
+              </OKoinsProvider>
+            </PaymentBackendProvider>
           </AuthProvider>
         </LanguageProvider>
       </QueryClientProvider>
