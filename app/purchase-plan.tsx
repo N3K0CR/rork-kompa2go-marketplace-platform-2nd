@@ -6,7 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/contexts/AuthContext';
 import { useReservationPlans } from '@/contexts/ReservationPlansContext';
 import { usePaymentBackend } from '@/contexts/PaymentBackendContext';
-
+import { useLemonSqueezy } from '@/contexts/LemonSqueezyContext';
+import CardPaymentCheckout from '@/components/CardPaymentCheckout';
 import { Check, ArrowLeft, Upload, Info, X } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -306,13 +307,28 @@ export default function PurchasePlanScreen() {
             <>
               {/* Card Payment Component */}
               {paymentMethod === 'card' && (
-                <View style={styles.cardPaymentSection}>
-                  <Text style={styles.sectionTitle}>Pago con Tarjeta</Text>
-                  <Text style={styles.cardPaymentMessage}>
-                    La integración con Lemon Squeezy está en desarrollo.
-                    Por favor, selecciona otro método de pago por ahora.
-                  </Text>
-                </View>
+                <CardPaymentCheckout
+                  planId={selectedPlanData.id}
+                  planName={selectedPlanData.name}
+                  amount={selectedPlanData.price}
+                  currency="CRC"
+                  onSuccess={() => {
+                    router.replace({
+                      pathname: '/payment-success',
+                      params: {
+                        planId: selectedPlanData.id,
+                        planName: selectedPlanData.name,
+                        amount: selectedPlanData.price.toString(),
+                        paymentId: 'card-payment-' + Date.now(),
+                        paymentMethod: 'card',
+                        reservations: selectedPlanData.reservations.toString()
+                      }
+                    });
+                  }}
+                  onError={(error) => {
+                    console.error('Card payment error:', error);
+                  }}
+                />
               )}
           
               {/* Traditional Payment Methods */}

@@ -19,6 +19,7 @@ import { PaymentBackendProvider } from "@/contexts/PaymentBackendContext";
 import { ChatProvider } from "@/contexts/ChatContext";
 import { K2GProductsProvider } from "@/contexts/K2GProductsContext";
 import { ReportedProblemsProvider } from "@/contexts/ReportedProblemsContext";
+import { LemonSqueezyProvider } from "@/contexts/LemonSqueezyContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ReservationAlertModal } from "@/components/ReservationAlertModal";
 import { trpc, trpcClient } from "@/lib/trpc";
@@ -84,7 +85,8 @@ export default function RootLayout() {
                         <PendingPaymentsProvider>
                           <LocationSearchProvider>
                             <PaymentBackendProvider>
-                              <ChatProvider>
+                              <LemonSqueezyProvider>
+                                <ChatProvider>
                                 <K2GProductsProvider>
                                   <ReportedProblemsProvider>
                                     <GestureHandlerRootView style={styles.container}>
@@ -93,7 +95,8 @@ export default function RootLayout() {
                                     </GestureHandlerRootView>
                                   </ReportedProblemsProvider>
                                 </K2GProductsProvider>
-                              </ChatProvider>
+                                </ChatProvider>
+                              </LemonSqueezyProvider>
                             </PaymentBackendProvider>
                           </LocationSearchProvider>
                         </PendingPaymentsProvider>
