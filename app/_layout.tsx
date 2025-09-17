@@ -20,6 +20,7 @@ import { ChatProvider } from "@/contexts/ChatContext";
 import { K2GProductsProvider } from "@/contexts/K2GProductsContext";
 import { ReportedProblemsProvider } from "@/contexts/ReportedProblemsContext";
 import { LemonSqueezyProvider } from "@/contexts/LemonSqueezyContext";
+import { KompiBrainProvider } from "@/contexts/KompiBrainContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ReservationAlertModal } from "@/components/ReservationAlertModal";
 import { trpc, trpcClient } from "@/lib/trpc";
@@ -86,16 +87,18 @@ export default function RootLayout() {
                           <LocationSearchProvider>
                             <PaymentBackendProvider>
                               <LemonSqueezyProvider>
-                                <ChatProvider>
-                                <K2GProductsProvider>
-                                  <ReportedProblemsProvider>
-                                    <GestureHandlerRootView style={styles.container}>
-                                      <RootLayoutNav />
-                                      <ReservationAlertModal />
-                                    </GestureHandlerRootView>
-                                  </ReportedProblemsProvider>
-                                </K2GProductsProvider>
-                                </ChatProvider>
+                                <KompiBrainProvider>
+                                  <ChatProvider>
+                                  <K2GProductsProvider>
+                                    <ReportedProblemsProvider>
+                                      <GestureHandlerRootView style={styles.container}>
+                                        <RootLayoutNav />
+                                        <ReservationAlertModal />
+                                      </GestureHandlerRootView>
+                                    </ReportedProblemsProvider>
+                                  </K2GProductsProvider>
+                                  </ChatProvider>
+                                </KompiBrainProvider>
                               </LemonSqueezyProvider>
                             </PaymentBackendProvider>
                           </LocationSearchProvider>
