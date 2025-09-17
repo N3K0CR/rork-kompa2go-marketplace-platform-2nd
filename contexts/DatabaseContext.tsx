@@ -2,78 +2,85 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Platform } from 'react-native';
 import createContextHook from '@nkzw/create-context-hook';
 
-// Platform-specific imports to avoid SharedArrayBuffer issues on web
-let runMigrations: any, seedDatabase: any;
-let userQueries: any, serviceQueries: any, providerQueries: any, appointmentQueries: any;
-let chatQueries: any, okoinsQueries: any, walletQueries: any, reviewQueries: any;
+// Mock functions for web
+const mockQuery = () => Promise.resolve([]);
+const mockFunction = () => Promise.resolve();
 
-if (Platform.OS !== 'web') {
-  try {
-    const dbModule = require('@/lib/db');
-    const queriesModule = require('@/lib/db/queries');
-    
-    runMigrations = dbModule.runMigrations;
-    seedDatabase = dbModule.seedDatabase;
-    userQueries = queriesModule.userQueries;
-    serviceQueries = queriesModule.serviceQueries;
-    providerQueries = queriesModule.providerQueries;
-    appointmentQueries = queriesModule.appointmentQueries;
-    chatQueries = queriesModule.chatQueries;
-    okoinsQueries = queriesModule.okoinsQueries;
-    walletQueries = queriesModule.walletQueries;
-    reviewQueries = queriesModule.reviewQueries;
-  } catch (error) {
-    console.error('Failed to load database modules:', error);
-  }
-} else {
-  // Mock functions for web
-  const mockQuery = () => Promise.resolve([]);
-  const mockFunction = () => Promise.resolve();
-  
-  runMigrations = mockFunction;
-  seedDatabase = mockFunction;
-  userQueries = {
+const mockQueries = {
+  userQueries: {
     create: mockQuery,
     getById: mockQuery,
     getByEmail: mockQuery,
     update: mockQuery
-  };
-  serviceQueries = {
+  },
+  serviceQueries: {
     getAll: mockQuery,
     getByCategory: mockQuery,
     search: mockQuery
-  };
-  providerQueries = {
+  },
+  providerQueries: {
     getById: mockQuery,
     getByLocation: mockQuery,
     getTopRated: mockQuery
-  };
-  appointmentQueries = {
+  },
+  appointmentQueries: {
     create: mockQuery,
     getByClientId: mockQuery,
     getByProviderId: mockQuery,
     updateStatus: mockQuery
-  };
-  chatQueries = {
+  },
+  chatQueries: {
     createMessage: mockQuery,
     getMessagesByChatId: mockQuery,
     getRecentChats: mockQuery
-  };
-  okoinsQueries = {
+  },
+  okoinsQueries: {
     createTransaction: mockQuery,
     getUserBalance: () => Promise.resolve(0),
     getUserTransactions: mockQuery
-  };
-  walletQueries = {
+  },
+  walletQueries: {
     createTransaction: mockQuery,
     getUserBalance: () => Promise.resolve(0),
     getUserTransactions: mockQuery
-  };
-  reviewQueries = {
+  },
+  reviewQueries: {
     create: mockQuery,
     getByProviderId: mockQuery
-  };
-}
+  },
+  runMigrations: mockFunction,
+  seedDatabase: mockFunction
+};
+
+// Dynamic import function for native platforms
+const loadDatabaseModules = async () => {
+  if (Platform.OS === 'web') {
+    return mockQueries;
+  }
+  
+  try {
+    const [dbModule, queriesModule] = await Promise.all([
+      import('@/lib/db'),
+      import('@/lib/db/queries')
+    ]);
+    
+    return {
+      runMigrations: dbModule.runMigrations,
+      seedDatabase: dbModule.seedDatabase,
+      userQueries: queriesModule.userQueries,
+      serviceQueries: queriesModule.serviceQueries,
+      providerQueries: queriesModule.providerQueries,
+      appointmentQueries: queriesModule.appointmentQueries,
+      chatQueries: queriesModule.chatQueries,
+      okoinsQueries: queriesModule.okoinsQueries,
+      walletQueries: queriesModule.walletQueries,
+      reviewQueries: queriesModule.reviewQueries
+    };
+  } catch (error) {
+    console.error('Failed to load database modules:', error);
+    return mockQueries;
+  }
+};
 
 
 
@@ -82,6 +89,7 @@ export const [DatabaseProvider, useDatabaseContext] = createContextHook(() => {
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [dbModules, setDbModules] = useState<any>(mockQueries);
 
   const initializeDatabase = useCallback(async () => {
     try {
@@ -90,12 +98,16 @@ export const [DatabaseProvider, useDatabaseContext] = createContextHook(() => {
       
       console.log('Initializing database...');
       
+      // Load database modules dynamically
+      const modules = await loadDatabaseModules();
+      setDbModules(modules);
+      
       if (Platform.OS === 'web') {
-        console.log('Web platform - skipping SQLite migrations');
+        console.log('Web platform - using mock database');
         setIsInitialized(true);
         console.log('Mock database initialized for web');
       } else {
-        await runMigrations();
+        await modules.runMigrations();
         setIsInitialized(true);
         console.log('Database initialized successfully');
       }
@@ -104,12 +116,11 @@ export const [DatabaseProvider, useDatabaseContext] = createContextHook(() => {
       console.error('Database initialization error:', errorMessage);
       setError(errorMessage);
       
-      // On web, don't fail completely - just use mock data
-      if (Platform.OS === 'web') {
-        console.log('Falling back to mock database on web');
-        setIsInitialized(true);
-        setError(null);
-      }
+      // Fallback to mock data
+      console.log('Falling back to mock database');
+      setDbModules(mockQueries);
+      setIsInitialized(true);
+      setError(null);
     } finally {
       setIsLoading(false);
     }
@@ -124,7 +135,7 @@ export const [DatabaseProvider, useDatabaseContext] = createContextHook(() => {
         console.log('Web platform - skipping database seeding');
         console.log('Mock data available on web');
       } else {
-        await seedDatabase();
+        await dbModules.seedDatabase();
         console.log('Database seeded successfully');
       }
     } catch (err) {
@@ -138,7 +149,7 @@ export const [DatabaseProvider, useDatabaseContext] = createContextHook(() => {
         setError(errorMessage);
       }
     }
-  }, []);
+  }, [dbModules]);
 
   useEffect(() => {
     initializeDatabase();
@@ -150,48 +161,48 @@ export const [DatabaseProvider, useDatabaseContext] = createContextHook(() => {
     error,
     
     // User operations
-    createUser: userQueries.create,
-    getUserById: userQueries.getById,
-    getUserByEmail: userQueries.getByEmail,
-    updateUser: userQueries.update,
+    createUser: dbModules.userQueries.create,
+    getUserById: dbModules.userQueries.getById,
+    getUserByEmail: dbModules.userQueries.getByEmail,
+    updateUser: dbModules.userQueries.update,
     
     // Service operations
-    getAllServices: serviceQueries.getAll,
-    getServicesByCategory: serviceQueries.getByCategory,
-    searchServices: serviceQueries.search,
+    getAllServices: dbModules.serviceQueries.getAll,
+    getServicesByCategory: dbModules.serviceQueries.getByCategory,
+    searchServices: dbModules.serviceQueries.search,
     
     // Provider operations
-    getProviderById: providerQueries.getById,
-    getProvidersByLocation: providerQueries.getByLocation,
-    getTopRatedProviders: providerQueries.getTopRated,
+    getProviderById: dbModules.providerQueries.getById,
+    getProvidersByLocation: dbModules.providerQueries.getByLocation,
+    getTopRatedProviders: dbModules.providerQueries.getTopRated,
     
     // Appointment operations
-    createAppointment: appointmentQueries.create,
-    getAppointmentsByClientId: appointmentQueries.getByClientId,
-    getAppointmentsByProviderId: appointmentQueries.getByProviderId,
-    updateAppointmentStatus: appointmentQueries.updateStatus,
+    createAppointment: dbModules.appointmentQueries.create,
+    getAppointmentsByClientId: dbModules.appointmentQueries.getByClientId,
+    getAppointmentsByProviderId: dbModules.appointmentQueries.getByProviderId,
+    updateAppointmentStatus: dbModules.appointmentQueries.updateStatus,
     
     // Chat operations
-    createChatMessage: chatQueries.createMessage,
-    getChatMessages: chatQueries.getMessagesByChatId,
-    getRecentChats: chatQueries.getRecentChats,
+    createChatMessage: dbModules.chatQueries.createMessage,
+    getChatMessages: dbModules.chatQueries.getMessagesByChatId,
+    getRecentChats: dbModules.chatQueries.getRecentChats,
     
     // OKoins operations
-    createOkoinsTransaction: okoinsQueries.createTransaction,
-    getOkoinsBalance: okoinsQueries.getUserBalance,
-    getOkoinsTransactions: okoinsQueries.getUserTransactions,
+    createOkoinsTransaction: dbModules.okoinsQueries.createTransaction,
+    getOkoinsBalance: dbModules.okoinsQueries.getUserBalance,
+    getOkoinsTransactions: dbModules.okoinsQueries.getUserTransactions,
     
     // Wallet operations
-    createWalletTransaction: walletQueries.createTransaction,
-    getWalletBalance: walletQueries.getUserBalance,
-    getWalletTransactions: walletQueries.getUserTransactions,
+    createWalletTransaction: dbModules.walletQueries.createTransaction,
+    getWalletBalance: dbModules.walletQueries.getUserBalance,
+    getWalletTransactions: dbModules.walletQueries.getUserTransactions,
     
     // Review operations
-    createReview: reviewQueries.create,
-    getProviderReviews: reviewQueries.getByProviderId,
+    createReview: dbModules.reviewQueries.create,
+    getProviderReviews: dbModules.reviewQueries.getByProviderId,
     
     // Utility functions
     initializeDatabase,
     seedData
-  }), [isInitialized, isLoading, error, initializeDatabase, seedData]);
+  }), [isInitialized, isLoading, error, dbModules, initializeDatabase, seedData]);
 });
