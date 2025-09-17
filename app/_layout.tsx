@@ -62,6 +62,7 @@ function RootLayoutNav() {
       <Stack.Screen name="admin-products" options={{ title: "Administrar Productos K2G" }} />
       <Stack.Screen name="reported-problems" options={{ headerShown: false }} />
       <Stack.Screen name="client/history" options={{ headerShown: false }} />
+      <Stack.Screen name="test-kompi" options={{ title: "Test KompiBrain" }} />
     </Stack>
   );
 }
