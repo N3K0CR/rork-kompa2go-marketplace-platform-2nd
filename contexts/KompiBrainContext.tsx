@@ -68,21 +68,24 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
 
   const createConversation = useCallback((title?: string): string => {
     const id = Date.now().toString();
-    const newConversation: Conversation = {
-      id,
-      messages: [],
-      title: title || `Conversación ${state.conversations.length + 1}`,
-      createdAt: new Date(),
-    };
     
-    setState(prev => ({
-      ...prev,
-      conversations: [...prev.conversations, newConversation],
-      currentConversationId: id,
-    }));
+    setState(prev => {
+      const newConversation: Conversation = {
+        id,
+        messages: [],
+        title: title || `Conversación ${prev.conversations.length + 1}`,
+        createdAt: new Date(),
+      };
+      
+      return {
+        ...prev,
+        conversations: [...prev.conversations, newConversation],
+        currentConversationId: id,
+      };
+    });
     
     return id;
-  }, [state.conversations.length]);
+  }, []);
 
   const addMessage = useCallback((conversationId: string, role: 'user' | 'assistant' | 'system', content: string) => {
     const messageId = Date.now().toString();
@@ -104,16 +107,22 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
   }, []);
 
   const sendMessage = useCallback(async (conversationId: string, content: string) => {
-    if (!content.trim() || state.isLoading) return;
+    setState(prev => {
+      if (!content.trim() || prev.isLoading) return prev;
+      return { ...prev, isLoading: true };
+    });
 
     // Add user message
     addMessage(conversationId, 'user', content.trim());
-    setState(prev => ({ ...prev, isLoading: true }));
 
     try {
       // Get current conversation messages for context
-      const conversation = state.conversations.find(conv => conv.id === conversationId);
-      const conversationMessages = conversation?.messages || [];
+      let conversationMessages: Message[] = [];
+      setState(prev => {
+        const conversation = prev.conversations.find(conv => conv.id === conversationId);
+        conversationMessages = conversation?.messages || [];
+        return prev;
+      });
 
       const response = await fetch('https://toolkit.rork.com/text/llm/', {
         method: 'POST',
@@ -153,7 +162,7 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [state.isLoading, state.conversations, addMessage]);
+  }, [addMessage]);
 
   const setCurrentConversation = useCallback((id: string | null) => {
     setState(prev => ({ ...prev, currentConversationId: id }));
@@ -193,9 +202,17 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
   }, []);
 
   const getCurrentConversation = useCallback((): Conversation | null => {
-    if (!state.currentConversationId) return null;
-    return state.conversations.find(conv => conv.id === state.currentConversationId) || null;
-  }, [state.currentConversationId, state.conversations]);
+    let result: Conversation | null = null;
+    setState(prev => {
+      if (!prev.currentConversationId) {
+        result = null;
+      } else {
+        result = prev.conversations.find(conv => conv.id === prev.currentConversationId) || null;
+      }
+      return prev;
+    });
+    return result;
+  }, []);
 
   return useMemo(() => ({
     ...state,
