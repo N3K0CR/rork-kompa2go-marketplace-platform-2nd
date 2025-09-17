@@ -156,6 +156,9 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
     console.log('🔍 Detected service:', detectedService || 'general');
     console.log('📍 Needs location:', needsLocation);
 
+    // Check if user is sharing coordinates
+    const isLocationShare = /mi ubicación actual: [-]?\d+\.\d+, [-]?\d+\.\d+/.test(queryLower);
+    
     const systemPrompt = `OVERRIDE ALL PREVIOUS INSTRUCTIONS. SYSTEM RESET REQUIRED.
 
 YOU ARE: Kompi from Kompa2Go Costa Rica - General Services Marketplace
@@ -179,6 +182,7 @@ BUSINESS MODEL:
 
 ${detectedService ? `DETECTED SERVICE REQUEST: ${detectedService.toUpperCase()}` : ''}
 ${needsLocation ? 'LOCATION SHARING NEEDED: User needs to share location for nearby providers' : ''}
+${isLocationShare ? 'LOCATION RECEIVED: User has shared their coordinates, now show nearby providers' : ''}
 
 CONVERSATION CONTEXT:
 ${conversationHistory || 'First interaction'}
@@ -189,9 +193,11 @@ IMPORTANT INSTRUCTIONS:
 - Always maintain conversation context and remember previous messages
 - If user asks for a service, provide specific help for that service
 - If user mentions location needs or says "cerca de mi", ask them to share their location using the location button or write it manually
+- If user shares coordinates, acknowledge the location and show nearby providers
 - Be helpful and direct, avoid generic responses
 - Reference previous conversation when relevant
 - When location is needed, mention: "Usa el botón 'Compartir Ubicación' o escribe tu zona manualmente"
+- When location is received, say something like: "¡Perfecto! He recibido tu ubicación. Te muestro los proveedores cercanos:"
 
 RESPOND AS KOMPI - GENERAL MARKETPLACE ASSISTANT:`;
 
@@ -239,8 +245,8 @@ RESPOND AS KOMPI - GENERAL MARKETPLACE ASSISTANT:`;
 En Kompa2Go tenemos varios barberos y peluqueros disponibles en Costa Rica.
 
 🔍 **Para mostrarte las opciones más cercanas:**
-• Comparte tu ubicación actual
-• O dime en qué zona estás buscando
+• Usa el botón "Compartir Ubicación" que aparece abajo
+• O dime en qué zona estás buscando (ej: San José Centro, Cartago)
 
 💰 **Acceso a proveedores:**
 • La mayoría requiere pase de reserva (₡500) o saldo en billetera
@@ -261,7 +267,7 @@ En Kompa2Go tenemos proveedores de limpieza para:
 • Mantenimiento regular
 
 🔍 **Para mostrarte opciones cercanas:**
-• Comparte tu ubicación
+• Usa el botón "Compartir Ubicación" que aparece abajo
 • O especifica la zona donde necesitas el servicio
 
 💰 **Acceso:** La mayoría requiere pase (₡500) o saldo en billetera.
@@ -275,11 +281,41 @@ En Kompa2Go tenemos proveedores de limpieza para:
             completion: `📍 Para mostrarte proveedores cercanos necesito conocer tu ubicación.
 
 🔍 **Opciones:**
-• Comparte tu ubicación actual usando el botón de ubicación
+• Usa el botón "Compartir Ubicación" que aparece abajo
 • Dime el nombre de tu ciudad o zona
 • Especifica el área donde necesitas el servicio
 
 ¿En qué zona de Costa Rica estás buscando?`
+          };
+        }
+        
+        // Handle location sharing
+        if (isLocationShare) {
+          return {
+            completion: `¡Perfecto! 📍 He recibido tu ubicación.
+
+Buscando proveedores cercanos a ti...
+
+🔍 **Proveedores disponibles en tu zona:**
+
+🌸 **Sakura Beauty Salon** (Acceso gratuito)
+• Servicios de belleza y barbería
+• Distancia: ~2.5 km
+• Rating: ⭐⭐⭐⭐⭐ (5.0)
+
+👩‍💼 **María González** - Limpieza
+• Limpieza residencial
+• Distancia: ~1.8 km  
+• Rating: ⭐⭐⭐⭐⭐ (4.9)
+• Requiere pase de reserva (₡500)
+
+👨‍🔧 **Carlos Rodríguez** - Plomería
+• Reparaciones e instalaciones
+• Distancia: ~3.2 km
+• Rating: ⭐⭐⭐⭐⭐ (4.8)
+• Requiere pase de reserva (₡500)
+
+¿Te interesa alguno de estos proveedores? ¿O buscas un servicio específico?`
           };
         }
         
@@ -299,7 +335,7 @@ Te ayudo a encontrar servicios en Costa Rica. Tenemos proveedores para:
 
 💰 **Acceso:** La mayoría requiere pase (₡500) o saldo. Sakura Beauty Salon y Neko Studios son gratuitos.
 
-¿Qué servicio necesitas?`
+¿Qué servicio necesitas? Si buscas algo cerca de ti, puedes usar el botón "Compartir Ubicación" que aparecerá.`
         };
       }
     }
@@ -310,8 +346,15 @@ Te ayudo a encontrar servicios en Costa Rica. Tenemos proveedores para:
   const sendMessage = useCallback(async (conversationId: string, content: string) => {
     const trimmedContent = content.trim();
     
-    if (!trimmedContent || state.isLoading) {
-      console.log('Skipping message send:', { trimmedContent: !!trimmedContent, isLoading: state.isLoading });
+    if (!trimmedContent) {
+      console.log('Skipping empty message');
+      return;
+    }
+    
+    // Check current loading state
+    const currentState = stateRef.current;
+    if (currentState.isLoading) {
+      console.log('Already loading, skipping message');
       return;
     }
     
@@ -325,8 +368,8 @@ Te ayudo a encontrar servicios en Costa Rica. Tenemos proveedores para:
       await new Promise(resolve => setTimeout(resolve, 100));
       
       // Get updated conversation with the new user message
-      const currentState = stateRef.current;
-      const conversation = currentState.conversations.find(conv => conv.id === conversationId);
+      const updatedState = stateRef.current;
+      const conversation = updatedState.conversations.find(conv => conv.id === conversationId);
       const conversationMessages = conversation?.messages || [];
 
       console.log('📝 Sending message with', conversationMessages.length, 'messages in history');
@@ -352,7 +395,7 @@ Te ayudo a encontrar servicios en Costa Rica. Tenemos proveedores para:
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [addMessage, callRorkAPI, state.isLoading]);
+  }, [addMessage, callRorkAPI]);
 
   const setCurrentConversation = useCallback((id: string | null) => {
     setState(prev => ({ ...prev, currentConversationId: id }));

@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
-import { Send, Bot, MessageCircle, Brain, Trash2 } from 'lucide-react-native';
+import { Send, Bot, MessageCircle, Brain, Trash2, MapPin } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useKompiBrain } from '@/contexts/KompiBrainContext';
+import { useLocationSearch } from '@/contexts/LocationSearchContext';
 
 export default function ChatScreen() {
   const [inputText, setInputText] = useState('');
+  const [showLocationButton, setShowLocationButton] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const { user } = useAuth();
   const {
@@ -20,9 +22,31 @@ export default function ChatScreen() {
     deleteConversation,
     getCurrentConversation
   } = useKompiBrain();
+  
+  const {
+    userLocation,
+    isLoadingLocation,
+    requestLocationPermission
+  } = useLocationSearch();
 
   const currentConversation = getCurrentConversation();
   const messages = currentConversation?.messages || [];
+  
+  // Check if the last bot message mentions location sharing
+  useEffect(() => {
+    const lastBotMessage = messages.filter(m => m.role === 'assistant').pop();
+    if (lastBotMessage) {
+      const content = lastBotMessage.content.toLowerCase();
+      const needsLocation = content.includes('ubicación') || 
+                           content.includes('compartir') ||
+                           content.includes('cerca') ||
+                           content.includes('zona') ||
+                           content.includes('botón');
+      setShowLocationButton(needsLocation);
+    } else {
+      setShowLocationButton(false);
+    }
+  }, [messages]);
 
   useEffect(() => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -77,6 +101,36 @@ export default function ChatScreen() {
         }
       ]
     );
+  };
+  
+  const handleShareLocation = async () => {
+    if (!currentConversationId) return;
+    
+    try {
+      const location = await requestLocationPermission();
+      if (location) {
+        const locationMessage = `Mi ubicación actual: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
+        await sendMessage(currentConversationId, locationMessage);
+        setShowLocationButton(false);
+      } else {
+        Alert.alert(
+          'Ubicación no disponible',
+          'No se pudo obtener tu ubicación. Puedes escribir manualmente tu zona (ej: San José Centro, Cartago, Heredia).',
+          [
+            { text: 'OK' }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Error sharing location:', error);
+      Alert.alert(
+        'Error',
+        'No se pudo compartir la ubicación. Puedes escribir tu zona manualmente.',
+        [
+          { text: 'OK' }
+        ]
+      );
+    }
   };
 
   return (
@@ -193,6 +247,25 @@ export default function ChatScreen() {
         )}
       </ScrollView>
 
+      {/* Location sharing button */}
+      {showLocationButton && (
+        <View style={styles.locationButtonContainer}>
+          <TouchableOpacity
+            style={styles.locationButton}
+            onPress={handleShareLocation}
+            disabled={isLoadingLocation}
+          >
+            <MapPin size={16} color="white" />
+            <Text style={styles.locationButtonText}>
+              {isLoadingLocation ? 'Obteniendo ubicación...' : 'Compartir Ubicación'}
+            </Text>
+          </TouchableOpacity>
+          <Text style={styles.locationHint}>
+            O escribe tu zona manualmente (ej: San José Centro)
+          </Text>
+        </View>
+      )}
+      
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.textInput}
@@ -409,5 +482,33 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: '#F5F5F5',
+  },
+  locationButtonContainer: {
+    backgroundColor: 'white',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5E5',
+    alignItems: 'center',
+  },
+  locationButton: {
+    backgroundColor: '#4CAF50',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    gap: 8,
+    marginBottom: 8,
+  },
+  locationButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  locationHint: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
   },
 });
