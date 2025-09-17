@@ -333,149 +333,145 @@ export default function AnalyticsScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.adminHeader}>
+      <LinearGradient
+        colors={['#D81B60', '#E91E63']}
+        style={styles.adminHeader}
+      >
         <Text style={styles.adminTitle}>Panel de Administración</Text>
-        <Text style={styles.adminSubtitle}>Métricas y estadísticas de Kompa2Go</Text>
-      </View>
+        <Text style={styles.adminSubtitle}>Resumen del sistema</Text>
+      </LinearGradient>
 
-      {/* Key Metrics */}
-      <View style={styles.metricsGrid}>
-        <View style={styles.metricCard}>
-          <View style={styles.metricIcon}>
-            <Users size={24} color="#D81B60" />
+      <View style={styles.adminContent}>
+        {/* Key Metrics Grid */}
+        <View style={styles.compactMetricsGrid}>
+          <View style={styles.compactMetricCard}>
+            <Users size={20} color="#D81B60" />
+            <Text style={styles.compactMetricValue}>{mockAnalytics.totalUsers.toLocaleString()}</Text>
+            <Text style={styles.compactMetricLabel}>Usuarios</Text>
           </View>
-          <Text style={styles.metricValue}>{mockAnalytics.totalUsers.toLocaleString()}</Text>
-          <Text style={styles.metricLabel}>Usuarios Totales</Text>
-          <Text style={styles.metricChange}>+{mockAnalytics.monthlyGrowth}% este mes</Text>
+
+          <View style={styles.compactMetricCard}>
+            <BarChart3 size={20} color="#4CAF50" />
+            <Text style={styles.compactMetricValue}>{mockAnalytics.totalProviders}</Text>
+            <Text style={styles.compactMetricLabel}>Proveedores</Text>
+          </View>
+
+          <View style={styles.compactMetricCard}>
+            <Calendar size={20} color="#FF9800" />
+            <Text style={styles.compactMetricValue}>{mockAnalytics.totalBookings.toLocaleString()}</Text>
+            <Text style={styles.compactMetricLabel}>Reservas</Text>
+          </View>
+
+          <View style={styles.compactMetricCard}>
+            <DollarSign size={20} color="#2196F3" />
+            <Text style={styles.compactMetricValue}>{formatCurrency(mockAnalytics.totalRevenue)}</Text>
+            <Text style={styles.compactMetricLabel}>Ingresos</Text>
+          </View>
+
+          <View style={styles.compactMetricCard}>
+            <TrendingUp size={20} color="#9C27B0" />
+            <Text style={styles.compactMetricValue}>+{mockAnalytics.monthlyGrowth}%</Text>
+            <Text style={styles.compactMetricLabel}>Crecimiento</Text>
+          </View>
+
+          <View style={styles.compactMetricCard}>
+            <CheckCircle size={20} color="#4CAF50" />
+            <Text style={styles.compactMetricValue}>{mockAnalytics.activeUsers}</Text>
+            <Text style={styles.compactMetricLabel}>Activos</Text>
+          </View>
         </View>
 
-        <View style={styles.metricCard}>
-          <View style={styles.metricIcon}>
-            <BarChart3 size={24} color="#4CAF50" />
-          </View>
-          <Text style={styles.metricValue}>{mockAnalytics.totalProviders}</Text>
-          <Text style={styles.metricLabel}>Proveedores</Text>
-          <Text style={styles.metricChange}>+5 nuevos</Text>
-        </View>
-
-        <View style={styles.metricCard}>
-          <View style={styles.metricIcon}>
-            <Calendar size={24} color="#FF9800" />
-          </View>
-          <Text style={styles.metricValue}>{mockAnalytics.totalBookings.toLocaleString()}</Text>
-          <Text style={styles.metricLabel}>Reservas</Text>
-          <Text style={styles.metricChange}>+234 esta semana</Text>
-        </View>
-
-        <View style={styles.metricCard}>
-          <View style={styles.metricIcon}>
-            <DollarSign size={24} color="#2196F3" />
-          </View>
-          <Text style={styles.metricValue}>{formatCurrency(mockAnalytics.totalRevenue)}</Text>
-          <Text style={styles.metricLabel}>Ingresos</Text>
-          <Text style={styles.metricChange}>+18% vs mes anterior</Text>
-        </View>
-      </View>
-
-      {/* Quick Actions */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
-        <View style={styles.quickActions}>
-          <TouchableOpacity style={styles.actionButton}>
-            <CheckCircle size={20} color="white" />
-            <Text style={styles.actionText}>Aprobar Proveedores</Text>
+        {/* Quick Actions Grid */}
+        <Text style={styles.gridSectionTitle}>Acciones Rápidas</Text>
+        <View style={styles.actionsGrid}>
+          <TouchableOpacity style={styles.compactActionCard}>
+            <CheckCircle size={24} color="#4CAF50" />
+            <Text style={styles.compactActionTitle}>Aprobar</Text>
+            <Text style={styles.compactActionSubtitle}>Proveedores</Text>
             {mockAnalytics.pendingApprovals > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{mockAnalytics.pendingApprovals}</Text>
+              <View style={styles.compactBadge}>
+                <Text style={styles.compactBadgeText}>{mockAnalytics.pendingApprovals}</Text>
               </View>
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionButton}>
-            <AlertTriangle size={20} color="white" />
-            <Text style={styles.actionText}>Revisar Quejas</Text>
+          <TouchableOpacity style={styles.compactActionCard}>
+            <AlertTriangle size={24} color="#FF5722" />
+            <Text style={styles.compactActionTitle}>Quejas</Text>
+            <Text style={styles.compactActionSubtitle}>Revisar</Text>
             {mockAnalytics.complaints > 0 && (
-              <View style={[styles.badge, styles.warningBadge]}>
-                <Text style={styles.badgeText}>{mockAnalytics.complaints}</Text>
+              <View style={[styles.compactBadge, styles.warningBadge]}>
+                <Text style={styles.compactBadgeText}>{mockAnalytics.complaints}</Text>
               </View>
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionButton}>
-            <DollarSign size={20} color="white" />
-            <Text style={styles.actionText}>Pagos Pendientes</Text>
+          <TouchableOpacity style={styles.compactActionCard}>
+            <DollarSign size={24} color="#2196F3" />
+            <Text style={styles.compactActionTitle}>Pagos</Text>
+            <Text style={styles.compactActionSubtitle}>Pendientes</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.compactActionCard}>
+            <Package size={24} color="#9C27B0" />
+            <Text style={styles.compactActionTitle}>Productos</Text>
+            <Text style={styles.compactActionSubtitle}>Gestionar</Text>
           </TouchableOpacity>
         </View>
-      </View>
 
-      {/* Top Services */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Servicios Más Populares</Text>
-        <View style={styles.servicesChart}>
+        {/* Top Services Grid */}
+        <Text style={styles.gridSectionTitle}>Servicios Populares</Text>
+        <View style={styles.servicesGrid}>
           {mockAnalytics.topServices.map((service, index) => (
-            <View key={index} style={styles.serviceItem}>
-              <View style={styles.serviceInfo}>
-                <Text style={styles.serviceName}>{service.name}</Text>
-                <Text style={styles.serviceStats}>
-                  {service.bookings} reservas • {formatCurrency(service.revenue)}
-                </Text>
-              </View>
-              <View style={styles.serviceBar}>
-                <View 
-                  style={[
-                    styles.serviceBarFill, 
-                    { width: `${(service.bookings / mockAnalytics.topServices[0].bookings) * 100}%` }
-                  ]} 
-                />
-              </View>
+            <View key={index} style={styles.compactServiceCard}>
+              <Text style={styles.compactServiceName}>{service.name}</Text>
+              <Text style={styles.compactServiceBookings}>{service.bookings}</Text>
+              <Text style={styles.compactServiceLabel}>reservas</Text>
+              <Text style={styles.compactServiceRevenue}>{formatCurrency(service.revenue)}</Text>
             </View>
           ))}
         </View>
-      </View>
 
-      {/* Recent Activity */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Actividad Reciente</Text>
-        <View style={styles.activityList}>
-          {mockAnalytics.recentActivity.map((activity, index) => (
-            <View key={index} style={styles.activityItem}>
-              <View style={[styles.activityDot, getActivityColor(activity.type)]} />
-              <View style={styles.activityContent}>
-                <Text style={styles.activityMessage}>{activity.message}</Text>
-                <Text style={styles.activityTime}>{activity.time}</Text>
+        {/* System Status Grid */}
+        <Text style={styles.gridSectionTitle}>Estado del Sistema</Text>
+        <View style={styles.statusCompactGrid}>
+          <View style={styles.compactStatusCard}>
+            <View style={[styles.compactStatusIndicator, styles.statusOnline]} />
+            <Text style={styles.compactStatusLabel}>Servidor</Text>
+            <Text style={styles.compactStatusValue}>Online</Text>
+          </View>
+          
+          <View style={styles.compactStatusCard}>
+            <View style={[styles.compactStatusIndicator, styles.statusOnline]} />
+            <Text style={styles.compactStatusLabel}>Base Datos</Text>
+            <Text style={styles.compactStatusValue}>Estable</Text>
+          </View>
+          
+          <View style={styles.compactStatusCard}>
+            <View style={[styles.compactStatusIndicator, styles.statusWarning]} />
+            <Text style={styles.compactStatusLabel}>Pagos</Text>
+            <Text style={styles.compactStatusValue}>Lento</Text>
+          </View>
+          
+          <View style={styles.compactStatusCard}>
+            <View style={[styles.compactStatusIndicator, styles.statusOnline]} />
+            <Text style={styles.compactStatusLabel}>Notificaciones</Text>
+            <Text style={styles.compactStatusValue}>Activo</Text>
+          </View>
+        </View>
+
+        {/* Recent Activity Compact */}
+        <Text style={styles.gridSectionTitle}>Actividad Reciente</Text>
+        <View style={styles.compactActivityCard}>
+          {mockAnalytics.recentActivity.slice(0, 4).map((activity, index) => (
+            <View key={index} style={styles.compactActivityItem}>
+              <View style={[styles.compactActivityDot, getActivityColor(activity.type)]} />
+              <View style={styles.compactActivityContent}>
+                <Text style={styles.compactActivityMessage} numberOfLines={1}>{activity.message}</Text>
+                <Text style={styles.compactActivityTime}>{activity.time}</Text>
               </View>
             </View>
           ))}
-        </View>
-      </View>
-
-      {/* System Status */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Estado del Sistema</Text>
-        <View style={styles.statusGrid}>
-          <View style={styles.statusItem}>
-            <View style={[styles.statusIndicator, styles.statusOnline]} />
-            <Text style={styles.statusLabel}>Servidor Principal</Text>
-            <Text style={styles.statusValue}>Online</Text>
-          </View>
-          
-          <View style={styles.statusItem}>
-            <View style={[styles.statusIndicator, styles.statusOnline]} />
-            <Text style={styles.statusLabel}>Base de Datos</Text>
-            <Text style={styles.statusValue}>Estable</Text>
-          </View>
-          
-          <View style={styles.statusItem}>
-            <View style={[styles.statusIndicator, styles.statusWarning]} />
-            <Text style={styles.statusLabel}>Pagos</Text>
-            <Text style={styles.statusValue}>Lento</Text>
-          </View>
-          
-          <View style={styles.statusItem}>
-            <View style={[styles.statusIndicator, styles.statusOnline]} />
-            <Text style={styles.statusLabel}>Notificaciones</Text>
-            <Text style={styles.statusValue}>Activo</Text>
-          </View>
         </View>
       </View>
       <FloatingKompi isVisible={true} />
@@ -655,22 +651,24 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   adminHeader: {
-    backgroundColor: 'white',
     paddingTop: 60,
     paddingHorizontal: 20,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    paddingBottom: 30,
   },
   adminTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
+    color: 'white',
     marginBottom: 4,
   },
   adminSubtitle: {
     fontSize: 16,
-    color: '#666',
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  adminContent: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 20,
   },
   metricsGrid: {
     flexDirection: 'row',
@@ -863,6 +861,199 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
+  },
+  // Compact Admin Styles
+  compactMetricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 24,
+  },
+  compactMetricCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 12,
+    width: (width - 48) / 3,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  compactMetricValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 6,
+    marginBottom: 2,
+  },
+  compactMetricLabel: {
+    fontSize: 11,
+    color: '#666',
+    textAlign: 'center',
+  },
+  gridSectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  actionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 24,
+  },
+  compactActionCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 12,
+    width: (width - 48) / 2,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    position: 'relative',
+  },
+  compactActionTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 6,
+  },
+  compactActionSubtitle: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  compactBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#FF5722',
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    minWidth: 16,
+    alignItems: 'center',
+  },
+  compactBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  servicesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 24,
+  },
+  compactServiceCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 12,
+    width: (width - 48) / 2,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  compactServiceName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  compactServiceBookings: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#D81B60',
+    marginBottom: 2,
+  },
+  compactServiceLabel: {
+    fontSize: 11,
+    color: '#666',
+    marginBottom: 4,
+  },
+  compactServiceRevenue: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
+  statusCompactGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 24,
+  },
+  compactStatusCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 12,
+    width: (width - 48) / 2,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  compactStatusIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginBottom: 6,
+  },
+  compactStatusLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 2,
+    textAlign: 'center',
+  },
+  compactStatusValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  compactActivityCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  compactActivityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  compactActivityDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  compactActivityContent: {
+    flex: 1,
+  },
+  compactActivityMessage: {
+    fontSize: 12,
+    color: '#333',
+    marginBottom: 2,
+  },
+  compactActivityTime: {
+    fontSize: 10,
+    color: '#666',
   },
   // OKoins specific styles
   okoinsCard: {
