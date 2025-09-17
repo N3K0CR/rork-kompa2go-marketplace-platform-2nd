@@ -56,6 +56,7 @@ function RootLayoutNav() {
       <Stack.Screen name="chat/[chatId]" options={{ headerShown: false }} />
       <Stack.Screen name="provider/[id]" options={{ title: "Detalles del Proveedor" }} />
       <Stack.Screen name="purchase-plan" options={{ headerShown: false }} />
+      <Stack.Screen name="payment-success" options={{ headerShown: false }} />
       <Stack.Screen name="admin-products" options={{ title: "Administrar Productos K2G" }} />
       <Stack.Screen name="reported-problems" options={{ headerShown: false }} />
       <Stack.Screen name="client/history" options={{ headerShown: false }} />

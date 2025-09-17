@@ -112,16 +112,18 @@ export default function PurchasePlanScreen() {
         await purchasePlan(selectedPlanData.id, paymentMethod as 'sinpe' | 'kash', proofImage);
       }
       
-      Alert.alert(
-        'Pago Procesado',
-        `Tu pago ha sido enviado para verificación.\n\nID de Pago: ${payment.id}\n\nRecibirás una notificación cuando sea aprobado.`,
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back()
-          }
-        ]
-      );
+      // Navigate to success page with payment details
+      router.replace({
+        pathname: '/payment-success',
+        params: {
+          planId: selectedPlanData.id,
+          planName: selectedPlanData.name,
+          amount: selectedPlanData.price.toString(),
+          paymentId: payment.id,
+          paymentMethod: paymentMethod,
+          reservations: selectedPlanData.reservations.toString()
+        }
+      });
       
     } catch (error) {
       console.error('Purchase error:', error);
