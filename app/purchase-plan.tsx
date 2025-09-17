@@ -131,8 +131,6 @@ export default function PurchasePlanScreen() {
     }
   };
   
-
-  
   const getPaymentMethods = () => {
     return ['card', 'sinpe', 'kash', 'bank_transfer'];
   };
