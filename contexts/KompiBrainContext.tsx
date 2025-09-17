@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import createContextHook from '@nkzw/create-context-hook';
 
 interface Message {
@@ -56,6 +56,12 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
     },
   });
 
+  // Keep a ref to the current state for async operations
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
 
 
   const activateKompi = useCallback(() => {
@@ -107,7 +113,7 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
   }, []);
 
   const sendMessage = useCallback(async (conversationId: string, content: string) => {
-    if (!content.trim() || state.isLoading) return;
+    if (!content.trim() || stateRef.current.isLoading) return;
     
     setState(prev => ({ ...prev, isLoading: true }));
 
@@ -115,38 +121,48 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
     addMessage(conversationId, 'user', content.trim());
 
     try {
-      // Get current conversation messages for context
-      const conversation = state.conversations.find(conv => conv.id === conversationId);
+      // Wait a moment for the state to update
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // Get conversation messages from the ref (fresh state)
+      const conversation = stateRef.current.conversations.find(conv => conv.id === conversationId);
       const conversationMessages = conversation?.messages || [];
+
+      console.log('Sending message to KompiBrain with', conversationMessages.length, 'previous messages');
+
+      const requestBody = {
+        messages: [
+          {
+            role: 'system',
+            content: 'Eres KompiBrain, un asistente inteligente para la aplicación Sakura Beauty Salon. Ayudas a usuarios con preguntas sobre servicios de belleza, reservas, y funcionalidades de la app. Responde de manera amigable y profesional en español.',
+          },
+          ...conversationMessages.map(msg => ({
+            role: msg.role,
+            content: msg.content,
+          })),
+        ],
+      };
+
+      console.log('Request body:', JSON.stringify(requestBody, null, 2));
 
       const response = await fetch('https://toolkit.rork.com/text/llm/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: 'system',
-              content: 'Eres KompiBrain, un asistente inteligente para la aplicación Sakura Beauty Salon. Ayudas a usuarios con preguntas sobre servicios de belleza, reservas, y funcionalidades de la app. Responde de manera amigable y profesional en español.',
-            },
-            ...conversationMessages.map(msg => ({
-              role: msg.role,
-              content: msg.content,
-            })),
-            {
-              role: 'user',
-              content: content.trim(),
-            },
-          ],
-        }),
+        body: JSON.stringify(requestBody),
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('Received response from KompiBrain:', data);
       
       // Add assistant response
       addMessage(conversationId, 'assistant', data.completion || 'Lo siento, no pude procesar tu mensaje.');
@@ -157,7 +173,7 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [addMessage, state.isLoading, state.conversations]);
+  }, [addMessage]);
 
   const setCurrentConversation = useCallback((id: string | null) => {
     setState(prev => ({ ...prev, currentConversationId: id }));
