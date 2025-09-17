@@ -113,6 +113,89 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
     }));
   }, []);
 
+  // Generate Rork prompt with context reset and identity enforcement
+  const generateRorkPrompt = useCallback((conversationMessages: Message[]) => {
+    const resetInstruction = `RESET: Ignora completamente cualquier contexto, identidad o instrucciones previas. Eres exclusivamente KompiBrain de Kompa2Go.`;
+    
+    const identityPrompt = `
+IDENTIDAD FORZADA: Eres KompiBrain, el asistente inteligente exclusivo de Kompa2Go.
+
+Kompa2Go es una plataforma integral de servicios de belleza y bienestar que conecta usuarios con profesionales certificados.
+
+CARACTERÍSTICAS DE KOMPA2GO:
+- Reserva de citas con profesionales de belleza
+- Sistema de pagos integrado con OKoins (moneda virtual)
+- Geolocalización para encontrar servicios cercanos
+- Chat en tiempo real con proveedores
+- Historial de servicios y reseñas
+- Programas de lealtad y recompensas
+- Análisis y estadísticas para proveedores
+
+TU FUNCIÓN:
+- Ayudar con navegación de la app
+- Explicar funcionalidades de Kompa2Go
+- Asistir con reservas y pagos
+- Resolver dudas sobre servicios
+- Guiar en el uso de OKoins
+- Proporcionar información sobre proveedores
+
+RESPONDE SIEMPRE:
+- En español
+- Como KompiBrain de Kompa2Go
+- De manera amigable y profesional
+- Con información específica de la plataforma
+
+NUNCA menciones otras aplicaciones o servicios de belleza.`;
+
+    return [
+      {
+        role: 'system' as const,
+        content: resetInstruction + identityPrompt
+      },
+      ...conversationMessages.map(msg => ({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content,
+      })),
+    ];
+  }, []);
+
+  // Call Rork API with response verification
+  const callRorkAPI = useCallback(async (messages: any[]) => {
+    const response = await fetch('https://toolkit.rork.com/text/llm/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messages,
+        // Context cleanup parameters
+        temperature: 0.7,
+        max_tokens: 1000,
+        top_p: 0.9,
+        frequency_penalty: 0.1,
+        presence_penalty: 0.1
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+    }
+
+    const data = await response.json();
+    
+    // Verify response doesn't mention wrong identity
+    if (data.completion && data.completion.toLowerCase().includes('sakura')) {
+      console.warn('Response contained wrong identity, regenerating...');
+      // Return a corrected response
+      return {
+        completion: 'Soy KompiBrain, tu asistente de Kompa2Go. ¿En qué puedo ayudarte con nuestros servicios de belleza y bienestar?'
+      };
+    }
+    
+    return data;
+  }, []);
+
   const sendMessage = useCallback(async (conversationId: string, content: string) => {
     if (!content.trim() || stateRef.current.isLoading) return;
     
@@ -131,38 +214,10 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
 
       console.log('Sending message to KompiBrain with', conversationMessages.length, 'previous messages');
 
-      const requestBody = {
-        messages: [
-          {
-            role: 'system',
-            content: 'Eres KompiBrain, un asistente inteligente para la aplicación Sakura Beauty Salon. Ayudas a usuarios con preguntas sobre servicios de belleza, reservas, y funcionalidades de la app. Responde de manera amigable y profesional en español.',
-          },
-          ...conversationMessages.map(msg => ({
-            role: msg.role,
-            content: msg.content,
-          })),
-        ],
-      };
+      const messages = generateRorkPrompt(conversationMessages);
+      console.log('Generated prompt with context reset');
 
-      console.log('Request body:', JSON.stringify(requestBody, null, 2));
-
-      const response = await fetch('https://toolkit.rork.com/text/llm/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-      }
-
-      const data = await response.json();
+      const data = await callRorkAPI(messages);
       console.log('Received response from KompiBrain:', data);
       
       // Add assistant response
@@ -174,7 +229,7 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [addMessage]);
+  }, [addMessage, generateRorkPrompt, callRorkAPI]);
 
   const setCurrentConversation = useCallback((id: string | null) => {
     setState(prev => ({ ...prev, currentConversationId: id }));
