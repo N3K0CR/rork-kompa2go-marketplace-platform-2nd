@@ -52,12 +52,8 @@ const mockQueries = {
   seedDatabase: mockFunction
 };
 
-// Dynamic import function for native platforms
+// Dynamic import function for all platforms (PostgreSQL works everywhere)
 const loadDatabaseModules = async () => {
-  if (Platform.OS === 'web') {
-    return mockQueries;
-  }
-  
   try {
     const [dbModule, queriesModule] = await Promise.all([
       import('@/lib/db'),
@@ -96,21 +92,17 @@ export const [DatabaseProvider, useDatabaseContext] = createContextHook(() => {
       setIsLoading(true);
       setError(null);
       
-      console.log('Initializing database...');
+      console.log('🔄 Initializing PostgreSQL database...');
       
-      if (Platform.OS === 'web') {
-        console.log('Web platform - using mock database');
-        setDbModules(mockQueries);
-        setIsInitialized(true);
-        console.log('Mock database initialized for web');
-      } else {
-        // Load database modules dynamically only on native platforms
-        const modules = await loadDatabaseModules();
-        setDbModules(modules);
-        await modules.runMigrations();
-        setIsInitialized(true);
-        console.log('Database initialized successfully');
-      }
+      // Load database modules for all platforms (PostgreSQL works everywhere)
+      const modules = await loadDatabaseModules();
+      setDbModules(modules);
+      
+      // Run migrations to ensure tables exist
+      await modules.runMigrations();
+      
+      setIsInitialized(true);
+      console.log('✅ PostgreSQL database initialized successfully');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Database initialization failed';
       console.error('Database initialization error:', errorMessage);
@@ -129,15 +121,10 @@ export const [DatabaseProvider, useDatabaseContext] = createContextHook(() => {
   const seedData = useCallback(async () => {
     try {
       setError(null);
-      console.log('Seeding database...');
+      console.log('🌱 Seeding database...');
       
-      if (Platform.OS === 'web') {
-        console.log('Web platform - skipping database seeding');
-        console.log('Mock data available on web');
-      } else {
-        await dbModules.seedDatabase();
-        console.log('Database seeded successfully');
-      }
+      await dbModules.seedDatabase();
+      console.log('✅ Database seeded successfully');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Database seeding failed';
       console.error('Database seeding error:', errorMessage);
