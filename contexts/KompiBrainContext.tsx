@@ -1,20 +1,25 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import createContextHook from '@nkzw/create-context-hook';
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: Date;
+}
+
+interface Conversation {
+  id: string;
+  messages: Message[];
+  title: string;
+  createdAt: Date;
+}
 
 interface KompiBrainState {
   isActive: boolean;
-  conversations: {
-    id: string;
-    messages: {
-      id: string;
-      role: 'user' | 'assistant';
-      content: string;
-      timestamp: Date;
-    }[];
-    title: string;
-    createdAt: Date;
-  }[];
+  conversations: Conversation[];
   currentConversationId: string | null;
+  isLoading: boolean;
   settings: {
     autoSave: boolean;
     theme: 'light' | 'dark';
@@ -26,11 +31,12 @@ interface KompiBrainActions {
   activateKompi: () => void;
   deactivateKompi: () => void;
   createConversation: (title?: string) => string;
-  addMessage: (conversationId: string, role: 'user' | 'assistant', content: string) => void;
+  sendMessage: (conversationId: string, content: string) => Promise<void>;
   setCurrentConversation: (id: string | null) => void;
   deleteConversation: (id: string) => void;
   updateSettings: (settings: Partial<KompiBrainState['settings']>) => void;
   clearAllData: () => void;
+  getCurrentConversation: () => Conversation | null;
 }
 
 type KompiBrainContextType = KompiBrainState & KompiBrainActions;
@@ -42,44 +48,13 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
     isActive: false,
     conversations: [],
     currentConversationId: null,
+    isLoading: false,
     settings: {
       autoSave: true,
       theme: 'light',
       language: 'es',
     },
   });
-
-  const loadData = useCallback(async () => {
-    try {
-      // For now, we'll use a simple in-memory storage
-      // This can be replaced with proper storage implementation later
-      console.log('Loading KompiBrain data...');
-    } catch (error) {
-      console.error('Error loading KompiBrain data:', error);
-    }
-  }, []);
-
-  const saveData = useCallback(async () => {
-    try {
-      // For now, we'll use a simple in-memory storage
-      // This can be replaced with proper storage implementation later
-      console.log('Saving KompiBrain data...');
-    } catch (error) {
-      console.error('Error saving KompiBrain data:', error);
-    }
-  }, []);
-
-  // Load data on mount
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  // Save data whenever state changes
-  useEffect(() => {
-    if (state.settings.autoSave) {
-      saveData();
-    }
-  }, [state, saveData]);
 
 
 
@@ -93,7 +68,7 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
 
   const createConversation = useCallback((title?: string): string => {
     const id = Date.now().toString();
-    const newConversation = {
+    const newConversation: Conversation = {
       id,
       messages: [],
       title: title || `Conversación ${state.conversations.length + 1}`,
@@ -109,9 +84,9 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
     return id;
   }, [state.conversations.length]);
 
-  const addMessage = useCallback((conversationId: string, role: 'user' | 'assistant', content: string) => {
+  const addMessage = useCallback((conversationId: string, role: 'user' | 'assistant' | 'system', content: string) => {
     const messageId = Date.now().toString();
-    const newMessage = {
+    const newMessage: Message = {
       id: messageId,
       role,
       content,
@@ -127,6 +102,58 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
       ),
     }));
   }, []);
+
+  const sendMessage = useCallback(async (conversationId: string, content: string) => {
+    if (!content.trim() || state.isLoading) return;
+
+    // Add user message
+    addMessage(conversationId, 'user', content.trim());
+    setState(prev => ({ ...prev, isLoading: true }));
+
+    try {
+      // Get current conversation messages for context
+      const conversation = state.conversations.find(conv => conv.id === conversationId);
+      const conversationMessages = conversation?.messages || [];
+
+      const response = await fetch('https://toolkit.rork.com/text/llm/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: 'system',
+              content: 'Eres KompiBrain, un asistente inteligente para la aplicación Sakura Beauty Salon. Ayudas a usuarios con preguntas sobre servicios de belleza, reservas, y funcionalidades de la app. Responde de manera amigable y profesional en español.',
+            },
+            ...conversationMessages.map(msg => ({
+              role: msg.role,
+              content: msg.content,
+            })),
+            {
+              role: 'user',
+              content: content.trim(),
+            },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Add assistant response
+      addMessage(conversationId, 'assistant', data.completion || 'Lo siento, no pude procesar tu mensaje.');
+    } catch (error) {
+      console.error('Error sending message to KompiBrain:', error);
+      
+      addMessage(conversationId, 'assistant', 'Lo siento, hubo un error al procesar tu mensaje. Por favor, intenta de nuevo.');
+    } finally {
+      setState(prev => ({ ...prev, isLoading: false }));
+    }
+  }, [state.isLoading, state.conversations, addMessage]);
 
   const setCurrentConversation = useCallback((id: string | null) => {
     setState(prev => ({ ...prev, currentConversationId: id }));
@@ -153,6 +180,7 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
         isActive: false,
         conversations: [],
         currentConversationId: null,
+        isLoading: false,
         settings: {
           autoSave: true,
           theme: 'light',
@@ -164,17 +192,23 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
     }
   }, []);
 
+  const getCurrentConversation = useCallback((): Conversation | null => {
+    if (!state.currentConversationId) return null;
+    return state.conversations.find(conv => conv.id === state.currentConversationId) || null;
+  }, [state.currentConversationId, state.conversations]);
+
   return useMemo(() => ({
     ...state,
     activateKompi,
     deactivateKompi,
     createConversation,
-    addMessage,
+    sendMessage,
     setCurrentConversation,
     deleteConversation,
     updateSettings,
     clearAllData,
-  }), [state, activateKompi, deactivateKompi, createConversation, addMessage, setCurrentConversation, deleteConversation, updateSettings, clearAllData]);
+    getCurrentConversation,
+  }), [state, activateKompi, deactivateKompi, createConversation, sendMessage, setCurrentConversation, deleteConversation, updateSettings, clearAllData, getCurrentConversation]);
 });
 
-export type { KompiBrainContextType };
+export type { KompiBrainContextType, Message, Conversation };
