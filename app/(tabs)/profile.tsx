@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, TextInput, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, TextInput, Platform } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWallet } from '@/contexts/WalletContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useReservationPlans } from '@/contexts/ReservationPlansContext';
 import { usePendingPayments } from '@/contexts/PendingPaymentsContext';
-import { User, Settings, CreditCard, History, LogOut, Shield, Calendar, Users, BarChart3, Star, TrendingUp, Lock, X, Key, Camera, Upload, Package, Check, AlertTriangle } from 'lucide-react-native';
+import { User, Settings, CreditCard, History, LogOut, Shield, Calendar, Users, BarChart3, Star, TrendingUp, Lock, X, Package, Check, AlertTriangle, Share } from 'lucide-react-native';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import * as Clipboard from 'expo-clipboard';
 
 export default function ProfileScreen() {
   const { user, signOut, changePassword, resetPassword } = useAuth();
@@ -30,6 +31,7 @@ export default function ProfileScreen() {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [proofImage, setProofImage] = useState<string | null>(null);
   const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const [showReferralModal, setShowReferralModal] = useState(false);
 
   const handleSignOut = () => {
     Alert.alert(
@@ -114,6 +116,9 @@ export default function ProfileScreen() {
       case 'reported_problems':
         router.push('/reported-problems');
         break;
+      case 'share_referral':
+        handleShareReferral();
+        break;
       default:
         Alert.alert('Funcionalidad', 'En desarrollo');
     }
@@ -145,6 +150,28 @@ export default function ProfileScreen() {
       Alert.alert('Error', error.message || 'Error al cambiar la contraseña');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleShareReferral = async () => {
+    const referralLink = `https://kompa2go.com/ref/${user?.uniqueId || user?.id}`;
+    
+    if (Platform.OS === 'web') {
+      // For web, copy to clipboard
+      try {
+        await Clipboard.setStringAsync(referralLink);
+        setShowReferralModal(true);
+      } catch (error) {
+        Alert.alert('Error', 'No se pudo copiar el enlace');
+      }
+    } else {
+      // For mobile, use native sharing
+      try {
+        await Clipboard.setStringAsync(referralLink);
+        setShowReferralModal(true);
+      } catch (error) {
+        Alert.alert('Error', 'No se pudo copiar el enlace');
+      }
     }
   };
 
@@ -272,6 +299,7 @@ export default function ProfileScreen() {
   const menuItems = [
     { icon: User, title: t('edit_profile'), subtitle: t('update_personal_info'), action: 'edit_profile' },
     { icon: History, title: t('historical'), subtitle: t('view_previous_bookings'), action: 'history' },
+    { icon: Share, title: 'Compartir Enlace de Referido', subtitle: 'Invita amigos y gana recompensas', action: 'share_referral' },
     ...(user?.userType !== 'provider' ? [{ icon: Settings, title: t('configurations'), subtitle: t('app_preferences'), action: 'settings' }] : []),
   ];
 
@@ -523,6 +551,45 @@ export default function ProfileScreen() {
                 {loading ? 'Enviando...' : 'Enviar Correo'}
               </Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Referral Link Modal */}
+      <Modal
+        visible={showReferralModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowReferralModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>¡Enlace Copiado!</Text>
+              <TouchableOpacity
+                onPress={() => setShowReferralModal(false)}
+                style={styles.closeButton}
+              >
+                <X size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.referralModalContent}>
+              <Check size={48} color="#10B981" style={styles.successIcon} />
+              <Text style={styles.referralSuccessText}>
+                Tu enlace de referido ha sido copiado al portapapeles
+              </Text>
+              <Text style={styles.referralInstructions}>
+                Compártelo con tus amigos para que se unan a Kompa2Go y ambos reciban recompensas
+              </Text>
+              
+              <TouchableOpacity
+                style={styles.referralCloseButton}
+                onPress={() => setShowReferralModal(false)}
+              >
+                <Text style={styles.referralCloseButtonText}>Entendido</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -1108,6 +1175,38 @@ const styles = StyleSheet.create({
   modalButtonText: {
     color: 'white',
     fontSize: 18,
+    fontWeight: '600',
+  },
+  referralModalContent: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  successIcon: {
+    marginBottom: 16,
+  },
+  referralSuccessText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#10B981',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  referralInstructions: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  referralCloseButton: {
+    backgroundColor: '#D81B60',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+  },
+  referralCloseButtonText: {
+    color: 'white',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

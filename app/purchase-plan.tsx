@@ -30,6 +30,7 @@ export default function PurchasePlanScreen() {
   const [proofImage, setProofImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [hoveredMethod, setHoveredMethod] = useState<string | null>(null);
+  const { isLoading: isLemonSqueezyLoading } = useLemonSqueezy();
   
   const plans = useMemo(() => getAvailablePlans(), [getAvailablePlans]);
   const selectedPlanData = useMemo(() => plans.find(p => p.id === selectedPlan), [plans, selectedPlan]);

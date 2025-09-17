@@ -114,7 +114,7 @@ export default function CalendarScreen() {
       return;
     }
 
-    const appointmentToAdd: Omit<Appointment, 'id'> = {
+    const appointmentToAdd: Omit<Appointment, 'id' | 'confirmationPostpones'> = {
       date: date,
       time: startTime,
       duration: duration,
@@ -216,9 +216,75 @@ export default function CalendarScreen() {
     </ScrollView>
   );
 
+  const renderProviderCalendarView = () => (
+    <ScrollView ref={scrollViewRef} style={styles.scrollContainer}>
+      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.title}>Mi Calendario</Text>
+          <Text style={styles.subtitle}>Gestiona tu agenda y disponibilidad</Text>
+        </View>
+        <TouchableOpacity style={styles.refreshButton} onPress={async () => { setIsRefreshing(true); await refreshAppointments(); setIsRefreshing(false); }} disabled={isRefreshing}>
+          <RefreshCw size={20} color={isRefreshing ? '#999' : '#D81B60'} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.customCalendarContainer}>
+        <View style={styles.calendarHeader}>
+          <TouchableOpacity onPress={goToPreviousMonth} style={styles.navButton}><ChevronLeft size={24} color="#333" /></TouchableOpacity>
+          <View style={styles.monthYearContainer}>
+            <Text style={styles.monthYearText}>{currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</Text>
+            <TouchableOpacity onPress={goToToday} style={styles.todayButton}><Text style={styles.todayButtonText}>Hoy</Text></TouchableOpacity>
+          </View>
+          <TouchableOpacity onPress={goToNextMonth} style={styles.navButton}><ChevronRight size={24} color="#333" /></TouchableOpacity>
+        </View>
+        <View style={styles.daysHeader}>
+          {['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'].map(day => <View key={day} style={styles.dayHeaderCell}><Text style={styles.dayHeaderText}>{day}</Text></View>)}
+        </View>
+        <View style={styles.calendarGrid}>
+          {calendarData.map((dayData) => (
+            <TouchableOpacity key={dayData.dateString} style={[styles.dayCell, !dayData.isCurrentMonth && styles.dayCellOtherMonth, dayData.isToday && styles.dayCellToday, dayData.isSelected && styles.dayCellSelected]} onPress={() => handleDatePress(dayData.dateString)}>
+              <Text style={[styles.dayNumber, !dayData.isCurrentMonth && styles.dayNumberOtherMonth, dayData.isToday && styles.dayNumberToday, dayData.isSelected && styles.dayNumberSelected]}>{dayData.date.getDate()}</Text>
+              <View style={styles.eventsContainer}>
+                {dayData.appointments.slice(0, 2).map(app => app?.id ? <View key={app.id} style={[styles.eventIndicator, { backgroundColor: getEventColor(app.type) }]} /> : null)}
+                {dayData.appointments.length > 2 && <View style={[styles.eventIndicator, styles.moreEventsIndicator]}><Text style={styles.moreEventsText}>+{dayData.appointments.length - 2}</Text></View>}
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {selectedDateAppointments.length > 0 && (
+        <View style={styles.selectedDateSection}>
+          <Text style={styles.selectedDateTitle}>Citas para el {new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}</Text>
+          {selectedDateAppointments.map(app => {
+            if (!app?.id) return null;
+            return (
+            <TouchableOpacity key={app.id} style={[styles.appointmentDetailCard, { borderLeftColor: getEventColor(app.type) }]} onPress={() => { setSelectedReservation(app); setModalState(prev => ({ ...prev, reservationDetails: true })); }}>
+              <View style={styles.appointmentTimeContainer}>
+                <Text style={styles.appointmentDetailTime}>{app.time}{app.type === 'blocked' ? ` - ${new Date(new Date(`1970-01-01T${app.time}:00`).getTime() + app.duration * 60000).toTimeString().substring(0,5)}` : ''}</Text>
+              </View>
+              <Text style={styles.appointmentDetailClient}>{app.type.includes('personal') || app.type.includes('blocked') ? 'Bloqueo Personal' : `Cliente: ${app.clientName}`}</Text>
+              <Text style={styles.appointmentDetailService}>{app.service}</Text>
+            </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+
+      <View ref={personalAgendaSectionRef} style={styles.personalAgendaSection}>
+        <TouchableOpacity style={styles.addPersonalAgendaButton} onPress={() => { setNewPersonalTask({ title: '', startTime: '', endTime: '', notes: '', date: selectedDate }); setModalState(prev => ({ ...prev, personalTask: true })); }}>
+          <Plus size={20} color="white" />
+          <Text style={styles.addPersonalAgendaText}>Bloquear Horario</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+
   return (
     <View style={styles.container}>
-      {user?.userType === 'client' ? renderClientCalendarView() : <Text style={styles.loadingText}>Cargando calendario...</Text>}
+      {user?.userType === 'client' ? renderClientCalendarView() : 
+       user?.userType === 'provider' ? renderProviderCalendarView() : 
+       <Text style={styles.loadingText}>Cargando calendario...</Text>}
       <FloatingKompi isVisible={true} />
       
       <Modal visible={modalState.reservationDetails} transparent animationType="slide" onRequestClose={() => setModalState(prev => ({ ...prev, reservationDetails: false }))}>
