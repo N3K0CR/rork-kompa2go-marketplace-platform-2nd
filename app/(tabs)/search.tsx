@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Dimensions, ActivityIndicator } from 'react-native';
-import { Search, MapPin, Star, Filter, Navigation, Loader, AlertCircle } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Dimensions, ActivityIndicator, Alert } from 'react-native';
+import { Search, MapPin, Star, Filter, Navigation, Loader, AlertCircle, Hash, Phone, Mail } from 'lucide-react-native';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useLocationSearch } from '@/contexts/LocationSearchContext';
 import ExtendRadiusDialog from '@/components/ExtendRadiusDialog';
@@ -46,6 +46,9 @@ const featuredProviders = [
     image: '🌸',
     isSpecialProvider: true,
     isAmbulante: false,
+    uniqueId: '2KPSK789',
+    phone: '+506 8888-0001',
+    email: 'sakura@beauty.com',
   },
   {
     id: '998',
@@ -59,6 +62,9 @@ const featuredProviders = [
     image: '📸',
     isSpecialProvider: true,
     isAmbulante: false,
+    uniqueId: '2KPNK456',
+    phone: '+506 8888-0002',
+    email: 'neko@studios.com',
   },
   {
     id: '1',
@@ -72,6 +78,9 @@ const featuredProviders = [
     image: '👩‍💼',
     isSpecialProvider: false,
     isAmbulante: false,
+    uniqueId: '2KPMG123',
+    phone: '+506 8888-0003',
+    email: 'maria@limpieza.com',
   },
   {
     id: '2',
@@ -85,6 +94,9 @@ const featuredProviders = [
     image: '👨‍🔧',
     isSpecialProvider: false,
     isAmbulante: false,
+    uniqueId: '2KPCR789',
+    phone: '+506 8888-0004',
+    email: 'carlos@plomeria.com',
   },
   {
     id: '3',
@@ -98,6 +110,9 @@ const featuredProviders = [
     image: '👩‍🌾',
     isSpecialProvider: false,
     isAmbulante: false,
+    uniqueId: '2KPAJ456',
+    phone: '+506 8888-0005',
+    email: 'ana@jardineria.com',
   },
   {
     id: '4',
@@ -111,6 +126,9 @@ const featuredProviders = [
     image: '🚚',
     isSpecialProvider: false,
     isAmbulante: true,
+    uniqueId: '2KPLM123',
+    phone: '+506 8888-0006',
+    email: 'luis@comida.com',
   },
   {
     id: '5',
@@ -124,6 +142,9 @@ const featuredProviders = [
     image: '📱',
     isSpecialProvider: false,
     isAmbulante: true,
+    uniqueId: '2KPCV789',
+    phone: '+506 8888-0007',
+    email: 'carmen@celulares.com',
   },
   {
     id: '6',
@@ -137,6 +158,9 @@ const featuredProviders = [
     image: '🚐',
     isSpecialProvider: false,
     isAmbulante: true,
+    uniqueId: '2KPRJ456',
+    phone: '+506 8888-0008',
+    email: 'roberto@lavado.com',
   },
 ];
 
@@ -149,6 +173,9 @@ export default function SearchScreen() {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [showK2GProducts, setShowK2GProducts] = useState(false);
   const [showAmbulanteProviders, setShowAmbulanteProviders] = useState(false);
+  const [idSearchQuery, setIdSearchQuery] = useState('');
+  const [idSearchResults, setIdSearchResults] = useState<any[]>([]);
+  const [showIdSearch, setShowIdSearch] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const resultsRef = useRef<View>(null);
   
@@ -214,6 +241,51 @@ export default function SearchScreen() {
     if (searchQuery.trim()) {
       await searchProviders(searchQuery.trim());
     }
+  };
+
+  const handleIdSearch = () => {
+    if (!idSearchQuery.trim()) {
+      Alert.alert('Error', 'Por favor ingresa un ID para buscar');
+      return;
+    }
+
+    const searchId = idSearchQuery.trim().toUpperCase();
+    console.log('🔍 Searching for ID:', searchId);
+    
+    // Search in featured providers
+    const results = featuredProviders.filter(provider => 
+      provider.uniqueId?.toUpperCase().includes(searchId)
+    );
+    
+    console.log('🔍 ID search results:', results);
+    
+    if (results.length === 0) {
+      Alert.alert('Sin resultados', `No se encontraron usuarios con el ID: ${searchId}`);
+      return;
+    }
+    
+    setIdSearchResults(results);
+    setShowIdSearch(true);
+    setShowK2GProducts(false);
+    setShowAmbulanteProviders(false);
+    setSelectedCategory(null);
+    
+    // Scroll to results
+    setTimeout(() => {
+      scrollToResults();
+    }, 100);
+  };
+
+  const showContactInfo = (provider: any) => {
+    Alert.alert(
+      `Contactar a ${provider.name}`,
+      `ID: ${provider.uniqueId}\nTeléfono: ${provider.phone}\nEmail: ${provider.email}\nServicio: ${provider.service}`,
+      [
+        { text: 'Cerrar', style: 'cancel' },
+        { text: 'Llamar', onPress: () => console.log('Calling:', provider.phone) },
+        { text: 'Email', onPress: () => console.log('Emailing:', provider.email) }
+      ]
+    );
   };
 
   const scrollToResults = () => {
@@ -361,6 +433,30 @@ export default function SearchScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* ID Search Section */}
+        <View style={styles.idSearchContainer}>
+          <Text style={styles.idSearchLabel}>Buscar por ID de Usuario:</Text>
+          <View style={styles.idSearchBar}>
+            <Hash size={18} color="#666" />
+            <TextInput
+              style={styles.idSearchInput}
+              placeholder="Ej: 2KPSK789 o MKPXY123"
+              value={idSearchQuery}
+              onChangeText={setIdSearchQuery}
+              onSubmitEditing={handleIdSearch}
+              placeholderTextColor="#666"
+              returnKeyType="search"
+              autoCapitalize="characters"
+            />
+            <TouchableOpacity 
+              style={styles.idSearchButton}
+              onPress={handleIdSearch}
+            >
+              <Text style={styles.idSearchButtonText}>Buscar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         <View style={styles.locationContainer}>
           <MapPin size={16} color="#666" />
           <Text style={styles.locationText}>{getLocationText()}</Text>
@@ -419,9 +515,11 @@ export default function SearchScreen() {
                 ]}
                 onPress={() => handleCategorySearch(category.name, category.id)}
               >
-                <Text style={styles.categoryIcon}>{category.icon}</Text>
-                <Text style={styles.categoryName}>{category.name}</Text>
-                <Text style={styles.categoryCount}>{category.providers} {t('providers_count')}</Text>
+                <View style={styles.categoryContent}>
+                  <Text style={styles.categoryIcon}>{category.icon}</Text>
+                  <Text style={styles.categoryName}>{category.name}</Text>
+                  <Text style={styles.categoryCount}>{category.providers} {t('providers_count')}</Text>
+                </View>
               </TouchableOpacity>
             ))}
           </View>
@@ -429,13 +527,61 @@ export default function SearchScreen() {
 
         <View ref={resultsRef} style={styles.section}>
           <Text style={styles.sectionTitle}>
-            {showK2GProducts ? 'K2G Products' : 
+            {showIdSearch ? `Resultados de ID: ${idSearchQuery}` :
+             showK2GProducts ? 'K2G Products' : 
              showAmbulanteProviders ? 'Proveedores Ambulantes' :
              foundProviders.length > 0 ? 'Proveedores Encontrados' : t('featured_providers')}
           </Text>
           
-          {/* Show K2G Products if selected */}
-          {showK2GProducts ? (
+          {/* Show ID Search Results */}
+          {showIdSearch ? (
+            idSearchResults.map((provider) => (
+              <TouchableOpacity
+                key={provider.id}
+                style={[styles.providerCard, styles.idSearchResultCard]}
+                onPress={() => showContactInfo(provider)}
+              >
+                <View style={styles.providerHeader}>
+                  <Text style={styles.providerImage}>{provider.image}</Text>
+                  <View style={styles.providerInfo}>
+                    <Text style={styles.providerName}>{provider.name}</Text>
+                    <Text style={styles.providerService}>{provider.service}</Text>
+                    <Text style={styles.providerUniqueId}>ID: {provider.uniqueId}</Text>
+                    <View style={styles.providerMeta}>
+                      <View style={styles.rating}>
+                        <Star size={14} color="#FFD700" fill="#FFD700" />
+                        <Text style={styles.ratingText}>{provider.rating}</Text>
+                        <Text style={styles.reviewsText}>({provider.reviews})</Text>
+                      </View>
+                      <View style={styles.location}>
+                        <MapPin size={14} color="#666" />
+                        <Text style={styles.locationText}>{provider.location}</Text>
+                      </View>
+                    </View>
+                  </View>
+                  <View style={styles.providerPrice}>
+                    <Text style={styles.priceText}>{provider.price}</Text>
+                  </View>
+                </View>
+                <View style={styles.contactActions}>
+                  <TouchableOpacity 
+                    style={styles.contactButton}
+                    onPress={() => console.log('Calling:', provider.phone)}
+                  >
+                    <Phone size={16} color="white" />
+                    <Text style={styles.contactButtonText}>Llamar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.contactButton, styles.emailButton]}
+                    onPress={() => console.log('Emailing:', provider.email)}
+                  >
+                    <Mail size={16} color="white" />
+                    <Text style={styles.contactButtonText}>Email</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            ))
+          ) : showK2GProducts ? (
             k2gProducts.length > 0 ? (
               k2gProducts.map((product) => (
                 <TouchableOpacity
@@ -519,13 +665,16 @@ export default function SearchScreen() {
         </View>
 
         {/* Reset Search Button */}
-        {(foundProviders.length > 0 || showK2GProducts || showAmbulanteProviders) && (
+        {(foundProviders.length > 0 || showK2GProducts || showAmbulanteProviders || showIdSearch) && (
           <TouchableOpacity 
             style={styles.resetButton}
             onPress={() => {
               resetSearch();
               setShowK2GProducts(false);
               setShowAmbulanteProviders(false);
+              setShowIdSearch(false);
+              setIdSearchResults([]);
+              setIdSearchQuery('');
               setSelectedCategory(null);
             }}
           >
@@ -930,6 +1079,80 @@ const styles = StyleSheet.create({
   ambulanteBadgeText: {
     color: 'white',
     fontSize: 12,
+    fontWeight: '600',
+  },
+  // ID Search Styles
+  idSearchContainer: {
+    marginBottom: 16,
+  },
+  idSearchLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  idSearchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  idSearchInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#333',
+  },
+  idSearchButton: {
+    backgroundColor: '#D81B60',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  idSearchButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Category Content
+  categoryContent: {
+    alignItems: 'center',
+  },
+  // ID Search Results
+  idSearchResultCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#34C759',
+  },
+  providerUniqueId: {
+    fontSize: 12,
+    color: '#34C759',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  contactActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
+  contactButton: {
+    flex: 1,
+    backgroundColor: '#D81B60',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 8,
+  },
+  emailButton: {
+    backgroundColor: '#007AFF',
+  },
+  contactButtonText: {
+    color: 'white',
+    fontSize: 14,
     fontWeight: '600',
   },
 });

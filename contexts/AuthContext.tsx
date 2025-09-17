@@ -57,6 +57,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Helper function to generate unique IDs
+  const generateUniqueId = (userType: 'client' | 'provider', existingIds: string[] = []): string => {
+    let newId: string;
+    let attempts = 0;
+    const maxAttempts = 100;
+    
+    do {
+      if (userType === 'client') {
+        // MKP + 5 alphanumeric characters
+        const alphanumeric = Math.random().toString(36).substring(2, 7).toUpperCase();
+        newId = `MKP${alphanumeric}`;
+      } else {
+        // 2KP + 5 alphanumeric characters
+        const alphanumeric = Math.random().toString(36).substring(2, 7).toUpperCase();
+        newId = `2KP${alphanumeric}`;
+      }
+      attempts++;
+    } while (existingIds.includes(newId) && attempts < maxAttempts);
+    
+    return newId;
+  };
+
   const signIn = async (email: string, password: string) => {
     try {
       // Simulate API call
@@ -69,15 +91,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         { email: 'onlycr@yahoo.com', password: 'kompa2go_admin22025', name: 'Neko2', alias: 'Neko2', userType: 'admin' as const },
         
         // Provider users
-        { email: 'agostounonueve@gmail.com', password: 'kompa2go_2kompa12025', name: 'Proveedor Demo 1', alias: '2kompa1', userType: 'provider' as const },
-        { email: 'onlycr@yahoo.com', password: 'kompa2go_2kompa22025', name: 'Proveedor Demo 2', alias: '2kompa2', userType: 'provider' as const },
+        { email: 'agostounonueve@gmail.com', password: 'kompa2go_2kompa12025', name: 'Proveedor Demo 1', alias: '2kompa1', userType: 'provider' as const, uniqueId: '2KPAB123' },
+        { email: 'onlycr@yahoo.com', password: 'kompa2go_2kompa22025', name: 'Proveedor Demo 2', alias: '2kompa2', userType: 'provider' as const, uniqueId: '2KPCD456' },
         
         // Sakura Beauty Salon - Special provider with unrestricted access
-        { email: 'Marfanar@', password: 'lov3myJob25', name: 'Sakura Beauty Salon', alias: 'sakura', userType: 'provider' as const, isSpecialProvider: true },
+        { email: 'Marfanar@', password: 'lov3myJob25', name: 'Sakura Beauty Salon', alias: 'sakura', userType: 'provider' as const, isSpecialProvider: true, uniqueId: '2KPSK789' },
         
         // Client users
-        { email: 'agostounonueve@gmail.com', password: 'kompa2go_mikompa12025', name: 'Cliente Demo 1', alias: 'mikompa1', userType: 'client' as const },
-        { email: 'onlycr@yahoo.com', password: 'kompa2go_mikompa22025', name: 'Cliente Demo 2', alias: 'mikompa2', userType: 'client' as const },
+        { email: 'agostounonueve@gmail.com', password: 'kompa2go_mikompa12025', name: 'Cliente Demo 1', alias: 'mikompa1', userType: 'client' as const, uniqueId: 'MKPXY123' },
+        { email: 'onlycr@yahoo.com', password: 'kompa2go_mikompa22025', name: 'Cliente Demo 2', alias: 'mikompa2', userType: 'client' as const, uniqueId: 'MKPZW456' },
       ];
       
       console.log('🔍 SignIn attempt:', { email, password });
@@ -100,8 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           location: 'San José',
           okoins: testUser.userType === 'client' ? 100 : 0,
           walletBalance: testUser.userType === 'client' ? 0 : undefined,
-          uniqueId: testUser.userType === 'client' ? `MK${String(Math.floor(Math.random() * 100000)).padStart(8, '0')}` : 
-                   testUser.userType === 'provider' ? `2K${String(Math.floor(Math.random() * 100000)).padStart(8, '0')}` : undefined,
+          uniqueId: (testUser as any).uniqueId || (testUser.userType === 'client' || testUser.userType === 'provider' ? generateUniqueId(testUser.userType) : undefined),
           isSpecialProvider: (testUser as any).isSpecialProvider || false,
         };
         console.log('✅ Created mock user:', mockUser);
@@ -120,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           phone: '+506 8888-8888',
           location: 'San José',
           userType: 'provider',
+          uniqueId: generateUniqueId('provider'),
         };
       } else {
         mockUser = {
@@ -131,6 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           userType: 'client',
           okoins: 100,
           walletBalance: 0,
+          uniqueId: generateUniqueId('client'),
         };
       }
 
@@ -152,16 +175,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      const userType = userData.userType || 'client';
+      const uniqueId = userType !== 'admin' ? generateUniqueId(userType) : undefined;
+      
       const newUser: User = {
         id: Date.now().toString(),
         email,
         name: userData.name || 'Usuario',
         phone: userData.phone,
         location: userData.location,
-        userType: userData.userType || 'client',
+        userType,
+        uniqueId,
+        okoins: userType === 'client' ? 100 : 0,
+        walletBalance: userType === 'client' ? 0 : undefined,
       };
 
       await AsyncStorage.setItem('user', JSON.stringify(newUser));
+      console.log('✅ New user created with ID:', uniqueId);
       
       // Set auth token for tRPC client
       const token = newUser.userType === 'admin' ? 'admin-token' : 'client-token';
@@ -236,8 +266,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         location: 'San José',
         okoins: testUser.userType === 'client' ? 100 : 0,
         walletBalance: testUser.userType === 'client' ? 0 : undefined,
-        uniqueId: testUser.userType === 'client' ? `MK${String(Math.floor(Math.random() * 100000)).padStart(8, '0')}` : 
-                 testUser.userType === 'provider' ? `2K${String(Math.floor(Math.random() * 100000)).padStart(8, '0')}` : undefined,
+        uniqueId: (testUser as any).uniqueId || (testUser.userType === 'client' || testUser.userType === 'provider' ? generateUniqueId(testUser.userType) : undefined),
         isSpecialProvider: (testUser as any).isSpecialProvider || false,
       };
 
