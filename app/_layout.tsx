@@ -75,44 +75,44 @@ export default function RootLayout() {
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
-        <AuthProvider>
-          <KompiBrainProvider>
-            <WalletProvider>
-              <OKoinsProvider>
-                <AppointmentsProvider>
-                  <TeamCalendarProvider>
-                    <ReservationAlertProvider>
-                      <ProviderProvider>
-                        <ReservationPlansProvider>
-                          <PendingPaymentsProvider>
-                            <LocationSearchProvider>
-                              <PaymentBackendProvider>
-                                <LemonSqueezyProvider>
-                                  <ChatProvider>
-                                    <K2GProductsProvider>
-                                      <ReportedProblemsProvider>
-                                        <GestureHandlerRootView style={styles.container}>
-                                          <RootLayoutNav />
-                                          <ReservationAlertModal />
-                                        </GestureHandlerRootView>
-                                      </ReportedProblemsProvider>
-                                    </K2GProductsProvider>
-                                  </ChatProvider>
-                                </LemonSqueezyProvider>
-                              </PaymentBackendProvider>
-                            </LocationSearchProvider>
-                          </PendingPaymentsProvider>
-                        </ReservationPlansProvider>
-                      </ProviderProvider>
-                    </ReservationAlertProvider>
-                  </TeamCalendarProvider>
-                </AppointmentsProvider>
-              </OKoinsProvider>
-            </WalletProvider>
-          </KompiBrainProvider>
-        </AuthProvider>
-      </LanguageProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <KompiBrainProvider>
+              <PaymentBackendProvider>
+                <OKoinsProvider>
+                  <AppointmentsProvider>
+                    <ReservationPlansProvider>
+                      <WalletProvider>
+                        <TeamCalendarProvider>
+                          <ReservationAlertProvider>
+                            <ProviderProvider>
+                              <PendingPaymentsProvider>
+                                <LocationSearchProvider>
+                                  <LemonSqueezyProvider>
+                                    <ChatProvider>
+                                      <K2GProductsProvider>
+                                        <ReportedProblemsProvider>
+                                          <GestureHandlerRootView style={styles.container}>
+                                            <RootLayoutNav />
+                                            <ReservationAlertModal />
+                                          </GestureHandlerRootView>
+                                        </ReportedProblemsProvider>
+                                      </K2GProductsProvider>
+                                    </ChatProvider>
+                                  </LemonSqueezyProvider>
+                                </LocationSearchProvider>
+                              </PendingPaymentsProvider>
+                            </ProviderProvider>
+                          </ReservationAlertProvider>
+                        </TeamCalendarProvider>
+                      </WalletProvider>
+                    </ReservationPlansProvider>
+                  </AppointmentsProvider>
+                </OKoinsProvider>
+              </PaymentBackendProvider>
+            </KompiBrainProvider>
+          </AuthProvider>
+        </LanguageProvider>
       </QueryClientProvider>
     </trpc.Provider>
   );
