@@ -107,22 +107,17 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
   }, []);
 
   const sendMessage = useCallback(async (conversationId: string, content: string) => {
-    setState(prev => {
-      if (!content.trim() || prev.isLoading) return prev;
-      return { ...prev, isLoading: true };
-    });
+    if (!content.trim() || state.isLoading) return;
+    
+    setState(prev => ({ ...prev, isLoading: true }));
 
     // Add user message
     addMessage(conversationId, 'user', content.trim());
 
     try {
       // Get current conversation messages for context
-      let conversationMessages: Message[] = [];
-      setState(prev => {
-        const conversation = prev.conversations.find(conv => conv.id === conversationId);
-        conversationMessages = conversation?.messages || [];
-        return prev;
-      });
+      const conversation = state.conversations.find(conv => conv.id === conversationId);
+      const conversationMessages = conversation?.messages || [];
 
       const response = await fetch('https://toolkit.rork.com/text/llm/', {
         method: 'POST',
@@ -162,7 +157,7 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [addMessage]);
+  }, [addMessage, state.isLoading, state.conversations]);
 
   const setCurrentConversation = useCallback((id: string | null) => {
     setState(prev => ({ ...prev, currentConversationId: id }));
@@ -202,17 +197,11 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
   }, []);
 
   const getCurrentConversation = useCallback((): Conversation | null => {
-    let result: Conversation | null = null;
-    setState(prev => {
-      if (!prev.currentConversationId) {
-        result = null;
-      } else {
-        result = prev.conversations.find(conv => conv.id === prev.currentConversationId) || null;
-      }
-      return prev;
-    });
-    return result;
-  }, []);
+    if (!state.currentConversationId) {
+      return null;
+    }
+    return state.conversations.find(conv => conv.id === state.currentConversationId) || null;
+  }, [state.currentConversationId, state.conversations]);
 
   return useMemo(() => ({
     ...state,
