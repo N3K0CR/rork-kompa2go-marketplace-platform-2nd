@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
-import { Send, Bot, MessageCircle, Brain, Trash2, MapPin } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Modal } from 'react-native';
+import { Send, Bot, MessageCircle, Brain, Trash2, MapPin, X } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useKompiBrain } from '@/contexts/KompiBrainContext';
 import { useLocationSearch } from '@/contexts/LocationSearchContext';
@@ -8,6 +8,8 @@ import { useLocationSearch } from '@/contexts/LocationSearchContext';
 export default function ChatScreen() {
   const [inputText, setInputText] = useState('');
   const [showLocationButton, setShowLocationButton] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const { user } = useAuth();
   const {
@@ -80,7 +82,7 @@ export default function ChatScreen() {
     if (!inputText.trim() || isLoading) return;
     
     if (!currentConversationId) {
-      Alert.alert('Error', 'No hay conversación activa. Creando nueva conversación...');
+      console.log('No hay conversación activa. Creando nueva conversación...');
       const newId = createConversation('Nueva Conversación');
       setCurrentConversation(newId);
       return;
@@ -91,7 +93,7 @@ export default function ChatScreen() {
       setInputText('');
     } catch (error) {
       console.error('Error sending message:', error);
-      Alert.alert('Error', 'No se pudo enviar el mensaje. Inténtalo de nuevo.');
+      console.log('No se pudo enviar el mensaje. Inténtalo de nuevo.');
     }
   };
 
@@ -101,26 +103,27 @@ export default function ChatScreen() {
   };
 
   const handleDeleteConversation = (conversationId: string) => {
-    Alert.alert(
-      'Eliminar Conversación',
-      '¿Estás seguro de que quieres eliminar esta conversación?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: () => deleteConversation(conversationId)
-        }
-      ]
-    );
+    setShowDeleteModal(conversationId);
+  };
+
+  const confirmDeleteConversation = () => {
+    if (showDeleteModal) {
+      deleteConversation(showDeleteModal);
+      setShowDeleteModal(null);
+    }
   };
   
-  const handleShareLocation = async () => {
+  const handleShareLocation = () => {
     console.log('🗺️ Location button pressed!');
-    console.log('Current conversation ID:', currentConversationId);
+    setShowLocationModal(true);
+  };
+
+  const shareCurrentLocation = async () => {
+    console.log('📍 Sharing current location...');
     
     if (!currentConversationId) {
       console.log('❌ No current conversation ID');
+      setShowLocationModal(false);
       return;
     }
     
@@ -134,27 +137,25 @@ export default function ChatScreen() {
         console.log('📤 Sending location message:', locationMessage);
         await sendMessage(currentConversationId, locationMessage);
         setShowLocationButton(false);
+        setShowLocationModal(false);
         console.log('✅ Location shared successfully');
       } else {
         console.log('❌ Location not available');
-        Alert.alert(
-          'Ubicación no disponible',
-          'No se pudo obtener tu ubicación. Puedes escribir manualmente tu zona (ej: San José Centro, Cartago, Heredia).',
-          [
-            { text: 'OK' }
-          ]
-        );
+        setShowLocationModal(false);
       }
     } catch (error) {
       console.error('❌ Error sharing location:', error);
-      Alert.alert(
-        'Error',
-        'No se pudo compartir la ubicación. Puedes escribir tu zona manualmente.',
-        [
-          { text: 'OK' }
-        ]
-      );
+      setShowLocationModal(false);
     }
+  };
+
+  const shareManualLocation = (location: string) => {
+    if (!currentConversationId || !location.trim()) return;
+    
+    console.log('📤 Sending manual location:', location);
+    sendMessage(currentConversationId, `Mi ubicación: ${location.trim()}`);
+    setShowLocationButton(false);
+    setShowLocationModal(false);
   };
 
   return (
@@ -285,11 +286,10 @@ export default function ChatScreen() {
           <TouchableOpacity
             style={styles.locationButton}
             onPress={handleShareLocation}
-            disabled={isLoadingLocation}
           >
             <MapPin size={16} color="white" />
             <Text style={styles.locationButtonText}>
-              {isLoadingLocation ? 'Obteniendo ubicación...' : 'Compartir Ubicación'}
+              Compartir Ubicación
             </Text>
           </TouchableOpacity>
           <Text style={styles.locationHint}>
@@ -316,7 +316,146 @@ export default function ChatScreen() {
           <Send size={20} color={(!inputText.trim() || isLoading) ? '#CCC' : 'white'} />
         </TouchableOpacity>
       </View>
+
+      {/* Location Modal */}
+      <LocationModal
+        visible={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        onShareCurrent={shareCurrentLocation}
+        onShareManual={shareManualLocation}
+        isLoadingLocation={isLoadingLocation}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        visible={showDeleteModal !== null}
+        onClose={() => setShowDeleteModal(null)}
+        onConfirm={confirmDeleteConversation}
+      />
     </KeyboardAvoidingView>
+  );
+}
+
+// Location Modal Component
+interface LocationModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onShareCurrent: () => void;
+  onShareManual: (location: string) => void;
+  isLoadingLocation: boolean;
+}
+
+function LocationModal({ visible, onClose, onShareCurrent, onShareManual, isLoadingLocation }: LocationModalProps) {
+  const [manualLocation, setManualLocation] = useState('');
+
+  const handleManualShare = () => {
+    if (manualLocation.trim()) {
+      onShareManual(manualLocation.trim());
+      setManualLocation('');
+    }
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Compartir Ubicación</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <X size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.modalDescription}>
+            Elige cómo compartir tu ubicación para encontrar proveedores cercanos:
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.modalButton, styles.currentLocationButton]}
+            onPress={onShareCurrent}
+            disabled={isLoadingLocation}
+          >
+            <MapPin size={20} color="white" />
+            <Text style={styles.modalButtonText}>
+              {isLoadingLocation ? 'Obteniendo ubicación...' : 'Usar Ubicación Actual'}
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>O</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <Text style={styles.manualLocationLabel}>Escribe tu zona manualmente:</Text>
+          <TextInput
+            style={styles.manualLocationInput}
+            value={manualLocation}
+            onChangeText={setManualLocation}
+            placeholder="Ej: San José Centro, Cartago, Heredia..."
+            placeholderTextColor="#999"
+          />
+
+          <TouchableOpacity
+            style={[styles.modalButton, styles.manualLocationButton, !manualLocation.trim() && styles.disabledButton]}
+            onPress={handleManualShare}
+            disabled={!manualLocation.trim()}
+          >
+            <Text style={[styles.modalButtonText, styles.manualButtonText]}>
+              Usar Esta Ubicación
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// Delete Confirmation Modal Component
+interface DeleteConfirmationModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+function DeleteConfirmationModal({ visible, onClose, onConfirm }: DeleteConfirmationModalProps) {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.deleteModalContent}>
+          <Text style={styles.deleteModalTitle}>Eliminar Conversación</Text>
+          <Text style={styles.deleteModalDescription}>
+            ¿Estás seguro de que quieres eliminar esta conversación? Esta acción no se puede deshacer.
+          </Text>
+          
+          <View style={styles.deleteModalButtons}>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.cancelButton]}
+              onPress={onClose}
+            >
+              <Text style={styles.cancelButtonText}>Cancelar</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.modalButton, styles.deleteButton]}
+              onPress={onConfirm}
+            >
+              <Text style={styles.deleteButtonText}>Eliminar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -542,5 +681,141 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     textAlign: 'center',
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalDescription: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  modalButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    gap: 8,
+  },
+  currentLocationButton: {
+    backgroundColor: '#4CAF50',
+    marginBottom: 20,
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E5E5E5',
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    fontSize: 14,
+    color: '#999',
+  },
+  manualLocationLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 8,
+  },
+  manualLocationInput: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 16,
+  },
+  manualLocationButton: {
+    backgroundColor: '#D81B60',
+  },
+  manualButtonText: {
+    color: 'white',
+  },
+  disabledButton: {
+    backgroundColor: '#CCC',
+  },
+  // Delete Modal Styles
+  deleteModalContent: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 350,
+  },
+  deleteModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  deleteModalDescription: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 24,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  deleteModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deleteButton: {
+    flex: 1,
+    backgroundColor: '#FF4444',
+  },
+  deleteButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
