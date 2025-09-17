@@ -412,7 +412,9 @@ export default function SearchScreen() {
   return (
     <ScrollView ref={scrollViewRef} style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>{t('search_services_title')}</Text>
+        <Text style={styles.title}>
+          {user?.userType === 'admin' ? 'Panel Administración: Buscar' : t('search_services_title')}
+        </Text>
         
         {/* Hide search bar for admin users */}
         {user?.userType !== 'admin' && (

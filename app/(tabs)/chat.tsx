@@ -1,101 +1,82 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import { Send, Bot } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { Send, Bot, MessageCircle, Brain, Trash2 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface Message {
-  id: string;
-  text: string;
-  isUser: boolean;
-  timestamp: Date;
-}
+import { useKompiBrain } from '@/contexts/KompiBrainContext';
 
 export default function ChatScreen() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: '¡Hola! Soy Kompi, tu asistente personal. ¿En qué puedo ayudarte hoy? Puedo ayudarte a encontrar servicios cerca de ti.',
-      isUser: false,
-      timestamp: new Date(),
-    },
-  ]);
   const [inputText, setInputText] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const { user } = useAuth();
+  const {
+    isActive,
+    conversations,
+    currentConversationId,
+    isLoading,
+    activateKompi,
+    createConversation,
+    sendMessage,
+    setCurrentConversation,
+    deleteConversation,
+    getCurrentConversation
+  } = useKompiBrain();
+
+  const currentConversation = getCurrentConversation();
+  const messages = currentConversation?.messages || [];
 
   useEffect(() => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
   }, [messages]);
 
-  const sendMessage = async () => {
+  useEffect(() => {
+    // Activate KompiBrain and create initial conversation if needed
+    if (!isActive) {
+      activateKompi();
+    }
+    
+    if (!currentConversationId && conversations.length === 0) {
+      const newConversationId = createConversation('Chat Principal');
+      console.log('Created initial conversation:', newConversationId);
+    }
+  }, [isActive, currentConversationId, conversations.length, activateKompi, createConversation]);
+
+  const handleSendMessage = async () => {
     if (!inputText.trim() || isLoading) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: inputText.trim(),
-      isUser: true,
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInputText('');
-    setIsLoading(true);
+    
+    if (!currentConversationId) {
+      Alert.alert('Error', 'No hay conversación activa. Creando nueva conversación...');
+      const newId = createConversation('Nueva Conversación');
+      setCurrentConversation(newId);
+      return;
+    }
 
     try {
-      const response = await fetch('https://toolkit.rork.com/text/llm/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: 'system',
-              content: `Eres Kompi, el asistente virtual de Kompa2Go, una plataforma de servicios en Costa Rica. 
-              Tu trabajo es ayudar a los usuarios a encontrar servicios que necesiten.
-              
-              Servicios disponibles:
-              - Limpieza (45 proveedores)
-              - Plomería (32 proveedores) 
-              - Electricidad (28 proveedores)
-              - Jardinería (23 proveedores)
-              - Pintura (19 proveedores)
-              - Carpintería (15 proveedores)
-              
-              Siempre pregunta por la ubicación del usuario para recomendar proveedores cercanos.
-              Sé amigable, útil y conciso. Usa emojis ocasionalmente.`
-            },
-            {
-              role: 'user',
-              content: inputText.trim(),
-            },
-          ],
-        }),
-      });
-
-      const data = await response.json();
-      
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: data.completion || 'Lo siento, no pude procesar tu mensaje. ¿Podrías intentar de nuevo?',
-        isUser: false,
-        timestamp: new Date(),
-      };
-
-      setMessages(prev => [...prev, botMessage]);
+      await sendMessage(currentConversationId, inputText.trim());
+      setInputText('');
     } catch (error) {
       console.error('Error sending message:', error);
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: 'Lo siento, hubo un problema con la conexión. ¿Podrías intentar de nuevo?',
-        isUser: false,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
+      Alert.alert('Error', 'No se pudo enviar el mensaje. Inténtalo de nuevo.');
     }
+  };
+
+  const handleNewConversation = () => {
+    const newId = createConversation(`Conversación ${conversations.length + 1}`);
+    setCurrentConversation(newId);
+  };
+
+  const handleDeleteConversation = (conversationId: string) => {
+    Alert.alert(
+      'Eliminar Conversación',
+      '¿Estás seguro de que quieres eliminar esta conversación?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: () => deleteConversation(conversationId)
+        }
+      ]
+    );
   };
 
   return (
@@ -104,9 +85,53 @@ export default function ChatScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.header}>
-        <Bot size={24} color="#D81B60" />
-        <Text style={styles.headerTitle}>Kompi - Tu Asistente</Text>
+        <View style={styles.headerLeft}>
+          <Brain size={24} color="#D81B60" />
+          <View>
+            <Text style={styles.headerTitle}>KompiBrain</Text>
+            <Text style={styles.headerSubtitle}>
+              {isActive ? '🧠 Memoria Activa' : '💤 Inactivo'} • {conversations.length} conversaciones
+            </Text>
+          </View>
+        </View>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={handleNewConversation}
+          >
+            <MessageCircle size={20} color="#D81B60" />
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* Conversation Selector */}
+      {conversations.length > 1 && (
+        <View style={styles.conversationSelector}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {conversations.map((conv) => (
+              <TouchableOpacity
+                key={conv.id}
+                style={[
+                  styles.conversationTab,
+                  currentConversationId === conv.id && styles.activeConversationTab
+                ]}
+                onPress={() => setCurrentConversation(conv.id)}
+                onLongPress={() => handleDeleteConversation(conv.id)}
+              >
+                <Text style={[
+                  styles.conversationTabText,
+                  currentConversationId === conv.id && styles.activeConversationTabText
+                ]}>
+                  {conv.title}
+                </Text>
+                <Text style={styles.conversationTabCount}>
+                  {conv.messages.length}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       <ScrollView
         ref={scrollViewRef}
@@ -114,36 +139,55 @@ export default function ChatScreen() {
         contentContainerStyle={styles.messagesContent}
         showsVerticalScrollIndicator={false}
       >
-        {messages.map((message) => (
-          <View
-            key={message.id}
-            style={[
-              styles.messageContainer,
-              message.isUser ? styles.userMessage : styles.botMessage,
-            ]}
-          >
+        {messages.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Brain size={48} color="#D81B60" />
+            <Text style={styles.emptyStateTitle}>¡Hola! Soy KompiBrain</Text>
+            <Text style={styles.emptyStateText}>
+              Tu asistente inteligente con memoria. Puedo recordar nuestras conversaciones anteriores y ayudarte mejor cada vez.
+            </Text>
+            <Text style={styles.emptyStateHint}>
+              Escribe un mensaje para comenzar...
+            </Text>
+          </View>
+        ) : (
+          messages.map((message) => (
             <View
+              key={message.id}
               style={[
-                styles.messageBubble,
-                message.isUser ? styles.userBubble : styles.botBubble,
+                styles.messageContainer,
+                message.role === 'user' ? styles.userMessage : styles.botMessage,
               ]}
             >
-              <Text
+              <View
                 style={[
-                  styles.messageText,
-                  message.isUser ? styles.userText : styles.botText,
+                  styles.messageBubble,
+                  message.role === 'user' ? styles.userBubble : styles.botBubble,
                 ]}
               >
-                {message.text}
-              </Text>
+                <Text
+                  style={[
+                    styles.messageText,
+                    message.role === 'user' ? styles.userText : styles.botText,
+                  ]}
+                >
+                  {message.content}
+                </Text>
+                <Text style={[
+                  styles.messageTime,
+                  message.role === 'user' ? styles.userTime : styles.botTime
+                ]}>
+                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </View>
             </View>
-          </View>
-        ))}
+          ))
+        )}
         
         {isLoading && (
           <View style={[styles.messageContainer, styles.botMessage]}>
             <View style={[styles.messageBubble, styles.botBubble]}>
-              <Text style={styles.loadingText}>Kompi está escribiendo...</Text>
+              <Text style={styles.loadingText}>🧠 KompiBrain está pensando...</Text>
             </View>
           </View>
         )}
@@ -161,7 +205,7 @@ export default function ChatScreen() {
         />
         <TouchableOpacity
           style={[styles.sendButton, (!inputText.trim() || isLoading) && styles.sendButtonDisabled]}
-          onPress={sendMessage}
+          onPress={handleSendMessage}
           disabled={!inputText.trim() || isLoading}
         >
           <Send size={20} color={(!inputText.trim() || isLoading) ? '#CCC' : 'white'} />
@@ -183,14 +227,96 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  headerButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#F5F5F5',
+  },
+  conversationSelector: {
+    backgroundColor: 'white',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+  },
+  conversationTab: {
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  activeConversationTab: {
+    backgroundColor: '#D81B60',
+  },
+  conversationTabText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  activeConversationTabText: {
+    color: 'white',
+  },
+  conversationTabCount: {
+    fontSize: 12,
+    color: '#999',
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    minWidth: 20,
+    textAlign: 'center',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  emptyStateTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 16,
+  },
+  emptyStateHint: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
   },
   messagesContainer: {
     flex: 1,
@@ -230,6 +356,18 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: 16,
     lineHeight: 20,
+    marginBottom: 4,
+  },
+  messageTime: {
+    fontSize: 11,
+    opacity: 0.7,
+  },
+  userTime: {
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'right',
+  },
+  botTime: {
+    color: '#999',
   },
   userText: {
     color: 'white',

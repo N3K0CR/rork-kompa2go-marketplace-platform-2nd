@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions, Platform, PanResponder, Alert } from 'react-native';
-import { MessageCircle, X, MapPin, Volume2 } from 'lucide-react-native';
+import { MessageCircle, X, MapPin, Volume2, Brain, Database } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useKompiBrain } from '@/contexts/KompiBrainContext';
 
 const { width } = Dimensions.get('window');
 
@@ -37,6 +38,15 @@ export default function FloatingKompi({
   const pan = useRef(new Animated.ValueXY()).current;
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { 
+    isActive, 
+    conversations, 
+    currentConversationId, 
+    isLoading,
+    activateKompi,
+    createConversation,
+    setCurrentConversation 
+  } = useKompiBrain();
   
   // Drag and drop functionality
   const panResponder = useRef(
@@ -72,9 +82,9 @@ export default function FloatingKompi({
   ).current;
   
   const greetings = {
-    welcome: `${t('hello')}${user?.name ? `, ${user.name}` : ''}! 👋 Soy Kompi, tu asistente personal. ¿En qué puedo ayudarte hoy?`,
-    idle: '💭 ¿Necesitas ayuda encontrando un servicio? ¡Estoy aquí para ayudarte!',
-    help: '🔍 Puedo ayudarte a buscar servicios, explicarte cómo funciona la plataforma, o responder tus preguntas.',
+    welcome: `${t('hello')}${user?.name ? `, ${user.name}` : ''}! 👋 Soy KompiBrain, tu asistente inteligente con memoria. ¿En qué puedo ayudarte hoy?`,
+    idle: '🧠 Mi memoria está activa y puedo recordar nuestras conversaciones anteriores. ¿Necesitas ayuda?',
+    help: '🔍 Puedo ayudarte a buscar servicios, recordar tus preferencias, y aprender de nuestras conversaciones.',
   };
 
   // Service request alert effect
@@ -152,9 +162,24 @@ export default function FloatingKompi({
 
   const handlePress = () => {
     setShowGreeting(false);
-    console.log('Kompi: Opening chat with context retention enabled');
-    console.log('Kompi: User type:', user?.userType || 'guest');
-    console.log('Kompi: Security mode: Contact info restricted until commission paid');
+    
+    // Activate KompiBrain if not active
+    if (!isActive) {
+      activateKompi();
+    }
+    
+    // Create initial conversation if none exists
+    if (!currentConversationId && conversations.length === 0) {
+      const newId = createConversation('Chat Principal');
+      setCurrentConversation(newId);
+      console.log('KompiBrain: Created initial conversation:', newId);
+    }
+    
+    console.log('KompiBrain: Opening chat with memory enabled');
+    console.log('KompiBrain: Active conversations:', conversations.length);
+    console.log('KompiBrain: Current conversation:', currentConversationId);
+    console.log('KompiBrain: User type:', user?.userType || 'guest');
+    
     router.push('/chat');
   };
   
@@ -267,6 +292,16 @@ export default function FloatingKompi({
           <Text style={styles.greetingText}>
             {greetings[greetingType]}
           </Text>
+          
+          {/* Memory Status */}
+          {isActive && (
+            <View style={styles.memoryStatus}>
+              <Brain size={14} color="#D81B60" />
+              <Text style={styles.memoryStatusText}>
+                {conversations.length} conversaciones en memoria
+              </Text>
+            </View>
+          )}
           {greetingType === 'idle' && (
             <TouchableOpacity 
               style={styles.locationButton}
@@ -298,13 +333,26 @@ export default function FloatingKompi({
           activeOpacity={0.8}
         >
           <View style={styles.buttonContent}>
-            <MessageCircle size={24} color="white" />
-            <Text style={styles.buttonText}>Kompi</Text>
+            <Brain size={24} color="white" />
+            <Text style={styles.buttonText}>KompiBrain</Text>
+            {isActive && (
+              <View style={styles.memoryIndicator}>
+                <Database size={12} color="white" />
+              </View>
+            )}
           </View>
           <View style={[
             styles.onlineIndicator,
-            showServiceAlert && styles.alertIndicator
+            showServiceAlert && styles.alertIndicator,
+            isActive && styles.memoryActiveIndicator
           ]} />
+          
+          {/* Memory Status Badge */}
+          {conversations.length > 0 && (
+            <View style={styles.conversationBadge}>
+              <Text style={styles.conversationBadgeText}>{conversations.length}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </Animated.View>
     </Animated.View>
@@ -430,11 +478,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     position: 'relative',
+    minWidth: 120,
   },
   buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    position: 'relative',
+  },
+  memoryIndicator: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 8,
+    padding: 2,
   },
   buttonText: {
     color: 'white',
@@ -451,6 +509,27 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 2,
     borderColor: 'white',
+  },
+  memoryActiveIndicator: {
+    backgroundColor: '#2196F3',
+  },
+  conversationBadge: {
+    position: 'absolute',
+    top: -8,
+    left: -8,
+    backgroundColor: '#FF9800',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  conversationBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   greetingBubble: {
     position: 'absolute',
@@ -489,6 +568,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     lineHeight: 20,
+    marginBottom: 8,
+  },
+  memoryStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(216, 27, 96, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 6,
+    alignSelf: 'flex-start',
+  },
+  memoryStatusText: {
+    fontSize: 11,
+    color: '#D81B60',
+    fontWeight: '600',
   },
   dismissButton: {
     position: 'absolute',
