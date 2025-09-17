@@ -454,6 +454,13 @@ export default function ProfileScreen() {
           <LogOut size={20} color="#FF4444" />
           <Text style={styles.signOutText}>{t('sign_out')}</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.debugButton}
+          onPress={() => router.push('/test-kompi')}
+        >
+          <Text style={styles.debugButtonText}>Test Kompi Brain</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Change Password Modal */}
@@ -1323,6 +1330,19 @@ const styles = StyleSheet.create({
   confirmLogoutButtonText: {
     color: 'white',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  debugButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  debugButtonText: {
+    color: 'white',
+    fontSize: 14,
     fontWeight: '600',
   },
 });
