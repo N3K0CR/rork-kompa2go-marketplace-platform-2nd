@@ -35,6 +35,9 @@ export default function ChatScreen() {
   // Check if the last bot message mentions location sharing
   useEffect(() => {
     const lastBotMessage = messages.filter(m => m.role === 'assistant').pop();
+    console.log('🔍 Checking for location button visibility...');
+    console.log('🔍 Last bot message:', lastBotMessage?.content?.substring(0, 100));
+    
     if (lastBotMessage) {
       const content = lastBotMessage.content.toLowerCase();
       const needsLocation = content.includes('ubicación') || 
@@ -42,8 +45,17 @@ export default function ChatScreen() {
                            content.includes('cerca') ||
                            content.includes('zona') ||
                            content.includes('botón');
+      console.log('🔍 Needs location button:', needsLocation);
+      console.log('🔍 Content keywords found:', {
+        ubicacion: content.includes('ubicación'),
+        compartir: content.includes('compartir'),
+        cerca: content.includes('cerca'),
+        zona: content.includes('zona'),
+        boton: content.includes('botón')
+      });
       setShowLocationButton(needsLocation);
     } else {
+      console.log('🔍 No bot messages found, hiding location button');
       setShowLocationButton(false);
     }
   }, [messages]);
@@ -104,15 +116,27 @@ export default function ChatScreen() {
   };
   
   const handleShareLocation = async () => {
-    if (!currentConversationId) return;
+    console.log('🗺️ Location button pressed!');
+    console.log('Current conversation ID:', currentConversationId);
+    
+    if (!currentConversationId) {
+      console.log('❌ No current conversation ID');
+      return;
+    }
     
     try {
+      console.log('📍 Requesting location permission...');
       const location = await requestLocationPermission();
+      console.log('📍 Location result:', location);
+      
       if (location) {
         const locationMessage = `Mi ubicación actual: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
+        console.log('📤 Sending location message:', locationMessage);
         await sendMessage(currentConversationId, locationMessage);
         setShowLocationButton(false);
+        console.log('✅ Location shared successfully');
       } else {
+        console.log('❌ Location not available');
         Alert.alert(
           'Ubicación no disponible',
           'No se pudo obtener tu ubicación. Puedes escribir manualmente tu zona (ej: San José Centro, Cartago, Heredia).',
@@ -122,7 +146,7 @@ export default function ChatScreen() {
         );
       }
     } catch (error) {
-      console.error('Error sharing location:', error);
+      console.error('❌ Error sharing location:', error);
       Alert.alert(
         'Error',
         'No se pudo compartir la ubicación. Puedes escribir tu zona manualmente.',
@@ -248,8 +272,16 @@ export default function ChatScreen() {
       </ScrollView>
 
       {/* Location sharing button */}
+      {(() => {
+        console.log('🔴 Rendering location button area, showLocationButton:', showLocationButton);
+        return null;
+      })()}
       {showLocationButton && (
         <View style={styles.locationButtonContainer}>
+          {(() => {
+            console.log('🔴 Location button container is rendering!');
+            return null;
+          })()}
           <TouchableOpacity
             style={styles.locationButton}
             onPress={handleShareLocation}

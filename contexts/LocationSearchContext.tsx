@@ -168,21 +168,38 @@ export const [LocationSearchProvider, useLocationSearch] = createContextHook(() 
 
   // Request location permission and get current location
   const requestLocationPermission = useCallback(async () => {
+    console.log('🌍 LocationSearchContext: requestLocationPermission called');
+    console.log('🌍 Platform:', Platform.OS);
+    
     try {
+      console.log('🌍 Setting loading state...');
       setState(prev => ({ ...prev, isLoadingLocation: true, searchError: null }));
       
       if (Platform.OS === 'web') {
+        console.log('🌐 Using web geolocation API');
         // Web geolocation API
         if (!navigator.geolocation) {
+          console.log('❌ Geolocation not supported by browser');
           throw new Error('Geolocation is not supported by this browser');
         }
         
+        console.log('🌐 Requesting position from browser...');
         const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 60000
-          });
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              console.log('🌐 Browser position success:', pos);
+              resolve(pos);
+            },
+            (err) => {
+              console.log('🌐 Browser position error:', err);
+              reject(err);
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 60000
+            }
+          );
         });
         
         const userLocation = {
@@ -190,6 +207,7 @@ export const [LocationSearchProvider, useLocationSearch] = createContextHook(() 
           longitude: position.coords.longitude
         };
         
+        console.log('🌐 Setting web location state:', userLocation);
         setState(prev => ({
           ...prev,
           userLocation,
@@ -197,14 +215,18 @@ export const [LocationSearchProvider, useLocationSearch] = createContextHook(() 
           isLoadingLocation: false
         }));
         
-        console.log('Location obtained (web):', userLocation);
+        console.log('✅ Location obtained (web):', userLocation);
         return userLocation;
         
       } else {
+        console.log('📱 Using mobile expo-location');
         // Mobile expo-location
+        console.log('📱 Requesting permissions...');
         const { status } = await Location.requestForegroundPermissionsAsync();
+        console.log('📱 Permission status:', status);
         
         if (status !== 'granted') {
+          console.log('❌ Permission denied');
           setState(prev => ({
             ...prev,
             locationPermission: false,
@@ -214,15 +236,18 @@ export const [LocationSearchProvider, useLocationSearch] = createContextHook(() 
           return null;
         }
         
+        console.log('📱 Getting current position...');
         const location = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced
         });
+        console.log('📱 Got position:', location);
         
         const userLocation = {
           latitude: location.coords.latitude,
           longitude: location.coords.longitude
         };
         
+        console.log('📱 Setting mobile location state:', userLocation);
         setState(prev => ({
           ...prev,
           userLocation,
@@ -230,12 +255,12 @@ export const [LocationSearchProvider, useLocationSearch] = createContextHook(() 
           isLoadingLocation: false
         }));
         
-        console.log('Location obtained (mobile):', userLocation);
+        console.log('✅ Location obtained (mobile):', userLocation);
         return userLocation;
       }
       
     } catch (error) {
-      console.error('Error getting location:', error);
+      console.error('❌ Error getting location:', error);
       setState(prev => ({
         ...prev,
         locationPermission: false,
