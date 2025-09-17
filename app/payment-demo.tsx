@@ -5,6 +5,7 @@ import { Stack } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePaymentBackend } from '@/contexts/PaymentBackendContext';
 import { CreditCard, DollarSign, Globe, TrendingUp, RefreshCw } from 'lucide-react-native';
+import FloatingKompi from '@/components/FloatingKompi';
 
 export default function PaymentBackendDemo() {
   const { user } = useAuth();
@@ -274,6 +275,7 @@ export default function PaymentBackendDemo() {
             </View>
           </View>
         </ScrollView>
+        <FloatingKompi isVisible={true} />
       </View>
     </>
   );

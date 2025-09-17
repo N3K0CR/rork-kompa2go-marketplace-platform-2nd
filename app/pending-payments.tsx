@@ -7,6 +7,7 @@ import { usePendingPayments } from '@/contexts/PendingPaymentsContext';
 import { ArrowLeft, CheckCircle, XCircle, Eye, Clock, DollarSign, User, Calendar } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { Stack } from 'expo-router';
+import FloatingKompi from '@/components/FloatingKompi';
 
 interface PendingPayment {
   id: string;
@@ -368,6 +369,7 @@ export default function PendingPaymentsScreen() {
             </View>
           </View>
         </Modal>
+        <FloatingKompi isVisible={true} />
       </View>
     </>
   );

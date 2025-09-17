@@ -10,6 +10,7 @@ import { useLemonSqueezy } from '@/contexts/LemonSqueezyContext';
 import CardPaymentCheckout from '@/components/CardPaymentCheckout';
 import { Check, ArrowLeft, Upload, Info, X } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import FloatingKompi from '@/components/FloatingKompi';
 
 export default function PurchasePlanScreen() {
   const insets = useSafeAreaInsets();
@@ -420,6 +421,7 @@ export default function PurchasePlanScreen() {
           )}
         </View>
         </ScrollView>
+        <FloatingKompi isVisible={true} />
       </View>
     </>
   );

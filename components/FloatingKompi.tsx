@@ -82,7 +82,7 @@ export default function FloatingKompi({
   ).current;
   
   const greetings = {
-    welcome: `${t('hello')}${user?.name ? `, ${user.name}` : ''}! 👋 Soy KompiBrain, tu asistente inteligente con memoria. ¿En qué puedo ayudarte hoy?`,
+    welcome: `${t('hello')}${user?.name ? `, ${user.name}` : ''}! 👋 Soy Kompi, tu asistente inteligente con memoria. ¿En qué puedo ayudarte hoy?`,
     idle: '🧠 Mi memoria está activa y puedo recordar nuestras conversaciones anteriores. ¿Necesitas ayuda?',
     help: '🔍 Puedo ayudarte a buscar servicios, recordar tus preferencias, y aprender de nuestras conversaciones.',
   };
@@ -172,13 +172,13 @@ export default function FloatingKompi({
     if (!currentConversationId && conversations.length === 0) {
       const newId = createConversation('Chat Principal');
       setCurrentConversation(newId);
-      console.log('KompiBrain: Created initial conversation:', newId);
+      console.log('Kompi: Created initial conversation:', newId);
     }
     
-    console.log('KompiBrain: Opening chat with memory enabled');
-    console.log('KompiBrain: Active conversations:', conversations.length);
-    console.log('KompiBrain: Current conversation:', currentConversationId);
-    console.log('KompiBrain: User type:', user?.userType || 'guest');
+    console.log('Kompi: Opening chat with memory enabled');
+    console.log('Kompi: Active conversations:', conversations.length);
+    console.log('Kompi: Current conversation:', currentConversationId);
+    console.log('Kompi: User type:', user?.userType || 'guest');
     
     router.push('/chat');
   };
@@ -334,7 +334,7 @@ export default function FloatingKompi({
         >
           <View style={styles.buttonContent}>
             <Brain size={24} color="white" />
-            <Text style={styles.buttonText}>KompiBrain</Text>
+            <Text style={styles.buttonText}>Kompi</Text>
             {isActive && (
               <View style={styles.memoryIndicator}>
                 <Database size={12} color="white" />
