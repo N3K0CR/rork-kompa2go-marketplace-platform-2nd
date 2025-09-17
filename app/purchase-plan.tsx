@@ -24,7 +24,6 @@ export default function PurchasePlanScreen() {
     formatAmount,
     isPaymentMethodSupported
   } = usePaymentBackend();
-
   
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'sinpe' | 'kash' | 'card' | 'bank_transfer'>('card');
