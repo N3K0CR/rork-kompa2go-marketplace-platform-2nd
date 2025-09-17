@@ -417,8 +417,6 @@ export default function PurchasePlanScreen() {
               )}
             </>
           )}
-          
-
         </View>
         </ScrollView>
       </View>
