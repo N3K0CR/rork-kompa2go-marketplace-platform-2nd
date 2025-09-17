@@ -1,5 +1,36 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+import { Platform } from 'react-native';
+
+// Platform-specific imports to avoid SharedArrayBuffer issues on web
+let sqliteTable: any, text: any, integer: any, real: any;
+let createInsertSchema: any, createSelectSchema: any;
+
+if (Platform.OS !== 'web') {
+  try {
+    const sqliteCore = require('drizzle-orm/sqlite-core');
+    const drizzleZod = require('drizzle-zod');
+    
+    sqliteTable = sqliteCore.sqliteTable;
+    text = sqliteCore.text;
+    integer = sqliteCore.integer;
+    real = sqliteCore.real;
+    createInsertSchema = drizzleZod.createInsertSchema;
+    createSelectSchema = drizzleZod.createSelectSchema;
+  } catch (error) {
+    console.error('Failed to load SQLite schema modules:', error);
+  }
+} else {
+  // Mock functions for web to prevent errors
+  const mockTable = (name: string, columns: any) => ({ name, columns });
+  const mockColumn = (name: string) => ({ name });
+  const mockSchema = (table: any) => ({ table });
+  
+  sqliteTable = mockTable;
+  text = () => mockColumn('text');
+  integer = () => mockColumn('integer');
+  real = () => mockColumn('real');
+  createInsertSchema = mockSchema;
+  createSelectSchema = mockSchema;
+}
 
 
 // Users table
@@ -109,23 +140,23 @@ export const reviews = sqliteTable('reviews', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
 });
 
-// Zod schemas for validation
-export const insertUserSchema = createInsertSchema(users);
-export const selectUserSchema = createSelectSchema(users);
-export const insertServiceSchema = createInsertSchema(services);
-export const selectServiceSchema = createSelectSchema(services);
-export const insertProviderSchema = createInsertSchema(providers);
-export const selectProviderSchema = createSelectSchema(providers);
-export const insertAppointmentSchema = createInsertSchema(appointments);
-export const selectAppointmentSchema = createSelectSchema(appointments);
-export const insertChatMessageSchema = createInsertSchema(chatMessages);
-export const selectChatMessageSchema = createSelectSchema(chatMessages);
-export const insertOkoinsTransactionSchema = createInsertSchema(okoinsTransactions);
-export const selectOkoinsTransactionSchema = createSelectSchema(okoinsTransactions);
-export const insertWalletTransactionSchema = createInsertSchema(walletTransactions);
-export const selectWalletTransactionSchema = createSelectSchema(walletTransactions);
-export const insertReviewSchema = createInsertSchema(reviews);
-export const selectReviewSchema = createSelectSchema(reviews);
+// Zod schemas for validation (only create on native platforms)
+export const insertUserSchema = Platform.OS !== 'web' ? createInsertSchema(users) : null;
+export const selectUserSchema = Platform.OS !== 'web' ? createSelectSchema(users) : null;
+export const insertServiceSchema = Platform.OS !== 'web' ? createInsertSchema(services) : null;
+export const selectServiceSchema = Platform.OS !== 'web' ? createSelectSchema(services) : null;
+export const insertProviderSchema = Platform.OS !== 'web' ? createInsertSchema(providers) : null;
+export const selectProviderSchema = Platform.OS !== 'web' ? createSelectSchema(providers) : null;
+export const insertAppointmentSchema = Platform.OS !== 'web' ? createInsertSchema(appointments) : null;
+export const selectAppointmentSchema = Platform.OS !== 'web' ? createSelectSchema(appointments) : null;
+export const insertChatMessageSchema = Platform.OS !== 'web' ? createInsertSchema(chatMessages) : null;
+export const selectChatMessageSchema = Platform.OS !== 'web' ? createSelectSchema(chatMessages) : null;
+export const insertOkoinsTransactionSchema = Platform.OS !== 'web' ? createInsertSchema(okoinsTransactions) : null;
+export const selectOkoinsTransactionSchema = Platform.OS !== 'web' ? createSelectSchema(okoinsTransactions) : null;
+export const insertWalletTransactionSchema = Platform.OS !== 'web' ? createInsertSchema(walletTransactions) : null;
+export const selectWalletTransactionSchema = Platform.OS !== 'web' ? createSelectSchema(walletTransactions) : null;
+export const insertReviewSchema = Platform.OS !== 'web' ? createInsertSchema(reviews) : null;
+export const selectReviewSchema = Platform.OS !== 'web' ? createSelectSchema(reviews) : null;
 
 // Types
 export type User = typeof users.$inferSelect;

@@ -1,5 +1,28 @@
-import { eq, desc, and, or, like } from 'drizzle-orm';
+import { Platform } from 'react-native';
 import { db } from './index';
+
+// Platform-specific imports to avoid SharedArrayBuffer issues on web
+let eq: any, desc: any, and: any, or: any, like: any;
+
+if (Platform.OS !== 'web') {
+  try {
+    const drizzleORM = require('drizzle-orm');
+    eq = drizzleORM.eq;
+    desc = drizzleORM.desc;
+    and = drizzleORM.and;
+    or = drizzleORM.or;
+    like = drizzleORM.like;
+  } catch (error) {
+    console.error('Failed to load Drizzle ORM modules:', error);
+  }
+} else {
+  // Mock functions for web
+  eq = () => ({});
+  desc = () => ({});
+  and = () => ({});
+  or = () => ({});
+  like = () => ({});
+}
 import { 
   users, 
   services, 
@@ -199,7 +222,7 @@ export const chatQueries = {
       .orderBy(desc(chatMessages.createdAt));
     
     const chatMap = new Map<string, ChatMessage>();
-    recentMessages.forEach(message => {
+    recentMessages.forEach((message: ChatMessage) => {
       if (!chatMap.has(message.chatId)) {
         chatMap.set(message.chatId, message);
       }
@@ -225,7 +248,7 @@ export const okoinsQueries = {
     const transactions = await db.select().from(okoinsTransactions)
       .where(eq(okoinsTransactions.userId, userId));
     
-    return transactions.reduce((balance, transaction) => {
+    return transactions.reduce((balance: number, transaction: OkoinsTransaction) => {
       return transaction.type === 'spent' 
         ? balance - transaction.amount 
         : balance + transaction.amount;
@@ -257,7 +280,7 @@ export const walletQueries = {
         eq(walletTransactions.status, 'completed')
       ));
     
-    return transactions.reduce((balance, transaction) => {
+    return transactions.reduce((balance: number, transaction: WalletTransaction) => {
       switch (transaction.type) {
         case 'deposit':
         case 'refund':
@@ -290,7 +313,7 @@ export const reviewQueries = {
     const providerReviews = await db.select().from(reviews)
       .where(eq(reviews.providerId, reviewData.providerId));
     
-    const avgRating = providerReviews.reduce((sum, r) => sum + r.rating, 0) / providerReviews.length;
+    const avgRating = providerReviews.reduce((sum: number, r: Review) => sum + r.rating, 0) / providerReviews.length;
     
     await db.update(providers)
       .set({ 

@@ -1,17 +1,79 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Platform } from 'react-native';
 import createContextHook from '@nkzw/create-context-hook';
-import { runMigrations, seedDatabase } from '@/lib/db';
-import { 
-  userQueries, 
-  serviceQueries, 
-  providerQueries, 
-  appointmentQueries,
-  chatQueries,
-  okoinsQueries,
-  walletQueries,
-  reviewQueries
-} from '@/lib/db/queries';
+
+// Platform-specific imports to avoid SharedArrayBuffer issues on web
+let runMigrations: any, seedDatabase: any;
+let userQueries: any, serviceQueries: any, providerQueries: any, appointmentQueries: any;
+let chatQueries: any, okoinsQueries: any, walletQueries: any, reviewQueries: any;
+
+if (Platform.OS !== 'web') {
+  try {
+    const dbModule = require('@/lib/db');
+    const queriesModule = require('@/lib/db/queries');
+    
+    runMigrations = dbModule.runMigrations;
+    seedDatabase = dbModule.seedDatabase;
+    userQueries = queriesModule.userQueries;
+    serviceQueries = queriesModule.serviceQueries;
+    providerQueries = queriesModule.providerQueries;
+    appointmentQueries = queriesModule.appointmentQueries;
+    chatQueries = queriesModule.chatQueries;
+    okoinsQueries = queriesModule.okoinsQueries;
+    walletQueries = queriesModule.walletQueries;
+    reviewQueries = queriesModule.reviewQueries;
+  } catch (error) {
+    console.error('Failed to load database modules:', error);
+  }
+} else {
+  // Mock functions for web
+  const mockQuery = () => Promise.resolve([]);
+  const mockFunction = () => Promise.resolve();
+  
+  runMigrations = mockFunction;
+  seedDatabase = mockFunction;
+  userQueries = {
+    create: mockQuery,
+    getById: mockQuery,
+    getByEmail: mockQuery,
+    update: mockQuery
+  };
+  serviceQueries = {
+    getAll: mockQuery,
+    getByCategory: mockQuery,
+    search: mockQuery
+  };
+  providerQueries = {
+    getById: mockQuery,
+    getByLocation: mockQuery,
+    getTopRated: mockQuery
+  };
+  appointmentQueries = {
+    create: mockQuery,
+    getByClientId: mockQuery,
+    getByProviderId: mockQuery,
+    updateStatus: mockQuery
+  };
+  chatQueries = {
+    createMessage: mockQuery,
+    getMessagesByChatId: mockQuery,
+    getRecentChats: mockQuery
+  };
+  okoinsQueries = {
+    createTransaction: mockQuery,
+    getUserBalance: () => Promise.resolve(0),
+    getUserTransactions: mockQuery
+  };
+  walletQueries = {
+    createTransaction: mockQuery,
+    getUserBalance: () => Promise.resolve(0),
+    getUserTransactions: mockQuery
+  };
+  reviewQueries = {
+    create: mockQuery,
+    getByProviderId: mockQuery
+  };
+}
 
 
 

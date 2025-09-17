@@ -1,54 +1,61 @@
 import { Platform } from 'react-native';
 import * as schema from './schema';
 
+// Create a mock database interface that matches Drizzle's API
+const createMockDb = () => {
+  return {
+    select: () => ({
+      from: (_table: any) => ({
+        where: (_condition: any) => Promise.resolve([]),
+        orderBy: (_order: any) => ({
+          limit: (_limit: number) => Promise.resolve([])
+        }),
+        limit: (_limit: number) => Promise.resolve([])
+      })
+    }),
+    insert: (_table: any) => ({
+      values: (data: any) => ({
+        returning: () => Promise.resolve([data])
+      })
+    }),
+    update: (_table: any) => ({
+      set: (data: any) => ({
+        where: (_condition: any) => ({
+          returning: () => Promise.resolve([data])
+        })
+      })
+    }),
+    delete: (_table: any) => ({
+      where: (_condition: any) => Promise.resolve()
+    })
+  };
+};
+
 // Platform-specific database setup
 let db: any;
 
-if (Platform.OS === 'web') {
-  // For web, we'll use a mock database to prevent SharedArrayBuffer errors
-  console.log('Web platform detected - using mock database');
-  
-  // Create a mock database interface that matches Drizzle's API
-  const createMockDb = () => {
-    return {
-      select: () => ({
-        from: (_table: any) => ({
-          where: (_condition: any) => Promise.resolve([]),
-          orderBy: (_order: any) => ({
-            limit: (_limit: number) => Promise.resolve([])
-          }),
-          limit: (_limit: number) => Promise.resolve([])
-        })
-      }),
-      insert: (_table: any) => ({
-        values: (data: any) => ({
-          returning: () => Promise.resolve([data])
-        })
-      }),
-      update: (_table: any) => ({
-        set: (data: any) => ({
-          where: (_condition: any) => ({
-            returning: () => Promise.resolve([data])
-          })
-        })
-      }),
-      delete: (_table: any) => ({
-        where: (_condition: any) => Promise.resolve()
-      })
-    };
-  };
-  
-  db = createMockDb();
-} else {
-  // For native platforms, use the real SQLite database
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { drizzle } = require('drizzle-orm/expo-sqlite');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { openDatabaseSync } = require('expo-sqlite');
-  
-  const expo = openDatabaseSync('kompa2go.db', { enableChangeListener: true });
-  db = drizzle(expo, { schema });
-}
+// Initialize database based on platform
+const initializeDb = () => {
+  if (Platform.OS === 'web') {
+    console.log('Web platform detected - using mock database');
+    return createMockDb();
+  } else {
+    try {
+      // Dynamic import for native platforms only
+      const { drizzle } = require('drizzle-orm/expo-sqlite');
+      const { openDatabaseSync } = require('expo-sqlite');
+      
+      const expo = openDatabaseSync('kompa2go.db', { enableChangeListener: true });
+      return drizzle(expo, { schema });
+    } catch (error) {
+      console.error('Failed to initialize SQLite database:', error);
+      console.log('Falling back to mock database');
+      return createMockDb();
+    }
+  }
+};
+
+db = initializeDb();
 
 export { db };
 
