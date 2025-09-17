@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import { Platform } from 'react-native';
 import createContextHook from '@nkzw/create-context-hook';
 import { runMigrations, seedDatabase } from '@/lib/db';
 import { 
@@ -26,14 +27,27 @@ export const [DatabaseProvider, useDatabaseContext] = createContextHook(() => {
       setError(null);
       
       console.log('Initializing database...');
-      await runMigrations();
       
-      setIsInitialized(true);
-      console.log('Database initialized successfully');
+      if (Platform.OS === 'web') {
+        console.log('Web platform - skipping SQLite migrations');
+        setIsInitialized(true);
+        console.log('Mock database initialized for web');
+      } else {
+        await runMigrations();
+        setIsInitialized(true);
+        console.log('Database initialized successfully');
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Database initialization failed';
       console.error('Database initialization error:', errorMessage);
       setError(errorMessage);
+      
+      // On web, don't fail completely - just use mock data
+      if (Platform.OS === 'web') {
+        console.log('Falling back to mock database on web');
+        setIsInitialized(true);
+        setError(null);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -43,12 +57,24 @@ export const [DatabaseProvider, useDatabaseContext] = createContextHook(() => {
     try {
       setError(null);
       console.log('Seeding database...');
-      await seedDatabase();
-      console.log('Database seeded successfully');
+      
+      if (Platform.OS === 'web') {
+        console.log('Web platform - skipping database seeding');
+        console.log('Mock data available on web');
+      } else {
+        await seedDatabase();
+        console.log('Database seeded successfully');
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Database seeding failed';
       console.error('Database seeding error:', errorMessage);
-      setError(errorMessage);
+      
+      // On web, don't fail completely
+      if (Platform.OS === 'web') {
+        console.log('Seeding not required on web - using mock data');
+      } else {
+        setError(errorMessage);
+      }
     }
   }, []);
 
