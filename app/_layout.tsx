@@ -77,40 +77,40 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
       <LanguageProvider>
         <AuthProvider>
-          <WalletProvider>
-            <OKoinsProvider>
-              <AppointmentsProvider>
-                <TeamCalendarProvider>
-                  <ReservationAlertProvider>
-                    <ProviderProvider>
-                      <ReservationPlansProvider>
-                        <PendingPaymentsProvider>
-                          <LocationSearchProvider>
-                            <PaymentBackendProvider>
-                              <LemonSqueezyProvider>
-                                <KompiBrainProvider>
+          <KompiBrainProvider>
+            <WalletProvider>
+              <OKoinsProvider>
+                <AppointmentsProvider>
+                  <TeamCalendarProvider>
+                    <ReservationAlertProvider>
+                      <ProviderProvider>
+                        <ReservationPlansProvider>
+                          <PendingPaymentsProvider>
+                            <LocationSearchProvider>
+                              <PaymentBackendProvider>
+                                <LemonSqueezyProvider>
                                   <ChatProvider>
-                                  <K2GProductsProvider>
-                                    <ReportedProblemsProvider>
-                                      <GestureHandlerRootView style={styles.container}>
-                                        <RootLayoutNav />
-                                        <ReservationAlertModal />
-                                      </GestureHandlerRootView>
-                                    </ReportedProblemsProvider>
-                                  </K2GProductsProvider>
+                                    <K2GProductsProvider>
+                                      <ReportedProblemsProvider>
+                                        <GestureHandlerRootView style={styles.container}>
+                                          <RootLayoutNav />
+                                          <ReservationAlertModal />
+                                        </GestureHandlerRootView>
+                                      </ReportedProblemsProvider>
+                                    </K2GProductsProvider>
                                   </ChatProvider>
-                                </KompiBrainProvider>
-                              </LemonSqueezyProvider>
-                            </PaymentBackendProvider>
-                          </LocationSearchProvider>
-                        </PendingPaymentsProvider>
-                      </ReservationPlansProvider>
-                    </ProviderProvider>
-                  </ReservationAlertProvider>
-                </TeamCalendarProvider>
-              </AppointmentsProvider>
-            </OKoinsProvider>
-          </WalletProvider>
+                                </LemonSqueezyProvider>
+                              </PaymentBackendProvider>
+                            </LocationSearchProvider>
+                          </PendingPaymentsProvider>
+                        </ReservationPlansProvider>
+                      </ProviderProvider>
+                    </ReservationAlertProvider>
+                  </TeamCalendarProvider>
+                </AppointmentsProvider>
+              </OKoinsProvider>
+            </WalletProvider>
+          </KompiBrainProvider>
         </AuthProvider>
       </LanguageProvider>
       </QueryClientProvider>
