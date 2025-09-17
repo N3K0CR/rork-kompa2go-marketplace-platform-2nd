@@ -58,6 +58,7 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
 
   // Keep a ref to the current state for async operations
   const stateRef = useRef(state);
+  
   useEffect(() => {
     stateRef.current = state;
   }, [state]);

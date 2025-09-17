@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -28,13 +28,18 @@ export default function TestKompiScreen() {
     deleteConversation,
     updateSettings,
     clearAllData,
-    getCurrentConversation,
+
   } = useKompiBrain();
 
   const [messageInput, setMessageInput] = useState('');
   const [conversationTitle, setConversationTitle] = useState('');
 
-  const currentConversation = getCurrentConversation();
+  const currentConversation = useMemo(() => {
+    if (!currentConversationId) {
+      return null;
+    }
+    return conversations.find(conv => conv.id === currentConversationId) || null;
+  }, [currentConversationId, conversations]);
 
   const handleSendMessage = async () => {
     if (!messageInput.trim() || !currentConversationId) return;
@@ -85,7 +90,7 @@ export default function TestKompiScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Stack.Screen options={{ title: 'Test KompiBrain', headerShown: true }} />
       
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
@@ -240,7 +245,7 @@ export default function TestKompiScreen() {
             {currentConversation.messages.length === 0 ? (
               <Text style={styles.emptyText}>No hay mensajes en esta conversación</Text>
             ) : (
-              currentConversation.messages.map((message) => (
+              currentConversation.messages.map((message: any) => (
                 <View key={message.id} style={[
                   styles.messageItem,
                   message.role === 'user' ? styles.userMessage : styles.assistantMessage
@@ -296,7 +301,7 @@ export default function TestKompiScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
