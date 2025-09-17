@@ -21,7 +21,7 @@ import { K2GProductsProvider } from "@/contexts/K2GProductsContext";
 import { ReportedProblemsProvider } from "@/contexts/ReportedProblemsContext";
 import { LemonSqueezyProvider } from "@/contexts/LemonSqueezyContext";
 import { KompiBrainProvider } from "@/contexts/KompiBrainContext";
-import { DatabaseProvider } from "@/contexts/DatabaseContext";
+// import { DatabaseProvider } from "@/contexts/DatabaseContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ReservationAlertModal } from "@/components/ReservationAlertModal";
 import { trpc, trpcClient } from "@/lib/trpc";
@@ -76,7 +76,8 @@ export default function RootLayout() {
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
-        <DatabaseProvider>
+        {/* Temporarily disable DatabaseProvider to fix SharedArrayBuffer error */}
+        {/* <DatabaseProvider> */}
           <LanguageProvider>
             <AuthProvider>
             <PaymentBackendProvider>
@@ -115,7 +116,7 @@ export default function RootLayout() {
             </PaymentBackendProvider>
             </AuthProvider>
           </LanguageProvider>
-        </DatabaseProvider>
+        {/* </DatabaseProvider> */}
       </QueryClientProvider>
     </trpc.Provider>
   );

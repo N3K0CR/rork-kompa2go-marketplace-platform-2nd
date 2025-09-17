@@ -98,15 +98,15 @@ export const [DatabaseProvider, useDatabaseContext] = createContextHook(() => {
       
       console.log('Initializing database...');
       
-      // Load database modules dynamically
-      const modules = await loadDatabaseModules();
-      setDbModules(modules);
-      
       if (Platform.OS === 'web') {
         console.log('Web platform - using mock database');
+        setDbModules(mockQueries);
         setIsInitialized(true);
         console.log('Mock database initialized for web');
       } else {
+        // Load database modules dynamically only on native platforms
+        const modules = await loadDatabaseModules();
+        setDbModules(modules);
         await modules.runMigrations();
         setIsInitialized(true);
         console.log('Database initialized successfully');
@@ -152,57 +152,64 @@ export const [DatabaseProvider, useDatabaseContext] = createContextHook(() => {
   }, [dbModules]);
 
   useEffect(() => {
-    initializeDatabase();
+    // Add a small delay to ensure all other contexts are initialized first
+    const timer = setTimeout(() => {
+      initializeDatabase();
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, [initializeDatabase]);
 
-  return useMemo(() => ({
+  const contextValue = useMemo(() => ({
     isInitialized,
     isLoading,
     error,
     
     // User operations
-    createUser: dbModules.userQueries.create,
-    getUserById: dbModules.userQueries.getById,
-    getUserByEmail: dbModules.userQueries.getByEmail,
-    updateUser: dbModules.userQueries.update,
+    createUser: dbModules?.userQueries?.create || mockQueries.userQueries.create,
+    getUserById: dbModules?.userQueries?.getById || mockQueries.userQueries.getById,
+    getUserByEmail: dbModules?.userQueries?.getByEmail || mockQueries.userQueries.getByEmail,
+    updateUser: dbModules?.userQueries?.update || mockQueries.userQueries.update,
     
     // Service operations
-    getAllServices: dbModules.serviceQueries.getAll,
-    getServicesByCategory: dbModules.serviceQueries.getByCategory,
-    searchServices: dbModules.serviceQueries.search,
+    getAllServices: dbModules?.serviceQueries?.getAll || mockQueries.serviceQueries.getAll,
+    getServicesByCategory: dbModules?.serviceQueries?.getByCategory || mockQueries.serviceQueries.getByCategory,
+    searchServices: dbModules?.serviceQueries?.search || mockQueries.serviceQueries.search,
     
     // Provider operations
-    getProviderById: dbModules.providerQueries.getById,
-    getProvidersByLocation: dbModules.providerQueries.getByLocation,
-    getTopRatedProviders: dbModules.providerQueries.getTopRated,
+    getProviderById: dbModules?.providerQueries?.getById || mockQueries.providerQueries.getById,
+    getProvidersByLocation: dbModules?.providerQueries?.getByLocation || mockQueries.providerQueries.getByLocation,
+    getTopRatedProviders: dbModules?.providerQueries?.getTopRated || mockQueries.providerQueries.getTopRated,
     
     // Appointment operations
-    createAppointment: dbModules.appointmentQueries.create,
-    getAppointmentsByClientId: dbModules.appointmentQueries.getByClientId,
-    getAppointmentsByProviderId: dbModules.appointmentQueries.getByProviderId,
-    updateAppointmentStatus: dbModules.appointmentQueries.updateStatus,
+    createAppointment: dbModules?.appointmentQueries?.create || mockQueries.appointmentQueries.create,
+    getAppointmentsByClientId: dbModules?.appointmentQueries?.getByClientId || mockQueries.appointmentQueries.getByClientId,
+    getAppointmentsByProviderId: dbModules?.appointmentQueries?.getByProviderId || mockQueries.appointmentQueries.getByProviderId,
+    updateAppointmentStatus: dbModules?.appointmentQueries?.updateStatus || mockQueries.appointmentQueries.updateStatus,
     
     // Chat operations
-    createChatMessage: dbModules.chatQueries.createMessage,
-    getChatMessages: dbModules.chatQueries.getMessagesByChatId,
-    getRecentChats: dbModules.chatQueries.getRecentChats,
+    createChatMessage: dbModules?.chatQueries?.createMessage || mockQueries.chatQueries.createMessage,
+    getChatMessages: dbModules?.chatQueries?.getMessagesByChatId || mockQueries.chatQueries.getMessagesByChatId,
+    getRecentChats: dbModules?.chatQueries?.getRecentChats || mockQueries.chatQueries.getRecentChats,
     
     // OKoins operations
-    createOkoinsTransaction: dbModules.okoinsQueries.createTransaction,
-    getOkoinsBalance: dbModules.okoinsQueries.getUserBalance,
-    getOkoinsTransactions: dbModules.okoinsQueries.getUserTransactions,
+    createOkoinsTransaction: dbModules?.okoinsQueries?.createTransaction || mockQueries.okoinsQueries.createTransaction,
+    getOkoinsBalance: dbModules?.okoinsQueries?.getUserBalance || mockQueries.okoinsQueries.getUserBalance,
+    getOkoinsTransactions: dbModules?.okoinsQueries?.getUserTransactions || mockQueries.okoinsQueries.getUserTransactions,
     
     // Wallet operations
-    createWalletTransaction: dbModules.walletQueries.createTransaction,
-    getWalletBalance: dbModules.walletQueries.getUserBalance,
-    getWalletTransactions: dbModules.walletQueries.getUserTransactions,
+    createWalletTransaction: dbModules?.walletQueries?.createTransaction || mockQueries.walletQueries.createTransaction,
+    getWalletBalance: dbModules?.walletQueries?.getUserBalance || mockQueries.walletQueries.getUserBalance,
+    getWalletTransactions: dbModules?.walletQueries?.getUserTransactions || mockQueries.walletQueries.getUserTransactions,
     
     // Review operations
-    createReview: dbModules.reviewQueries.create,
-    getProviderReviews: dbModules.reviewQueries.getByProviderId,
+    createReview: dbModules?.reviewQueries?.create || mockQueries.reviewQueries.create,
+    getProviderReviews: dbModules?.reviewQueries?.getByProviderId || mockQueries.reviewQueries.getByProviderId,
     
     // Utility functions
     initializeDatabase,
     seedData
   }), [isInitialized, isLoading, error, dbModules, initializeDatabase, seedData]);
+  
+  return contextValue;
 });

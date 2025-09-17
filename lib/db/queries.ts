@@ -1,88 +1,118 @@
 import { Platform } from 'react-native';
-import { db } from './index';
 
 // Platform-specific imports to avoid SharedArrayBuffer issues on web
 let eq: any, desc: any, and: any, or: any, like: any;
+let db: any;
+let schema: any;
 
-if (Platform.OS !== 'web') {
-  try {
-    const drizzleORM = require('drizzle-orm');
-    eq = drizzleORM.eq;
-    desc = drizzleORM.desc;
-    and = drizzleORM.and;
-    or = drizzleORM.or;
-    like = drizzleORM.like;
-  } catch (error) {
-    console.error('Failed to load Drizzle ORM modules:', error);
+// Initialize database and ORM functions
+const initializeDbAndORM = async () => {
+  if (Platform.OS === 'web') {
+    // Mock functions for web
+    eq = () => ({});
+    desc = () => ({});
+    and = () => ({});
+    or = () => ({});
+    like = () => ({});
+    
+    // Mock db for web
+    db = {
+      select: () => ({ from: () => ({ where: () => Promise.resolve([]) }) }),
+      insert: () => ({ values: () => ({ returning: () => Promise.resolve([]) }) }),
+      update: () => ({ set: () => ({ where: () => ({ returning: () => Promise.resolve([]) }) }) }),
+      delete: () => ({ where: () => Promise.resolve() })
+    };
+    
+    schema = {};
+  } else {
+    try {
+      const [dbModule, drizzleORM, schemaModule] = await Promise.all([
+        import('./index'),
+        import('drizzle-orm'),
+        import('./schema')
+      ]);
+      
+      db = await dbModule.getDb();
+      schema = schemaModule;
+      eq = drizzleORM.eq;
+      desc = drizzleORM.desc;
+      and = drizzleORM.and;
+      or = drizzleORM.or;
+      like = drizzleORM.like;
+    } catch (error) {
+      console.error('Failed to load database modules:', error);
+      throw error;
+    }
   }
-} else {
-  // Mock functions for web
-  eq = () => ({});
-  desc = () => ({});
-  and = () => ({});
-  or = () => ({});
-  like = () => ({});
-}
-import { 
-  users, 
-  services, 
-  providers, 
-  appointments, 
-  chatMessages, 
-  okoinsTransactions, 
-  walletTransactions, 
-  reviews,
+};
 
-  type User,
-  type NewUser,
-  type Service,
-  type NewService,
-  type Provider,
-  type NewProvider,
-  type Appointment,
-  type NewAppointment,
-  type ChatMessage,
-  type NewChatMessage,
-  type OkoinsTransaction,
-  type NewOkoinsTransaction,
-  type WalletTransaction,
-  type NewWalletTransaction,
-  type Review,
-  type NewReview
-} from './schema';
+// Ensure database is initialized before using queries
+const ensureInitialized = async () => {
+  if (!db) {
+    await initializeDbAndORM();
+  }
+};
+
+// Types (will be properly typed on native, any on web)
+type User = any;
+type NewUser = any;
+type Service = any;
+type NewService = any;
+type Provider = any;
+type NewProvider = any;
+type Appointment = any;
+type NewAppointment = any;
+type ChatMessage = any;
+type NewChatMessage = any;
+type OkoinsTransaction = any;
+type NewOkoinsTransaction = any;
+type WalletTransaction = any;
+type NewWalletTransaction = any;
+type Review = any;
+type NewReview = any;
 
 // User operations
 export const userQueries = {
   // Create user
   create: async (userData: NewUser): Promise<User> => {
-    const [user] = await db.insert(users).values(userData).returning();
+    await ensureInitialized();
+    if (Platform.OS === 'web') return userData;
+    const [user] = await db.insert(schema.users).values(userData).returning();
     return user;
   },
 
   // Get user by ID
   getById: async (id: string): Promise<User | undefined> => {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+    await ensureInitialized();
+    if (Platform.OS === 'web') return undefined;
+    const [user] = await db.select().from(schema.users).where(eq(schema.users.id, id));
     return user;
   },
 
   // Get user by email
   getByEmail: async (email: string): Promise<User | undefined> => {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
+    await ensureInitialized();
+    if (Platform.OS === 'web') return undefined;
+    const [user] = await db.select().from(schema.users).where(eq(schema.users.email, email));
     return user;
   },
 
   // Update user
   update: async (id: string, userData: Partial<NewUser>): Promise<User> => {
-    const [user] = await db.update(users)
+    await ensureInitialized();
+    if (Platform.OS === 'web') return { ...userData, id };
+    const [user] = await db.update(schema.users)
       .set({ ...userData, updatedAt: new Date() })
-      .where(eq(users.id, id))
+      .where(eq(schema.users.id, id))
       .returning();
     return user;
   },
 
   // Delete user
   delete: async (id: string): Promise<void> => {
-    await db.delete(users).where(eq(users.id, id));
+    await ensureInitialized();
+    if (Platform.OS === 'web') return;
+    await db.delete(schema.users).where(eq(schema.users.id, id));
   }
 };
 
@@ -90,30 +120,38 @@ export const userQueries = {
 export const serviceQueries = {
   // Create service
   create: async (serviceData: NewService): Promise<Service> => {
-    const [service] = await db.insert(services).values(serviceData).returning();
+    await ensureInitialized();
+    if (Platform.OS === 'web') return serviceData;
+    const [service] = await db.insert(schema.services).values(serviceData).returning();
     return service;
   },
 
   // Get all services
   getAll: async (): Promise<Service[]> => {
-    return await db.select().from(services).where(eq(services.isActive, true));
+    await ensureInitialized();
+    if (Platform.OS === 'web') return [];
+    return await db.select().from(schema.services).where(eq(schema.services.isActive, true));
   },
 
   // Get services by category
   getByCategory: async (category: string): Promise<Service[]> => {
-    return await db.select().from(services)
-      .where(and(eq(services.category, category), eq(services.isActive, true)));
+    await ensureInitialized();
+    if (Platform.OS === 'web') return [];
+    return await db.select().from(schema.services)
+      .where(and(eq(schema.services.category, category), eq(schema.services.isActive, true)));
   },
 
   // Search services
   search: async (query: string): Promise<Service[]> => {
-    return await db.select().from(services)
+    await ensureInitialized();
+    if (Platform.OS === 'web') return [];
+    return await db.select().from(schema.services)
       .where(and(
         or(
-          like(services.name, `%${query}%`),
-          like(services.description, `%${query}%`)
+          like(schema.services.name, `%${query}%`),
+          like(schema.services.description, `%${query}%`)
         ),
-        eq(services.isActive, true)
+        eq(schema.services.isActive, true)
       ));
   }
 };
@@ -122,40 +160,52 @@ export const serviceQueries = {
 export const providerQueries = {
   // Create provider
   create: async (providerData: NewProvider): Promise<Provider> => {
-    const [provider] = await db.insert(providers).values(providerData).returning();
+    await ensureInitialized();
+    if (Platform.OS === 'web') return providerData;
+    const [provider] = await db.insert(schema.providers).values(providerData).returning();
     return provider;
   },
 
   // Get provider by ID
   getById: async (id: string): Promise<Provider | undefined> => {
-    const [provider] = await db.select().from(providers).where(eq(providers.id, id));
+    await ensureInitialized();
+    if (Platform.OS === 'web') return undefined;
+    const [provider] = await db.select().from(schema.providers).where(eq(schema.providers.id, id));
     return provider;
   },
 
   // Get provider by user ID
   getByUserId: async (userId: string): Promise<Provider | undefined> => {
-    const [provider] = await db.select().from(providers).where(eq(providers.userId, userId));
+    await ensureInitialized();
+    if (Platform.OS === 'web') return undefined;
+    const [provider] = await db.select().from(schema.providers).where(eq(schema.providers.userId, userId));
     return provider;
   },
 
   // Get providers by location
   getByLocation: async (location: string): Promise<Provider[]> => {
-    return await db.select().from(providers)
-      .where(like(providers.location, `%${location}%`));
+    await ensureInitialized();
+    if (Platform.OS === 'web') return [];
+    return await db.select().from(schema.providers)
+      .where(like(schema.providers.location, `%${location}%`));
   },
 
   // Get top rated providers
   getTopRated: async (limit: number = 10): Promise<Provider[]> => {
-    return await db.select().from(providers)
-      .orderBy(desc(providers.rating))
+    await ensureInitialized();
+    if (Platform.OS === 'web') return [];
+    return await db.select().from(schema.providers)
+      .orderBy(desc(schema.providers.rating))
       .limit(limit);
   },
 
   // Update provider
   update: async (id: string, providerData: Partial<NewProvider>): Promise<Provider> => {
-    const [provider] = await db.update(providers)
+    await ensureInitialized();
+    if (Platform.OS === 'web') return { ...providerData, id };
+    const [provider] = await db.update(schema.providers)
       .set(providerData)
-      .where(eq(providers.id, id))
+      .where(eq(schema.providers.id, id))
       .returning();
     return provider;
   }
@@ -165,35 +215,45 @@ export const providerQueries = {
 export const appointmentQueries = {
   // Create appointment
   create: async (appointmentData: NewAppointment): Promise<Appointment> => {
-    const [appointment] = await db.insert(appointments).values(appointmentData).returning();
+    await ensureInitialized();
+    if (Platform.OS === 'web') return appointmentData;
+    const [appointment] = await db.insert(schema.appointments).values(appointmentData).returning();
     return appointment;
   },
 
   // Get appointment by ID
   getById: async (id: string): Promise<Appointment | undefined> => {
-    const [appointment] = await db.select().from(appointments).where(eq(appointments.id, id));
+    await ensureInitialized();
+    if (Platform.OS === 'web') return undefined;
+    const [appointment] = await db.select().from(schema.appointments).where(eq(schema.appointments.id, id));
     return appointment;
   },
 
   // Get appointments by client ID
   getByClientId: async (clientId: string): Promise<Appointment[]> => {
-    return await db.select().from(appointments)
-      .where(eq(appointments.clientId, clientId))
-      .orderBy(desc(appointments.scheduledAt));
+    await ensureInitialized();
+    if (Platform.OS === 'web') return [];
+    return await db.select().from(schema.appointments)
+      .where(eq(schema.appointments.clientId, clientId))
+      .orderBy(desc(schema.appointments.scheduledAt));
   },
 
   // Get appointments by provider ID
   getByProviderId: async (providerId: string): Promise<Appointment[]> => {
-    return await db.select().from(appointments)
-      .where(eq(appointments.providerId, providerId))
-      .orderBy(desc(appointments.scheduledAt));
+    await ensureInitialized();
+    if (Platform.OS === 'web') return [];
+    return await db.select().from(schema.appointments)
+      .where(eq(schema.appointments.providerId, providerId))
+      .orderBy(desc(schema.appointments.scheduledAt));
   },
 
   // Update appointment status
   updateStatus: async (id: string, status: 'pending' | 'confirmed' | 'completed' | 'cancelled'): Promise<Appointment> => {
-    const [appointment] = await db.update(appointments)
+    await ensureInitialized();
+    if (Platform.OS === 'web') return { id, status };
+    const [appointment] = await db.update(schema.appointments)
       .set({ status, updatedAt: new Date() })
-      .where(eq(appointments.id, id))
+      .where(eq(schema.appointments.id, id))
       .returning();
     return appointment;
   }
@@ -203,23 +263,29 @@ export const appointmentQueries = {
 export const chatQueries = {
   // Create message
   createMessage: async (messageData: NewChatMessage): Promise<ChatMessage> => {
-    const [message] = await db.insert(chatMessages).values(messageData).returning();
+    await ensureInitialized();
+    if (Platform.OS === 'web') return messageData;
+    const [message] = await db.insert(schema.chatMessages).values(messageData).returning();
     return message;
   },
 
   // Get messages by chat ID
   getMessagesByChatId: async (chatId: string, limit: number = 50): Promise<ChatMessage[]> => {
-    return await db.select().from(chatMessages)
-      .where(eq(chatMessages.chatId, chatId))
-      .orderBy(desc(chatMessages.createdAt))
+    await ensureInitialized();
+    if (Platform.OS === 'web') return [];
+    return await db.select().from(schema.chatMessages)
+      .where(eq(schema.chatMessages.chatId, chatId))
+      .orderBy(desc(schema.chatMessages.createdAt))
       .limit(limit);
   },
 
   // Get recent chats for user
   getRecentChats: async (userId: string): Promise<{ chatId: string; lastMessage: ChatMessage }[]> => {
-    const recentMessages = await db.select().from(chatMessages)
-      .where(eq(chatMessages.senderId, userId))
-      .orderBy(desc(chatMessages.createdAt));
+    await ensureInitialized();
+    if (Platform.OS === 'web') return [];
+    const recentMessages = await db.select().from(schema.chatMessages)
+      .where(eq(schema.chatMessages.senderId, userId))
+      .orderBy(desc(schema.chatMessages.createdAt));
     
     const chatMap = new Map<string, ChatMessage>();
     recentMessages.forEach((message: ChatMessage) => {
@@ -239,14 +305,18 @@ export const chatQueries = {
 export const okoinsQueries = {
   // Create transaction
   createTransaction: async (transactionData: NewOkoinsTransaction): Promise<OkoinsTransaction> => {
-    const [transaction] = await db.insert(okoinsTransactions).values(transactionData).returning();
+    await ensureInitialized();
+    if (Platform.OS === 'web') return transactionData;
+    const [transaction] = await db.insert(schema.okoinsTransactions).values(transactionData).returning();
     return transaction;
   },
 
   // Get user balance
   getUserBalance: async (userId: string): Promise<number> => {
-    const transactions = await db.select().from(okoinsTransactions)
-      .where(eq(okoinsTransactions.userId, userId));
+    await ensureInitialized();
+    if (Platform.OS === 'web') return 0;
+    const transactions = await db.select().from(schema.okoinsTransactions)
+      .where(eq(schema.okoinsTransactions.userId, userId));
     
     return transactions.reduce((balance: number, transaction: OkoinsTransaction) => {
       return transaction.type === 'spent' 
@@ -257,9 +327,11 @@ export const okoinsQueries = {
 
   // Get user transactions
   getUserTransactions: async (userId: string, limit: number = 50): Promise<OkoinsTransaction[]> => {
-    return await db.select().from(okoinsTransactions)
-      .where(eq(okoinsTransactions.userId, userId))
-      .orderBy(desc(okoinsTransactions.createdAt))
+    await ensureInitialized();
+    if (Platform.OS === 'web') return [];
+    return await db.select().from(schema.okoinsTransactions)
+      .where(eq(schema.okoinsTransactions.userId, userId))
+      .orderBy(desc(schema.okoinsTransactions.createdAt))
       .limit(limit);
   }
 };
@@ -268,16 +340,20 @@ export const okoinsQueries = {
 export const walletQueries = {
   // Create transaction
   createTransaction: async (transactionData: NewWalletTransaction): Promise<WalletTransaction> => {
-    const [transaction] = await db.insert(walletTransactions).values(transactionData).returning();
+    await ensureInitialized();
+    if (Platform.OS === 'web') return transactionData;
+    const [transaction] = await db.insert(schema.walletTransactions).values(transactionData).returning();
     return transaction;
   },
 
   // Get user balance
   getUserBalance: async (userId: string): Promise<number> => {
-    const transactions = await db.select().from(walletTransactions)
+    await ensureInitialized();
+    if (Platform.OS === 'web') return 0;
+    const transactions = await db.select().from(schema.walletTransactions)
       .where(and(
-        eq(walletTransactions.userId, userId),
-        eq(walletTransactions.status, 'completed')
+        eq(schema.walletTransactions.userId, userId),
+        eq(schema.walletTransactions.status, 'completed')
       ));
     
     return transactions.reduce((balance: number, transaction: WalletTransaction) => {
@@ -296,9 +372,11 @@ export const walletQueries = {
 
   // Get user transactions
   getUserTransactions: async (userId: string, limit: number = 50): Promise<WalletTransaction[]> => {
-    return await db.select().from(walletTransactions)
-      .where(eq(walletTransactions.userId, userId))
-      .orderBy(desc(walletTransactions.createdAt))
+    await ensureInitialized();
+    if (Platform.OS === 'web') return [];
+    return await db.select().from(schema.walletTransactions)
+      .where(eq(schema.walletTransactions.userId, userId))
+      .orderBy(desc(schema.walletTransactions.createdAt))
       .limit(limit);
   }
 };
@@ -307,29 +385,33 @@ export const walletQueries = {
 export const reviewQueries = {
   // Create review
   create: async (reviewData: NewReview): Promise<Review> => {
-    const [review] = await db.insert(reviews).values(reviewData).returning();
+    await ensureInitialized();
+    if (Platform.OS === 'web') return reviewData;
+    const [review] = await db.insert(schema.reviews).values(reviewData).returning();
     
     // Update provider rating
-    const providerReviews = await db.select().from(reviews)
-      .where(eq(reviews.providerId, reviewData.providerId));
+    const providerReviews = await db.select().from(schema.reviews)
+      .where(eq(schema.reviews.providerId, reviewData.providerId));
     
     const avgRating = providerReviews.reduce((sum: number, r: Review) => sum + r.rating, 0) / providerReviews.length;
     
-    await db.update(providers)
+    await db.update(schema.providers)
       .set({ 
         rating: avgRating, 
         totalReviews: providerReviews.length 
       })
-      .where(eq(providers.id, reviewData.providerId));
+      .where(eq(schema.providers.id, reviewData.providerId));
     
     return review;
   },
 
   // Get reviews by provider ID
   getByProviderId: async (providerId: string, limit: number = 20): Promise<Review[]> => {
-    return await db.select().from(reviews)
-      .where(eq(reviews.providerId, providerId))
-      .orderBy(desc(reviews.createdAt))
+    await ensureInitialized();
+    if (Platform.OS === 'web') return [];
+    return await db.select().from(schema.reviews)
+      .where(eq(schema.reviews.providerId, providerId))
+      .orderBy(desc(schema.reviews.createdAt))
       .limit(limit);
   }
 };
@@ -337,6 +419,11 @@ export const reviewQueries = {
 // Seed data function
 export const seedDatabase = async () => {
   console.log('Seeding database...');
+  
+  if (Platform.OS === 'web') {
+    console.log('Web platform - skipping database seeding');
+    return;
+  }
   
   // Seed services
   const serviceCategories = [

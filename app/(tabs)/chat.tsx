@@ -167,7 +167,7 @@ export default function ChatScreen() {
         <View style={styles.headerLeft}>
           <Brain size={24} color="#D81B60" />
           <View>
-            <Text style={styles.headerTitle}>KompiBrain</Text>
+            <Text style={styles.headerTitle}>Kompi</Text>
             <Text style={styles.headerSubtitle}>
               {isActive ? '🧠 Memoria Activa' : '💤 Inactivo'} • {conversations.length} conversaciones
             </Text>
@@ -221,7 +221,7 @@ export default function ChatScreen() {
         {messages.length === 0 ? (
           <View style={styles.emptyState}>
             <Brain size={48} color="#D81B60" />
-            <Text style={styles.emptyStateTitle}>¡Hola! Soy KompiBrain</Text>
+            <Text style={styles.emptyStateTitle}>¡Hola! Soy Kompi</Text>
             <Text style={styles.emptyStateText}>
               Tu asistente inteligente con memoria. Puedo recordar nuestras conversaciones anteriores y ayudarte mejor cada vez.
             </Text>
@@ -266,7 +266,7 @@ export default function ChatScreen() {
         {isLoading && (
           <View style={[styles.messageContainer, styles.botMessage]}>
             <View style={[styles.messageBubble, styles.botBubble]}>
-              <Text style={styles.loadingText}>🧠 KompiBrain está pensando...</Text>
+              <Text style={styles.loadingText}>🧠 Kompi está pensando...</Text>
             </View>
           </View>
         )}
