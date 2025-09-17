@@ -414,24 +414,27 @@ export default function SearchScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>{t('search_services_title')}</Text>
         
-        <View style={styles.searchContainer}>
-          <View style={styles.searchBar}>
-            <Search size={20} color="#666" />
-            <TextInput
-              style={styles.searchInput}
-              placeholder={t('what_service_need')}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onSubmitEditing={handleTextSearch}
-              placeholderTextColor="#666"
-              returnKeyType="search"
-            />
+        {/* Hide search bar for admin users */}
+        {user?.userType !== 'admin' && (
+          <View style={styles.searchContainer}>
+            <View style={styles.searchBar}>
+              <Search size={20} color="#666" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder={t('what_service_need')}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onSubmitEditing={handleTextSearch}
+                placeholderTextColor="#666"
+                returnKeyType="search"
+              />
+            </View>
+            
+            <TouchableOpacity style={styles.filterButton}>
+              <Filter size={20} color="#D81B60" />
+            </TouchableOpacity>
           </View>
-          
-          <TouchableOpacity style={styles.filterButton}>
-            <Filter size={20} color="#D81B60" />
-          </TouchableOpacity>
-        </View>
+        )}
 
         {/* ID Search Section */}
         <View style={styles.idSearchContainer}>
@@ -457,27 +460,30 @@ export default function SearchScreen() {
           </View>
         </View>
 
-        <View style={styles.locationContainer}>
-          <MapPin size={16} color="#666" />
-          <Text style={styles.locationText}>{getLocationText()}</Text>
-          <TouchableOpacity 
-            style={[
-              styles.shareLocationButton,
-              isLoadingLocation && styles.shareLocationButtonLoading
-            ]}
-            onPress={handleLocationRequest}
-            disabled={isLoadingLocation}
-          >
-            {isLoadingLocation ? (
-              <ActivityIndicator size={14} color="#D81B60" />
-            ) : (
-              <Navigation size={14} color="#D81B60" />
-            )}
-            <Text style={styles.shareLocationText}>
-              {isLoadingLocation ? 'Obteniendo...' : t('share_location')}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {/* Hide location sharing for admin users */}
+        {user?.userType !== 'admin' && (
+          <View style={styles.locationContainer}>
+            <MapPin size={16} color="#666" />
+            <Text style={styles.locationText}>{getLocationText()}</Text>
+            <TouchableOpacity 
+              style={[
+                styles.shareLocationButton,
+                isLoadingLocation && styles.shareLocationButtonLoading
+              ]}
+              onPress={handleLocationRequest}
+              disabled={isLoadingLocation}
+            >
+              {isLoadingLocation ? (
+                <ActivityIndicator size={14} color="#D81B60" />
+              ) : (
+                <Navigation size={14} color="#D81B60" />
+              )}
+              <Text style={styles.shareLocationText}>
+                {isLoadingLocation ? 'Obteniendo...' : t('share_location')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
         
         {/* Search Status */}
         {getSearchStatusText() && (
