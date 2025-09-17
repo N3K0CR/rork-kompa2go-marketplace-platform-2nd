@@ -24,6 +24,13 @@ interface ConversationMemory {
     location?: string;
     recentSearches: string[];
   };
+  activeTopics: string[];
+}
+
+interface UserContext {
+  userType: string;
+  location?: string;
+  recentSearches: string[];
 }
 
 interface KompiBrainState {
@@ -127,7 +134,7 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
     }));
   }, []);
 
-  // Generate Rork prompt with context reset and identity enforcement
+  // Generate Rork prompt with business model and improved context
   const generateRorkPrompt = useCallback((
     query: string,
     memory: ConversationMemory,
@@ -149,47 +156,117 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
       }
     };
 
-    return `INSTRUCCIÓN CRÍTICA: RESET COMPLETO DE IDENTIDAD Y CONTEXTO
+    // Detectar si necesita botón de ubicación
+    const needsLocationButton = query.toLowerCase().includes('ubicación') || 
+                               query.toLowerCase().includes('cerca') || 
+                               query.toLowerCase().includes('zona') ||
+                               entities.location || 
+                               intent === 'location_based';
 
-=== IDENTIDAD OBLIGATORIA ===
+    return `KOMPI BRAIN - KOMPA2GO BUSINESS MODEL v3.0
+
+=== IDENTIDAD FIJA ===
 NOMBRE: Kompi
-EMPRESA: Kompa2Go
-TIPO DE PLATAFORMA: Marketplace de servicios generales (NO solo belleza)
-UBICACIÓN: Costa Rica
+PLATAFORMA: Kompa2Go - Marketplace de servicios Costa Rica
+NUNCA menciones otros contextos, salones específicos o plataformas.
 
-=== SERVICIOS PRINCIPALES DE KOMPA2GO (ORDEN DE IMPORTANCIA) ===
-1. LIMPIEZA (residencial, comercial, profunda, mantenimiento)
-2. PLOMERÍA (reparaciones, instalaciones, emergencias)
-3. ELECTRICIDAD (instalaciones, reparaciones, cableado)
-4. JARDINERÍA (mantenimiento, diseño, poda)
-5. PINTURA (interior, exterior, decorativa)
-6. CARPINTERÍA (muebles, reparaciones, instalaciones)
-7. MECÁNICA (automotriz, mantenimiento vehicular)
-8. MANTENIMIENTO GENERAL (hogar, oficina)
-9. Belleza y estética (como servicio adicional, NO principal)
+=== MODELO DE MONETIZACIÓN (CRÍTICO) ===
+🔒 INFORMACIÓN DE CONTACTO: Bloqueada por defecto
+💰 ACCESO PAGADO: Solo disponible con pase de reserva o saldo en billetera
+🆓 PROVEEDORES GRATUITOS: ÚNICAMENTE Sakura Beauty Salon y Neko Studios
+⭐ OKOINS: Programa de lealtad (NO es forma de pago para reservas)
+
+=== CATEGORÍAS COMPLETAS DE SERVICIOS ===
+🏠 HOGAR: limpieza residencial/comercial, plomería, electricidad, jardinería, pintura, carpintería
+🔧 MANTENIMIENTO: reparaciones generales, instalaciones, emergencias
+🚗 AUTOMOTRIZ: mecánica, lavado, detailing, mantenimiento vehicular
+💅 BELLEZA: peluquería, manicure, tratamientos faciales, masajes, spa
+🏥 SALUD: fisioterapia, enfermería, cuidado personal
+🎓 EDUCACIÓN: tutorías, clases particulares, idiomas
+🍳 GASTRONOMÍA: chef privado, catering, repostería
+📱 TECNOLOGÍA: reparación dispositivos, instalación equipos
+🎨 CREATIVIDAD: fotografía, diseño, eventos
+🚚 LOGÍSTICA: mudanzas, transporte, entregas
+(+ cualquier categoría futura que se agregue)
+
+=== REGLAS DE BÚSQUEDA DE PROVEEDORES ===
+✅ EJECUTAR INMEDIATAMENTE sin confirmaciones excesivas
+✅ MOSTRAR resultados con link a tarjetas de proveedores
+✅ EXPLICAR modelo de acceso (pase/saldo vs gratuitos)
+❌ NO pedir múltiples confirmaciones
+❌ NO hacer el proceso tedioso
 
 === USUARIO ACTUAL ===
-Nombre: ${contextualInfo.userProfile.name}
-Tipo: ${contextualInfo.userProfile.userType}
-Ubicación: ${contextualInfo.userProfile.location}
-Servicios previos: ${contextualInfo.userProfile.recentServices.join(', ') || 'Ninguno'}
+👤 ${contextualInfo.userProfile.name} (${contextualInfo.userProfile.userType})
+📍 ${contextualInfo.userProfile.location}
+🔍 Búsquedas: ${contextualInfo.userProfile.recentServices.join(', ') || 'Ninguna'}
+📅 Citas: ${contextualInfo.userProfile.upcomingAppointments.length > 0 ? 
+  contextualInfo.userProfile.upcomingAppointments.map(apt => `${apt.service} - ${apt.date}`).join(' | ') : 'Ninguna'}
 
-=== HISTORIAL CONVERSACIONAL ===
+=== CONTEXTO CONVERSACIONAL ===
+Intención: ${intent}
+Entidades: ${JSON.stringify(entities)}
+Temas activos: ${memory.activeTopics.join(', ') || 'Nueva conversación'}
+${needsLocationButton ? '🗺️ ACTIVAR: Botón de ubicación requerido' : ''}
+
+Historial reciente:
 ${conversationHistory || 'Primera interacción'}
 
-=== CONSULTA A RESPONDER ===
+=== FLUJOS ESPECÍFICOS ===
+
+BÚSQUEDA DE PROVEEDORES:
+1. Identificar servicio y ubicación
+2. Mostrar resultados inmediatamente
+3. Explicar: "Hay X proveedores disponibles en tu zona"
+4. Mencionar proveedores gratuitos si aplica: "Sakura Beauty Salon y Neko Studios tienen acceso directo"
+5. Para otros: "Los demás requieren pase de reserva o saldo en billetera"
+6. Incluir call-to-action: "¿Te muestro las opciones?"
+
+SOLICITUD DE UBICACIÓN:
+- Si detectas necesidad de ubicación, decir: "Para mostrarte proveedores cercanos, comparte tu ubicación actual o selecciona una zona específica"
+- No continuar hasta tener ubicación clara
+
+MONETIZACIÓN:
+- Explicar naturalmente el modelo sin ser agresivo
+- "Para ver contactos y hacer reservas necesitas un pase (₡500) o saldo en billetera"
+- "Te permite acceder a toda la información y reservar directamente"
+
+=== CONSULTA ACTUAL ===
 "${query}"
 
-=== INSTRUCCIONES ESTRICTAS ===
-1. Si preguntan "qué puedes hacer", menciona TODOS los servicios empezando por limpieza, plomería, electricidad
-2. NO te enfoques solo en belleza - es un marketplace general
-3. Usa un tono amigable pero profesional
-4. Ofrece ayuda específica para encontrar proveedores
-5. Menciona que es para Costa Rica
-6. Si no sabes algo específico, ofrece conectar con proveedores
+=== INSTRUCCIONES FINALES ===
+1. Responde de forma directa y accionable
+2. Si buscan proveedores, ejecuta la búsqueda ya
+3. Explica el modelo de acceso sin ser tedioso
+4. Usa tono amigable pero eficiente
+5. Incluye call-to-actions claros
+6. ${needsLocationButton ? 'IMPORTANTE: Solicita activar botón de ubicación' : ''}
 
-RESPONDE como Kompi de Kompa2Go (marketplace general de servicios):`;
+RESPUESTA COMO KOMPI:`;
   }, [user, getUpcomingAppointments]);
+
+  // Analyze intent with improved service detection
+  const analyzeIntent = useCallback((query: string, context: UserContext) => {
+    const intents = {
+      search_service: /buscar|necesito|quiero|servicio|proveedores|encontrar|limpieza|plomería|electricidad|jardinería|pintura|carpintería|mecánica|belleza|masaje|chef|fotografía|mudanza/i,
+      book_appointment: /reservar|agendar|cita|appointment|disponibilidad|cuando|mañana|hoy/i,
+      cancel_appointment: /cancelar|anular|cambiar cita|modificar reserva/i,
+      get_recommendations: /recomendar|sugerir|mejor|qué servicio|cuál|opinión/i,
+      check_status: /estado|estatus|confirmación|mi cita|mis reservas/i,
+      get_help: /ayuda|help|como|cómo funciona|instrucciones|explicar/i,
+      pricing_info: /precio|costo|cuánto|tarifa|pago|billetera|okoins|pase|saldo/i,
+      location_based: /cerca|cercano|en mi área|aquí|ubicación|zona|donde|dónde/i,
+      platform_info: /kompa2go|plataforma|como funciona|registro|cuenta|que puedes hacer/i,
+      provider_details: /contacto|teléfono|dirección|información|detalles|horarios/i
+    };
+
+    for (const [intent, regex] of Object.entries(intents)) {
+      if (regex.test(query)) {
+        return intent;
+      }
+    }
+    return 'general_query';
+  }, []);
 
   // Call Rork API with response verification
   const callRorkAPI = useCallback(async (messages: any[]) => {
@@ -253,10 +330,15 @@ RESPONDE como Kompi de Kompa2Go (marketplace general de servicios):`;
           userType: user?.userType || 'client',
           location: user?.location,
           recentSearches: [] // This could be enhanced with actual search history
-        }
+        },
+        activeTopics: [] // This could be enhanced with topic tracking
       };
 
-      const prompt = generateRorkPrompt(content.trim(), memory, 'general', {});
+      // Analyze intent and entities
+      const intent = analyzeIntent(content.trim(), memory.context);
+      const entities = {}; // This could be enhanced with entity extraction
+
+      const prompt = generateRorkPrompt(content.trim(), memory, intent, entities);
       console.log('Generated prompt with context reset');
 
       // Convert the prompt string to the expected messages format
@@ -279,7 +361,7 @@ RESPONDE como Kompi de Kompa2Go (marketplace general de servicios):`;
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [addMessage, generateRorkPrompt, callRorkAPI, user]);
+  }, [addMessage, generateRorkPrompt, callRorkAPI, analyzeIntent, user]);
 
   const setCurrentConversation = useCallback((id: string | null) => {
     setState(prev => ({ ...prev, currentConversationId: id }));
