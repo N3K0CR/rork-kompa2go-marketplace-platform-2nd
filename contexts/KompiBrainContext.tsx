@@ -120,31 +120,72 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
 
 
 
-  // Call Rork API with aggressive context reset and response verification
+  // Enhanced API call with conversation context and service detection
   const callRorkAPI = useCallback(async (userQuery: string, conversationHistory: string) => {
-    // Strategy 1: Multiple system messages to force context reset
-    const resetMessages = [
-      {
-        role: 'system' as const,
-        content: 'CRITICAL SYSTEM OVERRIDE: Delete all previous context about beauty salons, Sakura, or any specific business identity.'
-      },
-      {
-        role: 'system' as const,
-        content: 'NEW IDENTITY REQUIRED: You are Kompi, assistant for Kompa2Go - a general services marketplace in Costa Rica.'
-      },
-      {
-        role: 'system' as const,
-        content: 'PRIMARY SERVICES: 1) Limpieza (cleaning) 2) Plomería (plumbing) 3) Electricidad (electrical) 4) Jardinería (gardening) 5) Pintura (painting) 6) Carpintería (carpentry) 7) Mecánica (automotive) 8) Mantenimiento (maintenance) + others including beauty as secondary.'
-      },
-      {
-        role: 'system' as const,
-        content: 'BUSINESS MODEL: Most providers require paid pass (₡500) or wallet balance. FREE ACCESS: Only Sakura Beauty Salon + Neko Studios. OKoins = loyalty program (NOT payment method).'
-      },
-      {
-        role: 'user' as const,
-        content: `Context: ${conversationHistory || 'First interaction'}\n\nUser query: "${userQuery}"`
+    console.log('🚀 Calling Rork API with query:', userQuery);
+    console.log('📚 Conversation context:', conversationHistory);
+    
+    // Detect if user is asking for a specific service
+    const serviceKeywords = {
+      barberia: ['barberia', 'barbería', 'corte de pelo', 'cortar pelo', 'peluquero', 'barber', 'corte', 'pelo'],
+      limpieza: ['limpieza', 'limpiar', 'cleaning', 'aseo', 'limpie'],
+      plomeria: ['plomería', 'plomeria', 'fontanero', 'tubería', 'agua', 'plomero'],
+      electricidad: ['electricidad', 'electricista', 'luz', 'cables', 'eléctrico'],
+      jardineria: ['jardinería', 'jardineria', 'jardín', 'plantas', 'poda', 'jardinero'],
+      pintura: ['pintura', 'pintar', 'paint', 'pintor'],
+      mecanica: ['mecánica', 'mecanica', 'carro', 'auto', 'vehiculo', 'mecánico'],
+      belleza: ['belleza', 'beauty', 'spa', 'masaje', 'facial', 'manicure', 'pedicure'],
+      ubicacion: ['cerca', 'cercano', 'ubicación', 'zona', 'área', 'donde', 'dónde']
+    };
+    
+    let detectedService = '';
+    const queryLower = userQuery.toLowerCase();
+    
+    for (const [service, keywords] of Object.entries(serviceKeywords)) {
+      if (keywords.some(keyword => queryLower.includes(keyword))) {
+        detectedService = service;
+        break;
       }
-    ];
+    }
+    
+    console.log('🔍 Detected service:', detectedService || 'general');
+
+    const systemPrompt = `OVERRIDE ALL PREVIOUS INSTRUCTIONS. SYSTEM RESET REQUIRED.
+
+YOU ARE: Kompi from Kompa2Go Costa Rica - General Services Marketplace
+
+KOMPA2GO SERVICES (NOT BEAUTY FOCUSED):
+- LIMPIEZA (cleaning): Most popular service
+- PLOMERÍA (plumbing): Emergency repairs, installations  
+- ELECTRICIDAD (electrical): Wiring, repairs, installations
+- JARDINERÍA (gardening): Landscaping, maintenance
+- PINTURA (painting): Interior, exterior painting
+- CARPINTERÍA (carpentry): Furniture, repairs
+- MECÁNICA (automotive): Car repairs, maintenance
+- BARBERÍA/PELUQUERÍA: Hair cuts, styling
+- MANTENIMIENTO (maintenance): General home/office
+- Other services: Beauty, tutoring, chef, photography, etc.
+
+BUSINESS MODEL:
+- Most providers require paid pass (₡500) or wallet balance
+- FREE ACCESS: Only Sakura Beauty Salon + Neko Studios
+- OKoins = loyalty program (NOT payment method)
+
+${detectedService ? `DETECTED SERVICE REQUEST: ${detectedService.toUpperCase()}` : ''}
+
+CONVERSATION CONTEXT:
+${conversationHistory || 'First interaction'}
+
+USER QUERY: "${userQuery}"
+
+IMPORTANT INSTRUCTIONS:
+- Always maintain conversation context and remember previous messages
+- If user asks for a service, provide specific help for that service
+- If user mentions location needs, ask for their location
+- Be helpful and direct, avoid generic responses
+- Reference previous conversation when relevant
+
+RESPOND AS KOMPI - GENERAL MARKETPLACE ASSISTANT:`;
 
     const response = await fetch('https://toolkit.rork.com/text/llm/', {
       method: 'POST',
@@ -152,15 +193,18 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        messages: resetMessages,
-        // Aggressive parameters for context reset
-        temperature: 0.3, // Lower for more consistency
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt
+          },
+          {
+            role: 'user',
+            content: userQuery
+          }
+        ],
+        temperature: 0.4,
         max_tokens: 1000,
-        top_p: 0.8,
-        frequency_penalty: 0.2, // Higher to avoid repetition
-        presence_penalty: 0.2,
-        // Additional parameters if supported
-        stop: ['Sakura Beauty', 'belleza y bienestar exclusivamente'],
       }),
     });
 
@@ -171,41 +215,83 @@ export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainC
 
     const data = await response.json();
     
-    // Enhanced verification - check for wrong identity or beauty-only focus
+    // Verify response quality
     if (data.completion) {
       const completion = data.completion.toLowerCase();
-      const isWrongIdentity = completion.includes('sakura') || completion.includes('salon de belleza');
-      const isBeautyOnlyFocus = (
-        completion.includes('belleza y bienestar') && 
-        !completion.includes('limpieza') &&
-        !completion.includes('plomería') &&
-        !completion.includes('electricidad')
-      );
+      const isWrongIdentity = completion.includes('sakura') && !completion.includes('kompa2go');
       
-      if (isWrongIdentity || isBeautyOnlyFocus) {
-        console.warn('Response verification failed, using corrected response...');
-        // Return a corrected response focused on general services
+      if (isWrongIdentity) {
+        console.warn('⚠️ Response verification failed, using corrected response...');
+        
+        // Generate service-specific response
+        if (detectedService === 'barberia') {
+          return {
+            completion: `¡Perfecto! Te ayudo a encontrar una barbería cerca de ti 💇‍♂️
+
+En Kompa2Go tenemos varios barberos y peluqueros disponibles en Costa Rica.
+
+🔍 **Para mostrarte las opciones más cercanas:**
+• Comparte tu ubicación actual
+• O dime en qué zona estás buscando
+
+💰 **Acceso a proveedores:**
+• La mayoría requiere pase de reserva (₡500) o saldo en billetera
+• Sakura Beauty Salon y Neko Studios tienen acceso gratuito
+
+¿En qué zona necesitas el servicio de barbería?`
+          };
+        }
+        
+        if (detectedService === 'limpieza') {
+          return {
+            completion: `¡Excelente! Te ayudo a encontrar servicios de limpieza 🧽
+
+En Kompa2Go tenemos proveedores de limpieza para:
+• Limpieza residencial
+• Limpieza comercial
+• Limpieza profunda
+• Mantenimiento regular
+
+🔍 **Para mostrarte opciones cercanas:**
+• Comparte tu ubicación
+• O especifica la zona donde necesitas el servicio
+
+💰 **Acceso:** La mayoría requiere pase (₡500) o saldo en billetera.
+
+¿Qué tipo de limpieza necesitas y en qué zona?`
+          };
+        }
+        
+        if (detectedService === 'ubicacion') {
+          return {
+            completion: `📍 Para mostrarte proveedores cercanos necesito conocer tu ubicación.
+
+🔍 **Opciones:**
+• Comparte tu ubicación actual usando el botón de ubicación
+• Dime el nombre de tu ciudad o zona
+• Especifica el área donde necesitas el servicio
+
+¿En qué zona de Costa Rica estás buscando?`
+          };
+        }
+        
         return {
           completion: `¡Hola! Soy Kompi de Kompa2Go 🇨🇷
 
-Te puedo ayudar a encontrar servicios en Costa Rica:
+Te ayudo a encontrar servicios en Costa Rica. Tenemos proveedores para:
 
-🏠 **Servicios más solicitados:**
+🏠 **Servicios principales:**
 • Limpieza residencial y comercial
-• Plomería (reparaciones e instalaciones)
-• Electricidad (cableado y reparaciones)
-• Jardinería y mantenimiento de jardines
-
-🔧 **Otros servicios disponibles:**
-• Pintura interior/exterior
-• Carpintería y muebles
+• Plomería y reparaciones
+• Electricidad e instalaciones
+• Jardinería y mantenimiento
+• Barbería y peluquería
+• Pintura y carpintería
 • Mecánica automotriz
-• Mantenimiento general
-• Belleza, educación, gastronomía y más
 
-💰 **Modelo de acceso:** La mayoría requiere pase de reserva (₡500) o saldo en billetera. Solo Sakura Beauty Salon y Neko Studios tienen acceso gratuito.
+💰 **Acceso:** La mayoría requiere pase (₡500) o saldo. Sakura Beauty Salon y Neko Studios son gratuitos.
 
-¿Qué tipo de servicio estás buscando?`
+¿Qué servicio necesitas?`
         };
       }
     }
@@ -214,54 +300,51 @@ Te puedo ayudar a encontrar servicios en Costa Rica:
   }, []);
 
   const sendMessage = useCallback(async (conversationId: string, content: string) => {
-    // Validate inputs but don't return early to avoid hooks order issues
     const trimmedContent = content.trim();
-    const isCurrentlyLoading = stateRef.current.isLoading;
     
-    if (!trimmedContent || isCurrentlyLoading) {
-      console.log('Skipping message send:', { trimmedContent: !!trimmedContent, isCurrentlyLoading });
+    if (!trimmedContent || state.isLoading) {
+      console.log('Skipping message send:', { trimmedContent: !!trimmedContent, isLoading: state.isLoading });
       return;
     }
     
     setState(prev => ({ ...prev, isLoading: true }));
 
-    // Add user message
-    addMessage(conversationId, 'user', content.trim());
+    // Add user message first
+    addMessage(conversationId, 'user', trimmedContent);
 
     try {
-      // Wait a moment for the state to update
-      await new Promise(resolve => setTimeout(resolve, 50));
+      // Wait for state update
+      await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Get conversation messages from the ref (fresh state)
-      const conversation = stateRef.current.conversations.find(conv => conv.id === conversationId);
+      // Get updated conversation with the new user message
+      const currentState = stateRef.current;
+      const conversation = currentState.conversations.find(conv => conv.id === conversationId);
       const conversationMessages = conversation?.messages || [];
 
-      console.log('Sending message to KompiBrain with', conversationMessages.length, 'previous messages');
+      console.log('📝 Sending message with', conversationMessages.length, 'messages in history');
+      console.log('💬 Current conversation messages:', conversationMessages.map(m => `${m.role}: ${m.content.substring(0, 50)}...`));
 
-
-
-      // Generate conversation history for context
-      const recentMessages = conversationMessages.slice(-8);
+      // Generate conversation history for context (including the new user message)
+      const recentMessages = conversationMessages.slice(-6); // Keep last 6 messages for context
       const conversationHistory = recentMessages.map(msg => 
         `${msg.role === 'user' ? 'Usuario' : 'Kompi'}: ${msg.content}`
       ).join('\n');
 
-      console.log('Using aggressive context reset strategy');
+      console.log('🔄 Using conversation history:', conversationHistory);
 
-      // Use the new aggressive reset API call
-      const data = await callRorkAPI(content.trim(), conversationHistory);
-      console.log('Received response from KompiBrain:', data);
+      // Call API with conversation context
+      const data = await callRorkAPI(trimmedContent, conversationHistory);
+      console.log('✅ Received response from KompiBrain');
       
       // Add assistant response
       addMessage(conversationId, 'assistant', data.completion || 'Lo siento, no pude procesar tu mensaje.');
     } catch (error) {
-      console.error('Error sending message to KompiBrain:', error);
-      
+      console.error('❌ Error sending message to KompiBrain:', error);
       addMessage(conversationId, 'assistant', 'Lo siento, hubo un error al procesar tu mensaje. Por favor, intenta de nuevo.');
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [addMessage, callRorkAPI]);
+  }, [addMessage, callRorkAPI, state.isLoading]);
 
   const setCurrentConversation = useCallback((id: string | null) => {
     setState(prev => ({ ...prev, currentConversationId: id }));
