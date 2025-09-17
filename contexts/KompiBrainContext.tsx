@@ -269,11 +269,12 @@ NUNCA menciones otras aplicaciones o servicios de belleza.`;
   }, []);
 
   const getCurrentConversation = useCallback((): Conversation | null => {
-    if (!state.currentConversationId) {
+    const currentState = stateRef.current;
+    if (!currentState.currentConversationId) {
       return null;
     }
-    return state.conversations.find(conv => conv.id === state.currentConversationId) || null;
-  }, [state.currentConversationId, state.conversations]);
+    return currentState.conversations.find(conv => conv.id === currentState.currentConversationId) || null;
+  }, []);
 
   return useMemo(() => ({
     ...state,
@@ -286,7 +287,18 @@ NUNCA menciones otras aplicaciones o servicios de belleza.`;
     updateSettings,
     clearAllData,
     getCurrentConversation,
-  }), [state, activateKompi, deactivateKompi, createConversation, sendMessage, setCurrentConversation, deleteConversation, updateSettings, clearAllData, getCurrentConversation]);
+  }), [
+    state,
+    activateKompi,
+    deactivateKompi,
+    createConversation,
+    sendMessage,
+    setCurrentConversation,
+    deleteConversation,
+    updateSettings,
+    clearAllData,
+    getCurrentConversation,
+  ]);
 });
 
 export type { KompiBrainContextType, Message, Conversation };
