@@ -46,7 +46,7 @@ type KompiBrainContextType = KompiBrainState & KompiBrainActions;
 
 
 export const [KompiBrainProvider, useKompiBrain] = createContextHook<KompiBrainContextType>(() => {
-  
+  // All hooks must be called in the same order every time
   const [state, setState] = useState<KompiBrainState>({
     isActive: false,
     conversations: [],
@@ -214,7 +214,14 @@ Te puedo ayudar a encontrar servicios en Costa Rica:
   }, []);
 
   const sendMessage = useCallback(async (conversationId: string, content: string) => {
-    if (!content.trim() || stateRef.current.isLoading) return;
+    // Validate inputs but don't return early to avoid hooks order issues
+    const trimmedContent = content.trim();
+    const isCurrentlyLoading = stateRef.current.isLoading;
+    
+    if (!trimmedContent || isCurrentlyLoading) {
+      console.log('Skipping message send:', { trimmedContent: !!trimmedContent, isCurrentlyLoading });
+      return;
+    }
     
     setState(prev => ({ ...prev, isLoading: true }));
 
@@ -301,7 +308,8 @@ Te puedo ayudar a encontrar servicios en Costa Rica:
     return currentState.conversations.find(conv => conv.id === currentState.currentConversationId) || null;
   }, []);
 
-  return useMemo(() => ({
+  // Return the context value - using useMemo to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
     ...state,
     activateKompi,
     deactivateKompi,
@@ -324,6 +332,8 @@ Te puedo ayudar a encontrar servicios en Costa Rica:
     clearAllData,
     getCurrentConversation,
   ]);
+
+  return contextValue;
 });
 
 export type { KompiBrainContextType, Message, Conversation };
