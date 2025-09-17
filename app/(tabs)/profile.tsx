@@ -47,13 +47,23 @@ export default function ProfileScreen() {
               console.log('🔄 Starting logout process...');
               console.log('🔍 Current user before logout:', user);
               
-              // Clear user state immediately to prevent UI issues
+              // Clear user state first
               await signOut();
               
               console.log('✅ Logout successful, redirecting to auth...');
               
-              // Use router.push instead of replace to ensure proper navigation
-              router.push('/auth');
+              // Force navigation to auth screen and reset navigation stack
+              router.replace('/auth');
+              
+              // Additional cleanup - force a small delay to ensure state is cleared
+              setTimeout(() => {
+                console.log('✅ Navigation completed');
+                // Double-check navigation if needed
+                if (user) {
+                  console.log('⚠️ User still exists after logout, forcing navigation again');
+                  router.replace('/onboarding');
+                }
+              }, 200);
               
             } catch (error) {
               console.error('❌ Error during logout:', error);

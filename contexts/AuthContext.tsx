@@ -176,14 +176,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     try {
       console.log('🔄 Starting signOut process...');
-      await AsyncStorage.removeItem('user');
-      console.log('✅ User removed from AsyncStorage');
-      setAuthToken(null); // Clear auth token
-      console.log('✅ Auth token cleared');
+      
+      // Clear user state first to prevent UI issues
       setUser(null);
       console.log('✅ User state cleared');
+      
+      // Clear auth token
+      setAuthToken(null);
+      console.log('✅ Auth token cleared');
+      
+      // Remove from storage
+      await AsyncStorage.removeItem('user');
+      console.log('✅ User removed from AsyncStorage');
+      
+      // Force a small delay to ensure all state updates are processed
+      await new Promise(resolve => setTimeout(resolve, 50));
+      console.log('✅ SignOut process completed successfully');
+      
     } catch (error) {
       console.error('❌ Error signing out:', error);
+      // Even if there's an error, clear the user state
+      setUser(null);
+      setAuthToken(null);
       throw error; // Re-throw to let the caller handle it
     }
   };
