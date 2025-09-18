@@ -153,31 +153,49 @@ export const updateRoute = protectedProcedure
         });
       }
       
+      // Recalcular métricas si cambiaron puntos o modos de transporte
+      let points = existingRoute.points;
+      let transportModes = existingRoute.transportModes;
+      let distance = existingRoute.distance;
+      let duration = existingRoute.duration;
+      let estimatedCost = existingRoute.estimatedCost;
+      let carbonFootprint = existingRoute.carbonFootprint;
+      
+      if (input.points || input.transportModeIds) {
+        if (input.points) {
+          points = input.points.map((point, index) => ({
+            ...point,
+            id: `point_${input.routeId}_${index}`,
+          }));
+        }
+        
+        const transportModeIds = input.transportModeIds || existingRoute.transportModes.map(tm => tm.id);
+        
+        distance = calculateRouteDistance(points);
+        duration = estimateRouteDuration(distance, transportModeIds);
+        estimatedCost = estimateRouteCost(distance, transportModeIds);
+        carbonFootprint = estimateCarbonFootprint(distance, transportModeIds);
+        
+        if (input.transportModeIds) {
+          transportModes = await getTransportModesByIds(transportModeIds);
+        }
+      }
+      
       // Actualizar ruta
       const updatedRoute = {
         ...existingRoute,
-        ...input,
+        name: input.name ?? existingRoute.name,
+        points,
+        transportModes,
+        distance,
+        duration,
+        estimatedCost,
+        carbonFootprint,
+        status: input.status ?? existingRoute.status,
+        isRecurring: input.isRecurring ?? existingRoute.isRecurring,
+        recurringPattern: input.recurringPattern ?? existingRoute.recurringPattern,
         updatedAt: new Date(),
       };
-      
-      // Recalcular métricas si cambiaron puntos o modos de transporte
-      if (input.points || input.transportModeIds) {
-        const points = input.points ? input.points.map((point, index) => ({
-          ...point,
-          id: `point_${input.routeId}_${index}`,
-        })) : existingRoute.points;
-        const transportModeIds = input.transportModeIds || existingRoute.transportModes.map(tm => tm.id);
-        
-        updatedRoute.points = points;
-        updatedRoute.distance = calculateRouteDistance(points);
-        updatedRoute.duration = estimateRouteDuration(updatedRoute.distance, transportModeIds);
-        updatedRoute.estimatedCost = estimateRouteCost(updatedRoute.distance, transportModeIds);
-        updatedRoute.carbonFootprint = estimateCarbonFootprint(updatedRoute.distance, transportModeIds);
-        
-        if (input.transportModeIds) {
-          updatedRoute.transportModes = await getTransportModesByIds(transportModeIds);
-        }
-      }
       
       // Actualizar en el servicio de matching
       MatchingService.removeRoute(input.routeId);
