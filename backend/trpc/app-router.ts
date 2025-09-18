@@ -2,6 +2,34 @@ import { createTRPCRouter } from "@/backend/trpc/create-context";
 import hiRoute from "@/backend/trpc/routes/example/hi/route";
 import * as paymentRoutes from "@/backend/trpc/routes/payments/routes";
 import * as commuteRoutes from "@/backend/trpc/routes/commute/routes";
+import {
+  createZoneProcedure,
+  updateZoneProcedure,
+  deleteZoneProcedure,
+  getAllZonesProcedure,
+  getZoneByIdProcedure,
+  joinZoneProcedure,
+  leaveZoneProcedure,
+  getDriverZoneAssignmentsProcedure,
+  getZoneSaturationProcedure,
+  getZoneRecommendationsProcedure,
+  getZoneAnalyticsProcedure,
+  getZoneStatusProcedure,
+  getNearbyZonesProcedure,
+} from './routes/commute/zone-saturation-routes';
+import {
+  calculateSurgePriceProcedure,
+  getSurgePriceProcedure,
+  updateDemandMetricsProcedure,
+  getDemandMetricsProcedure,
+  createSurgePricingConfigProcedure,
+  updateSurgePricingConfigProcedure,
+  getSurgePricingConfigProcedure,
+  getAllSurgePricingConfigsProcedure,
+  getSurgePricingAnalyticsProcedure,
+  getMultiZoneSurgePricingProcedure,
+  getSurgeHeatmapProcedure,
+} from './routes/commute/surge-pricing-routes';
 
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
@@ -64,19 +92,32 @@ export const appRouter = createTRPCRouter({
     clearDestinationMockData: commuteRoutes.clearDestinationMockData,
     
     // Zone Saturation Service
-    createZone: commuteRoutes.createZone,
-    updateZone: commuteRoutes.updateZone,
-    deleteZone: commuteRoutes.deleteZone,
-    getAllZones: commuteRoutes.getAllZones,
-    getZoneById: commuteRoutes.getZoneById,
-    joinZone: commuteRoutes.joinZone,
-    leaveZone: commuteRoutes.leaveZone,
-    getDriverZoneAssignments: commuteRoutes.getDriverZoneAssignments,
-    getZoneSaturation: commuteRoutes.getZoneSaturation,
-    getZoneRecommendations: commuteRoutes.getZoneRecommendations,
-    getZoneAnalytics: commuteRoutes.getZoneAnalytics,
-    getZoneStatus: commuteRoutes.getZoneStatus,
-    getNearbyZones: commuteRoutes.getNearbyZones,
+    createZone: createZoneProcedure,
+    updateZone: updateZoneProcedure,
+    deleteZone: deleteZoneProcedure,
+    getAllZones: getAllZonesProcedure,
+    getZoneById: getZoneByIdProcedure,
+    joinZone: joinZoneProcedure,
+    leaveZone: leaveZoneProcedure,
+    getDriverZoneAssignments: getDriverZoneAssignmentsProcedure,
+    getZoneSaturation: getZoneSaturationProcedure,
+    getZoneRecommendations: getZoneRecommendationsProcedure,
+    getZoneAnalytics: getZoneAnalyticsProcedure,
+    getZoneStatus: getZoneStatusProcedure,
+    getNearbyZones: getNearbyZonesProcedure,
+    
+    // Surge pricing procedures
+    calculateSurgePrice: calculateSurgePriceProcedure,
+    getSurgePrice: getSurgePriceProcedure,
+    updateDemandMetrics: updateDemandMetricsProcedure,
+    getDemandMetrics: getDemandMetricsProcedure,
+    createSurgePricingConfig: createSurgePricingConfigProcedure,
+    updateSurgePricingConfig: updateSurgePricingConfigProcedure,
+    getSurgePricingConfig: getSurgePricingConfigProcedure,
+    getAllSurgePricingConfigs: getAllSurgePricingConfigsProcedure,
+    getSurgePricingAnalytics: getSurgePricingAnalyticsProcedure,
+    getMultiZoneSurgePrice: getMultiZoneSurgePricingProcedure,
+    getSurgeHeatmap: getSurgeHeatmapProcedure,
   }),
 });
 
