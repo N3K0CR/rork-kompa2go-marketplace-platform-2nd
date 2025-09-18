@@ -17,7 +17,7 @@ interface Location {
 
 interface DestinationSelectorProps {
   currentLocation?: Location;
-  onDestinationSet?: (destination: Location) => void;
+  onDestinationSet?: (destination: Location, settings?: any) => void;
   onClose?: () => void;
 }
 
@@ -68,7 +68,11 @@ export const DestinationSelector: React.FC<DestinationSelectorProps> = ({
       });
 
       Alert.alert('¡Éxito!', 'Modo destino activado');
-      onDestinationSet?.(destination);
+      onDestinationSet?.(destination, {
+        maxDetourDistance,
+        maxDetourTime,
+        priority,
+      });
       
       // Refresh data
       activeDestinationQuery.refetch();

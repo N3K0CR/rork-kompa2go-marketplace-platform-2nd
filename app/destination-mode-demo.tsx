@@ -77,10 +77,11 @@ export default function DestinationModeDemo() {
     }
   };
 
-  const handleDestinationSet = (destination: Location) => {
-    console.log('Destination set:', destination);
+  const handleDestinationSet = (destination: Location, settings: any) => {
+    console.log('Destination set:', destination, 'Settings:', settings);
     setShowSelector(false);
     activeDestinationQuery.refetch();
+    destinationStatsQuery.refetch();
   };
 
   const handleTripSelect = (tripId: string) => {
