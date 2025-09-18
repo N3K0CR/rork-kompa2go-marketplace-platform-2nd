@@ -140,13 +140,29 @@ export class RealTimeService {
   /**
    * Actualiza la ubicación de un viaje en tiempo real
    */
-  static async updateLocation(input: AddTrackingPointInput): Promise<{ success: boolean }> {
+  static async updateLocation(input: AddTrackingPointInput, userId?: string): Promise<{ success: boolean }> {
     console.log('📍 Updating location for trip:', input.tripId);
     
     try {
+      // Validar entrada
+      if (!input.tripId || typeof input.latitude !== 'number' || typeof input.longitude !== 'number') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Invalid location data provided',
+        });
+      }
+
+      // Validar coordenadas
+      if (input.latitude < -90 || input.latitude > 90 || input.longitude < -180 || input.longitude > 180) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Invalid coordinates provided',
+        });
+      }
+
       const locationUpdate: LocationUpdate = {
         tripId: input.tripId,
-        userId: '', // Se obtendría del contexto de autenticación
+        userId: userId || 'unknown', // Se obtendría del contexto de autenticación
         latitude: input.latitude,
         longitude: input.longitude,
         timestamp: input.timestamp || new Date(),

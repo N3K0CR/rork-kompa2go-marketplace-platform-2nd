@@ -91,12 +91,28 @@ export class MatchingService {
     console.log('🔍 Finding matches for request:', request);
 
     try {
+      // Validar entrada
+      if (!request.routeId || !request.userId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Missing required fields: routeId or userId',
+        });
+      }
+
       // Obtener la ruta del usuario
       const userRoute = activeRoutes.get(request.routeId);
       if (!userRoute) {
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Route not found',
+        });
+      }
+
+      // Verificar que la ruta pertenece al usuario
+      if (userRoute.userId !== request.userId) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Access denied to route',
         });
       }
 
@@ -113,12 +129,17 @@ export class MatchingService {
       const allMatches = [...directMatches, ...carpoolMatches];
       const rankedMatches = this.rankMatches(allMatches, request.preferences);
       
+      console.log(`✅ Found ${rankedMatches.length} matches for user ${request.userId}`);
+      
       return {
         matches: rankedMatches.slice(0, 5), // Top 5 matches
         alternatives: publicTransportAlternatives,
       };
     } catch (error) {
       console.error('❌ Error finding matches:', error);
+      if (error instanceof TRPCError) {
+        throw error;
+      }
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to find matches',
