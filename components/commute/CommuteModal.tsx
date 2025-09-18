@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, TextInput } from 'react-native';
 import { X, MapPin, Plus, Minus, Clock, Users, DollarSign, Calendar } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius, Shadows, Typography } from '@/context-package/design-system';
@@ -14,14 +14,14 @@ interface CommuteModalProps {
   mode: 'create' | 'edit';
 }
 
-export default function CommuteModal({
+const CommuteModal = memo<CommuteModalProps>(function CommuteModal({
   visible,
   onClose,
   onSave,
   transportModes,
   initialRoute,
   mode = 'create'
-}: CommuteModalProps) {
+}) {
   const [routeName, setRouteName] = useState(initialRoute?.name || '');
   const [selectedTransportModes, setSelectedTransportModes] = useState<string[]>(
     initialRoute?.transportModes?.map(m => m.id) || []
@@ -53,7 +53,7 @@ export default function CommuteModal({
   const [isRecurring, setIsRecurring] = useState(initialRoute?.isRecurring || false);
   const [recurringType, setRecurringType] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (!routeName.trim()) {
       console.log('❌ CommuteModal: Route name is required');
       return;
@@ -88,31 +88,32 @@ export default function CommuteModal({
     console.log('💾 CommuteModal: Saving route:', routeData);
     onSave(routeData);
     onClose();
-  };
+  }, [routeName, selectedTransportModes, routePoints, isRecurring, recurringType, transportModes, onSave, onClose]);
 
-  const handleAddPoint = () => {
+  const handleAddPoint = useCallback(() => {
     const newPoint: Omit<RoutePoint, 'id'> = {
       latitude: 0,
       longitude: 0,
       address: '',
       type: 'waypoint'
     };
-    setRoutePoints([...routePoints, newPoint]);
-  };
+    setRoutePoints(prev => [...prev, newPoint]);
+  }, []);
 
-  const handleRemovePoint = (index: number) => {
+  const handleRemovePoint = useCallback((index: number) => {
     if (routePoints.length <= 2) return; // Keep at least origin and destination
-    const newPoints = routePoints.filter((_, i) => i !== index);
-    setRoutePoints(newPoints);
-  };
+    setRoutePoints(prev => prev.filter((_, i) => i !== index));
+  }, [routePoints.length]);
 
-  const handlePointChange = (index: number, field: keyof Omit<RoutePoint, 'id'>, value: any) => {
-    const newPoints = [...routePoints];
-    (newPoints[index] as any)[field] = value;
-    setRoutePoints(newPoints);
-  };
+  const handlePointChange = useCallback((index: number, field: keyof Omit<RoutePoint, 'id'>, value: any) => {
+    setRoutePoints(prev => {
+      const newPoints = [...prev];
+      (newPoints[index] as any)[field] = value;
+      return newPoints;
+    });
+  }, []);
 
-  const renderPointEditor = (point: Omit<RoutePoint, 'id'>, index: number) => {
+  const renderPointEditor = useCallback((point: Omit<RoutePoint, 'id'>, index: number) => {
     const isOrigin = point.type === 'origin';
     const isDestination = point.type === 'destination';
     const canRemove = routePoints.length > 2 && !isOrigin && !isDestination;
@@ -167,7 +168,7 @@ export default function CommuteModal({
         </TouchableOpacity>
       </View>
     );
-  };
+  }, [routePoints.length, handleRemovePoint, handlePointChange]);
 
   return (
     <Modal
@@ -212,7 +213,11 @@ export default function CommuteModal({
               </TouchableOpacity>
             </View>
             
-            {routePoints.map((point, index) => renderPointEditor(point, index))}
+            {routePoints.map((point, index) => (
+              <React.Fragment key={index}>
+                {renderPointEditor(point, index)}
+              </React.Fragment>
+            ))}
           </View>
 
           {/* Transport Modes */}
@@ -300,7 +305,7 @@ export default function CommuteModal({
       </View>
     </Modal>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -552,3 +557,5 @@ const styles = StyleSheet.create({
     color: 'white',
   },
 });
+
+export default CommuteModal;

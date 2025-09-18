@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { MapPin, Navigation, Users, Clock } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius, Shadows, Typography } from '@/context-package/design-system';
@@ -19,7 +19,7 @@ interface MapViewProps {
   showUserLocation?: boolean;
 }
 
-export default function MapView({
+const MapView = memo<MapViewProps>(function MapView({
   routes,
   selectedRoute,
   onRouteSelect,
@@ -28,7 +28,7 @@ export default function MapView({
   transportModes,
   isLoading = false,
   showUserLocation = true
-}: MapViewProps) {
+}) {
   const [selectedPoint, setSelectedPoint] = useState<RoutePoint | null>(null);
   const { width, height } = Dimensions.get('window');
 
@@ -39,7 +39,7 @@ export default function MapView({
     }
   }, [userLocation, showUserLocation]);
 
-  const getTransportModeIcon = (modeId: string) => {
+  const getTransportModeIcon = useCallback((modeId: string) => {
     if (!modeId?.trim()) return '📍';
     const mode = transportModes.find(m => m.id === modeId);
     if (!mode) return '📍';
@@ -59,9 +59,9 @@ export default function MapView({
     
     const lowerName = mode.name.toLowerCase();
     return iconMap[lowerName] || mode.icon || '📍';
-  };
+  }, [transportModes]);
 
-  const getRouteColor = (route: CommuteRoute) => {
+  const getRouteColor = useCallback((route: CommuteRoute) => {
     if (route.id === selectedRoute?.id) return Colors.primary[500];
     switch (route.status) {
       case 'active':
@@ -73,9 +73,9 @@ export default function MapView({
       default:
         return Colors.primary[300];
     }
-  };
+  }, [selectedRoute?.id]);
 
-  const handleMapPress = (event: any) => {
+  const handleMapPress = useCallback((event: any) => {
     if (Platform.OS === 'web') {
       // Web implementation would use a different event structure
       const { coordinate } = event.nativeEvent || {};
@@ -89,15 +89,15 @@ export default function MapView({
         onLocationPress(coordinate);
       }
     }
-  };
+  }, [onLocationPress]);
 
-  const handleRoutePress = (route: CommuteRoute) => {
+  const handleRoutePress = useCallback((route: CommuteRoute) => {
     if (!route?.id?.trim()) return;
     console.log('🗺️ MapView: Route selected:', route.id);
     onRouteSelect?.(route);
-  };
+  }, [onRouteSelect]);
 
-  const renderRoutePoint = (point: RoutePoint, index: number, route: CommuteRoute) => {
+  const renderRoutePoint = useCallback((point: RoutePoint, index: number, route: CommuteRoute) => {
     if (!point?.id?.trim()) return null;
     const isSelected = selectedPoint?.id === point.id;
     const isOrigin = point.type === 'origin';
@@ -140,9 +140,9 @@ export default function MapView({
         )}
       </TouchableOpacity>
     );
-  };
+  }, [selectedPoint?.id, setSelectedPoint, width, height]);
 
-  const renderRoute = (route: CommuteRoute) => {
+  const renderRoute = useCallback((route: CommuteRoute) => {
     const routeColor = getRouteColor(route);
     const isSelected = route.id === selectedRoute?.id;
     
@@ -211,7 +211,7 @@ export default function MapView({
         </TouchableOpacity>
       </View>
     );
-  };
+  }, [selectedRoute?.id, getRouteColor, renderRoutePoint, handleRoutePress, getTransportModeIcon]);
 
   return (
     <View style={styles.container}>
@@ -245,7 +245,11 @@ export default function MapView({
         
         {/* Routes overlay */}
         <View style={styles.routesOverlay}>
-          {routes.map(renderRoute)}
+          {routes.map((route) => (
+            <React.Fragment key={route.id}>
+              {renderRoute(route)}
+            </React.Fragment>
+          ))}
         </View>
       </View>
       
@@ -307,7 +311,7 @@ export default function MapView({
       )}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -595,3 +599,5 @@ const styles = StyleSheet.create({
     fontWeight: Typography.fontWeight.bold,
   },
 });
+
+export default MapView;

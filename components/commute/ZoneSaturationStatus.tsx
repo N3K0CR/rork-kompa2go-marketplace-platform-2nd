@@ -62,7 +62,7 @@ const SaturationIndicator: React.FC<SaturationIndicatorProps> = ({
 }) => {
   const [animatedValue] = useState(new Animated.Value(0));
 
-  const getColor = (status: string): string => {
+  const getColor = useCallback((status: string): string => {
     switch (status) {
       case 'low': return '#4CAF50';
       case 'optimal': return '#FF9800';
@@ -70,7 +70,7 @@ const SaturationIndicator: React.FC<SaturationIndicatorProps> = ({
       case 'saturated': return '#9C27B0';
       default: return '#757575';
     }
-  };
+  }, []);
 
   const getIcon = (status: string) => {
     const color = getColor(status);

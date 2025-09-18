@@ -3,9 +3,9 @@
 // ============================================================================
 // UI component for selecting destination in driver mode
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ScrollView } from 'react-native';
-import { MapPin, Target, Navigation, Clock, TrendingUp, X } from 'lucide-react-native';
+import { MapPin, Target, Navigation, TrendingUp, X } from 'lucide-react-native';
 import { trpc } from '@/lib/trpc';
 
 interface Location {
@@ -21,11 +21,11 @@ interface DestinationSelectorProps {
   onClose?: () => void;
 }
 
-export const DestinationSelector: React.FC<DestinationSelectorProps> = ({
+export const DestinationSelector = memo<DestinationSelectorProps>(function DestinationSelector({
   currentLocation,
   onDestinationSet,
   onClose,
-}) => {
+}) {
   const [destination, setDestination] = useState<Location | null>(null);
   const [destinationAddress, setDestinationAddress] = useState<string>('');
   const [maxDetourDistance, setMaxDetourDistance] = useState<number>(5000);
@@ -52,7 +52,7 @@ export const DestinationSelector: React.FC<DestinationSelectorProps> = ({
     }
   }, [activeDestinationQuery.data]);
 
-  const handleSetDestination = async () => {
+  const handleSetDestination = useCallback(async () => {
     if (!destination) {
       Alert.alert('Error', 'Por favor selecciona un destino');
       return;
@@ -83,9 +83,9 @@ export const DestinationSelector: React.FC<DestinationSelectorProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [destination, maxDetourDistance, maxDetourTime, priority, setDestinationModeMutation, onDestinationSet, activeDestinationQuery, destinationStatsQuery]);
 
-  const handleDeactivateDestination = async () => {
+  const handleDeactivateDestination = useCallback(async () => {
     if (!activeDestinationQuery.data) return;
 
     try {
@@ -104,9 +104,9 @@ export const DestinationSelector: React.FC<DestinationSelectorProps> = ({
       console.error('Error deactivating destination mode:', error);
       Alert.alert('Error', 'No se pudo desactivar el modo destino');
     }
-  };
+  }, [activeDestinationQuery.data, deactivateDestinationModeMutation, activeDestinationQuery, destinationStatsQuery]);
 
-  const handleAddressSearch = () => {
+  const handleAddressSearch = useCallback(() => {
     // Mock geocoding - in production, use a real geocoding service
     if (destinationAddress.trim()) {
       const mockLocation: Location = {
@@ -117,16 +117,16 @@ export const DestinationSelector: React.FC<DestinationSelectorProps> = ({
       };
       setDestination(mockLocation);
     }
-  };
+  }, [destinationAddress, currentLocation]);
 
-  const formatDistance = (meters: number): string => {
+  const formatDistance = useCallback((meters: number): string => {
     return meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${meters} m`;
-  };
+  }, []);
 
-  const formatTime = (seconds: number): string => {
+  const formatTime = useCallback((seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     return minutes >= 60 ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : `${minutes}m`;
-  };
+  }, []);
 
   return (
     <ScrollView style={styles.container} testID="destination-selector">
@@ -338,7 +338,7 @@ export const DestinationSelector: React.FC<DestinationSelectorProps> = ({
       </View>
     </ScrollView>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

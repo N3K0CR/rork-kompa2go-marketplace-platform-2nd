@@ -3,7 +3,7 @@
 // ============================================================================
 // Dashboard component for drivers showing trip chaining status and next trips
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Clock, MapPin, DollarSign, Users, ChevronRight, CheckCircle, AlertCircle } from 'lucide-react-native';
 import { trpc } from '@/lib/trpc';
@@ -68,10 +68,10 @@ interface DriverDashboardProps {
   };
 }
 
-export const DriverDashboard: React.FC<DriverDashboardProps> = ({
+export const DriverDashboard = memo<DriverDashboardProps>(function DriverDashboard({
   currentTripId,
   currentLocation,
-}) => {
+}) {
   const [selectedChain, setSelectedChain] = useState<TripChain | null>(null);
   const [nearbyTrips, setNearbyTrips] = useState<TripQueueEntry[]>([]);
   const [isNearCompletion, setIsNearCompletion] = useState(false);
@@ -99,7 +99,7 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
     if (currentLocation) {
       updateDriverLocationMutation.mutate(currentLocation);
     }
-  }, [currentLocation]);
+  }, [currentLocation, updateDriverLocationMutation]);
 
   // Check for trip completion and nearby trips
   useEffect(() => {
@@ -109,7 +109,7 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
     }
   }, [checkTripCompletionQuery.data]);
 
-  const handleAcceptNextTrip = async (nextTripId: string) => {
+  const handleAcceptNextTrip = useCallback(async (nextTripId: string) => {
     if (!currentTripId) {
       Alert.alert('Error', 'No hay viaje activo');
       return;
@@ -131,23 +131,23 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
       console.error('Error accepting next trip:', error);
       Alert.alert('Error', 'No se pudo aceptar el próximo viaje');
     }
-  };
+  }, [currentTripId, acceptNextTripMutation, driverChainsQuery, tripChainingStatsQuery]);
 
-  const formatDuration = (seconds: number): string => {
+  const formatDuration = useCallback((seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-  };
+  }, []);
 
-  const formatDistance = (meters: number): string => {
+  const formatDistance = useCallback((meters: number): string => {
     return meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${meters} m`;
-  };
+  }, []);
 
-  const formatCurrency = (amount: number): string => {
-    return `$${amount.toFixed(2)}`;
-  };
+  const formatCurrency = useCallback((amount: number): string => {
+    return `${amount.toFixed(2)}`;
+  }, []);
 
-  const getStatusColor = (status: string): string => {
+  const getStatusColor = useCallback((status: string): string => {
     switch (status) {
       case 'active':
       case 'in_progress':
@@ -161,9 +161,9 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
       default:
         return '#757575';
     }
-  };
+  }, []);
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = useCallback((status: string) => {
     switch (status) {
       case 'active':
       case 'in_progress':
@@ -175,7 +175,7 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
       default:
         return <AlertCircle size={16} color="#757575" />;
     }
-  };
+  }, []);
 
   return (
     <ScrollView style={styles.container} testID="driver-dashboard">
@@ -344,7 +344,7 @@ export const DriverDashboard: React.FC<DriverDashboardProps> = ({
       </View>
     </ScrollView>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

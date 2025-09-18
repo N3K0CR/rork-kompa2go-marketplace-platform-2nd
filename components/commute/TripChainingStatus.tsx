@@ -3,7 +3,7 @@
 // ============================================================================
 // Visual indicator component for trip chaining status and next trip availability
 
-import React from 'react';
+import React, { useCallback, useMemo, memo } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { Clock, CheckCircle, AlertCircle, ArrowRight, Users, Zap } from 'lucide-react-native';
 
@@ -18,7 +18,7 @@ interface TripChainingStatusProps {
   testID?: string;
 }
 
-export const TripChainingStatus: React.FC<TripChainingStatusProps> = ({
+export const TripChainingStatus = memo<TripChainingStatusProps>(function TripChainingStatus({
   status,
   canAcceptNextTrip = false,
   nextTripId,
@@ -27,7 +27,7 @@ export const TripChainingStatus: React.FC<TripChainingStatusProps> = ({
   totalTripsInChain,
   nearbyTripsCount = 0,
   testID = 'trip-chaining-status',
-}) => {
+}) {
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
 
   React.useEffect(() => {
@@ -53,7 +53,7 @@ export const TripChainingStatus: React.FC<TripChainingStatusProps> = ({
     }
   }, [status, canAcceptNextTrip, pulseAnim]);
 
-  const getStatusConfig = () => {
+  const getStatusConfig = useMemo(() => {
     switch (status) {
       case 'planned':
         return {
@@ -104,12 +104,11 @@ export const TripChainingStatus: React.FC<TripChainingStatusProps> = ({
           description: 'Estado desconocido',
         };
     }
-  };
+  }, [status, canAcceptNextTrip]);
 
-  const config = getStatusConfig();
-  const StatusIcon = config.icon;
+  const StatusIcon = getStatusConfig.icon;
 
-  const formatTimeRemaining = (date: Date): string => {
+  const formatTimeRemaining = useCallback((date: Date): string => {
     const now = new Date();
     const diff = date.getTime() - now.getTime();
     const minutes = Math.round(diff / 60000);
@@ -120,16 +119,16 @@ export const TripChainingStatus: React.FC<TripChainingStatusProps> = ({
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
     return `${hours}h ${remainingMinutes}m`;
-  };
+  }, []);
 
   return (
-    <View style={[styles.container, { backgroundColor: config.backgroundColor }]} testID={testID}>
+    <View style={[styles.container, { backgroundColor: getStatusConfig.backgroundColor }]} testID={testID}>
       {/* Main Status */}
       <View style={styles.statusRow}>
         <Animated.View 
           style={[
             styles.iconContainer,
-            { backgroundColor: config.color },
+            { backgroundColor: getStatusConfig.color },
             status === 'completing' && canAcceptNextTrip && {
               transform: [{ scale: pulseAnim }],
             },
@@ -139,19 +138,19 @@ export const TripChainingStatus: React.FC<TripChainingStatusProps> = ({
         </Animated.View>
         
         <View style={styles.statusInfo}>
-          <Text style={[styles.statusText, { color: config.color }]}>
-            {config.text}
+          <Text style={[styles.statusText, { color: getStatusConfig.color }]}>
+            {getStatusConfig.text}
           </Text>
           <Text style={styles.statusDescription}>
-            {config.description}
+            {getStatusConfig.description}
           </Text>
         </View>
 
         {/* Chain Position Indicator */}
         {chainPosition !== undefined && totalTripsInChain !== undefined && (
           <View style={styles.chainIndicator}>
-            <Users size={14} color={config.color} />
-            <Text style={[styles.chainText, { color: config.color }]}>
+            <Users size={14} color={getStatusConfig.color} />
+            <Text style={[styles.chainText, { color: getStatusConfig.color }]}>
               {chainPosition}/{totalTripsInChain}
             </Text>
           </View>
@@ -161,8 +160,8 @@ export const TripChainingStatus: React.FC<TripChainingStatusProps> = ({
       {/* Completion Time */}
       {estimatedCompletionTime && status === 'completing' && (
         <View style={styles.completionInfo}>
-          <Clock size={12} color={config.color} />
-          <Text style={[styles.completionText, { color: config.color }]}>
+          <Clock size={12} color={getStatusConfig.color} />
+          <Text style={[styles.completionText, { color: getStatusConfig.color }]}>
             Finaliza en {formatTimeRemaining(estimatedCompletionTime)}
           </Text>
         </View>
@@ -211,7 +210,7 @@ export const TripChainingStatus: React.FC<TripChainingStatusProps> = ({
       )}
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
