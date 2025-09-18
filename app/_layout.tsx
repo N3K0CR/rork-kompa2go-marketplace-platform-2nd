@@ -21,6 +21,7 @@ import { K2GProductsProvider } from "@/contexts/K2GProductsContext";
 import { ReportedProblemsProvider } from "@/contexts/ReportedProblemsContext";
 import { LemonSqueezyProvider } from "@/contexts/LemonSqueezyContext";
 import { KompiBrainProvider } from "@/contexts/KompiBrainContext";
+import CommuteProvider from "@/contexts/CommuteContext";
 // import { DatabaseProvider } from "@/contexts/DatabaseContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ReservationAlertModal } from "@/components/ReservationAlertModal";
@@ -64,6 +65,12 @@ function RootLayoutNav() {
       <Stack.Screen name="reported-problems" options={{ headerShown: false }} />
       <Stack.Screen name="client/history" options={{ headerShown: false }} />
       <Stack.Screen name="test-kompi" options={{ title: "Test KompiBrain" }} />
+      
+      {/* 2Kommute Routes */}
+      <Stack.Screen name="commute" options={{ headerShown: false }} />
+      <Stack.Screen name="commute/search" options={{ title: "Buscar Viaje" }} />
+      <Stack.Screen name="commute/driver" options={{ title: "Modo Conductor" }} />
+      <Stack.Screen name="commute/trip/[tripId]" options={{ title: "Detalles del Viaje" }} />
     </Stack>
   );
 }
@@ -95,10 +102,12 @@ export default function RootLayout() {
                                     <ChatProvider>
                                       <K2GProductsProvider>
                                         <ReportedProblemsProvider>
-                                          <GestureHandlerRootView style={styles.container}>
-                                            <RootLayoutNav />
-                                            <ReservationAlertModal />
-                                          </GestureHandlerRootView>
+                                          <CommuteProvider>
+                                            <GestureHandlerRootView style={styles.container}>
+                                              <RootLayoutNav />
+                                              <ReservationAlertModal />
+                                            </GestureHandlerRootView>
+                                          </CommuteProvider>
                                         </ReportedProblemsProvider>
                                       </K2GProductsProvider>
                                     </ChatProvider>

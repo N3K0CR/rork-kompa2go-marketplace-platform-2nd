@@ -145,6 +145,28 @@ export default function HomeScreen() {
             <Text style={styles.actionText}>{t('ask_kompi')}</Text>
           </TouchableOpacity>
         </View>
+        
+        {/* 2Kommute Access Button */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🚗 Transporte Inteligente</Text>
+          <TouchableOpacity 
+            style={styles.kommuteCard}
+            onPress={() => router.push('/commute')}
+          >
+            <View style={styles.kommuteHeader}>
+              <Text style={styles.kommuteTitle}>2Kommute</Text>
+              <Text style={styles.kommuteBadge}>NUEVO</Text>
+            </View>
+            <Text style={styles.kommuteDescription}>
+              Comparte viajes, ahorra dinero y reduce tu huella de carbono
+            </Text>
+            <View style={styles.kommuteFeatures}>
+              <Text style={styles.kommuteFeature}>🚗 Comparte viajes</Text>
+              <Text style={styles.kommuteFeature}>💰 Ahorra dinero</Text>
+              <Text style={styles.kommuteFeature}>🌱 Eco-friendly</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('upcoming_appointments')}</Text>
@@ -1983,6 +2005,58 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
+  },
+  
+  // 2Kommute Styles
+  kommuteCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#007AFF',
+  },
+  kommuteHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  kommuteTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#007AFF',
+  },
+  kommuteBadge: {
+    backgroundColor: '#FF3B30',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  kommuteDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  kommuteFeatures: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  kommuteFeature: {
+    fontSize: 12,
+    color: '#333',
+    fontWeight: '500',
+    flex: 1,
+    textAlign: 'center',
   },
 
 });

@@ -132,6 +132,41 @@ export const ExistingRootLayout = () => {
   );
 };
 
+// Integration points for 2Kommute
+export const KommuteIntegration = {
+  // Entry points from existing app
+  entryPoints: {
+    homeScreen: {
+      location: 'app/(tabs)/index.tsx',
+      integration: 'Card button in client dashboard',
+      route: '/commute',
+      userTypes: ['client', 'provider'], // Available for both
+    },
+    floatingButton: {
+      location: 'components/FloatingKompi.tsx',
+      integration: 'Optional quick access (future)',
+      route: '/commute',
+      conditional: true,
+    },
+  },
+  
+  // Navigation flow
+  flow: {
+    entry: '/commute (Home)',
+    search: '/commute/search (Find rides)',
+    driver: '/commute/driver (Offer rides)',
+    trip: '/commute/trip/[tripId] (Active trip)',
+  },
+  
+  // Context integration
+  contextIntegration: {
+    provider: 'CommuteProvider',
+    location: 'app/_layout.tsx',
+    position: 'After ReportedProblemsProvider',
+    dependencies: ['AuthContext', 'LocationSearchContext'],
+  },
+};
+
 // Navigation patterns used in Kompa2Go
 export const NavigationPatterns = {
   // Tab-based navigation for main features
@@ -178,6 +213,13 @@ export const NavigationPatterns = {
       ],
       modal: false,
     },
+    // NEW: 2Kommute navigation stack
+    commute: {
+      screens: ['index', 'search', 'driver', 'trip/[tripId]'],
+      modal: false,
+      hasInnerStack: true,
+      description: 'Smart transportation module with carpooling features',
+    },
   },
 
   // Dynamic routes
@@ -185,6 +227,8 @@ export const NavigationPatterns = {
     'provider/[id]',
     'booking/[providerId]',
     'chat/[chatId]',
+    // NEW: 2Kommute dynamic routes
+    'commute/trip/[tripId]',
   ],
 
   // Modal presentations
@@ -253,6 +297,11 @@ export const RoutingConfig = {
         'booking/[providerId]': 'booking/:providerId',
         'chat/[chatId]': 'chat/:chatId',
         'payment-success': 'payment-success',
+        // NEW: 2Kommute deep linking
+        'commute': 'commute',
+        'commute/search': 'commute/search',
+        'commute/driver': 'commute/driver',
+        'commute/trip/[tripId]': 'commute/trip/:tripId',
       },
     },
   },
@@ -290,4 +339,5 @@ export default {
   NavigationPatterns,
   RoutingConfig,
   NavigationComponents,
+  KommuteIntegration,
 };
