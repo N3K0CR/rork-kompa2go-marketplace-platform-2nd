@@ -248,7 +248,7 @@ export const RealTimeEventSchema = z.object({
   userId: z.string(),
   tripId: z.string().optional(),
   teamId: z.string().optional(),
-  data: z.record(z.any()),
+  data: z.record(z.string(), z.any()),
   timestamp: z.date(),
   priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
 });
@@ -318,7 +318,7 @@ export const CommuteErrorSchema = z.object({
     'VALIDATION_ERROR'
   ]),
   message: z.string(),
-  details: z.record(z.any()).optional(),
+  details: z.record(z.string(), z.any()).optional(),
 });
 
 // Export types for use in other files

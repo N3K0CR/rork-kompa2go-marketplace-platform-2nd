@@ -183,7 +183,8 @@ export const updateRoute = protectedProcedure
       
       // Actualizar ruta
       const updatedRoute = {
-        ...existingRoute,
+        id: existingRoute.id,
+        userId: existingRoute.userId,
         name: input.name ?? existingRoute.name,
         points,
         transportModes,
@@ -194,6 +195,7 @@ export const updateRoute = protectedProcedure
         status: input.status ?? existingRoute.status,
         isRecurring: input.isRecurring ?? existingRoute.isRecurring,
         recurringPattern: input.recurringPattern ?? existingRoute.recurringPattern,
+        createdAt: existingRoute.createdAt,
         updatedAt: new Date(),
       };
       
