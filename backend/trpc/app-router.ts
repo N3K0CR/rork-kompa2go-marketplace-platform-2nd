@@ -52,6 +52,16 @@ export const appRouter = createTRPCRouter({
     getTripChainingStats: commuteRoutes.getTripChainingStats,
     updateDriverLocation: commuteRoutes.updateDriverLocation,
     checkTripCompletionAndFindNearby: commuteRoutes.checkTripCompletionAndFindNearby,
+    
+    // Destination Mode Service
+    setDestinationMode: commuteRoutes.setDestinationMode,
+    updateDestinationProgress: commuteRoutes.updateDestinationProgress,
+    findTripsToDestination: commuteRoutes.findTripsToDestination,
+    getActiveDestinationMode: commuteRoutes.getActiveDestinationMode,
+    deactivateDestinationMode: commuteRoutes.deactivateDestinationMode,
+    getDestinationModeStats: commuteRoutes.getDestinationModeStats,
+    addMockTripsForDestination: commuteRoutes.addMockTripsForDestination,
+    clearDestinationMockData: commuteRoutes.clearDestinationMockData,
   }),
 });
 

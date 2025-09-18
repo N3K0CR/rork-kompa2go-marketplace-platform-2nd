@@ -201,6 +201,56 @@ export const UpdateTripInputSchema = z.object({
   canAcceptNextTrip: z.boolean().optional(),
 });
 
+// Destination mode schemas
+export const DestinationModeSchema = z.object({
+  id: z.string(),
+  driverId: z.string(),
+  destination: z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+    address: z.string(),
+    name: z.string().optional(),
+  }),
+  maxDetourDistance: z.number().positive().default(5000), // 5km
+  maxDetourTime: z.number().positive().default(900), // 15 minutes
+  priority: z.number().min(1).max(10).default(5),
+  isActive: z.boolean(),
+  estimatedArrival: z.date().optional(),
+  progressToDestination: z.number().min(0).max(100).default(0),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const SetDestinationModeInputSchema = z.object({
+  destination: z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+    address: z.string(),
+    name: z.string().optional(),
+  }),
+  maxDetourDistance: z.number().positive().default(5000),
+  maxDetourTime: z.number().positive().default(900),
+  priority: z.number().min(1).max(10).default(5),
+});
+
+export const UpdateDestinationProgressInputSchema = z.object({
+  destinationModeId: z.string(),
+  currentLocation: z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  }),
+  progressPercentage: z.number().min(0).max(100),
+});
+
+export const FindTripsToDestinationInputSchema = z.object({
+  destinationModeId: z.string(),
+  currentLocation: z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  }),
+  maxResults: z.number().positive().default(10),
+});
+
 // Trip chaining input schemas
 export const AcceptNextTripInputSchema = z.object({
   currentTripId: z.string(),
@@ -416,6 +466,12 @@ export type SubscriptionInput = z.infer<typeof SubscriptionInputSchema>;
 export type AnalyticsRequest = z.infer<typeof AnalyticsRequestSchema>;
 export type CarbonFootprint = z.infer<typeof CarbonFootprintSchema>;
 export type CommuteError = z.infer<typeof CommuteErrorSchema>;
+
+// Destination mode types
+export type DestinationMode = z.infer<typeof DestinationModeSchema>;
+export type SetDestinationModeInput = z.infer<typeof SetDestinationModeInputSchema>;
+export type UpdateDestinationProgressInput = z.infer<typeof UpdateDestinationProgressInputSchema>;
+export type FindTripsToDestinationInput = z.infer<typeof FindTripsToDestinationInputSchema>;
 
 // Trip chaining types
 export type TripChain = z.infer<typeof TripChainSchema>;

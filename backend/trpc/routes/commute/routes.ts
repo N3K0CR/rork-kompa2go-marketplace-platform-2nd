@@ -9,6 +9,7 @@ import { TRPCError } from '@trpc/server';
 import { MatchingService } from './matching-service';
 import { RealTimeService } from './realtime-service';
 import { TripChainingService } from './trip-chaining-service';
+import { destinationModeService } from './destination-service';
 import {
   CreateRouteInputSchema,
   UpdateRouteInputSchema,
@@ -27,6 +28,11 @@ import {
   CreateTripChainInputSchema,
   TripChainSchema,
   TripQueueEntrySchema,
+  // Destination mode schemas
+  SetDestinationModeInputSchema,
+  UpdateDestinationProgressInputSchema,
+  FindTripsToDestinationInputSchema,
+  DestinationModeSchema,
 } from './types';
 
 // ============================================================================
@@ -1004,3 +1010,264 @@ function calculateDistance(point1: any, point2: any): number {
 
   return R * c;
 }
+
+// ============================================================================
+// DESTINATION MODE PROCEDURES
+// ============================================================================
+
+/**
+ * Sets destination mode for a driver
+ */
+export const setDestinationMode = protectedProcedure
+  .input(SetDestinationModeInputSchema)
+  .output(z.object({
+    success: z.boolean(),
+    destinationMode: DestinationModeSchema,
+  }))
+  .mutation(async ({ input, ctx }) => {
+    console.log('🎯 Setting destination mode for driver:', ctx.user.id);
+    
+    try {
+      const destinationMode = await destinationModeService.setDestinationMode(ctx.user.id, input);
+      
+      return {
+        success: true,
+        destinationMode,
+      };
+    } catch (error) {
+      console.error('❌ Error setting destination mode:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to set destination mode',
+        cause: error,
+      });
+    }
+  });
+
+/**
+ * Updates progress towards destination
+ */
+export const updateDestinationProgress = protectedProcedure
+  .input(UpdateDestinationProgressInputSchema)
+  .output(z.object({
+    success: z.boolean(),
+    destinationMode: DestinationModeSchema.nullable(),
+  }))
+  .mutation(async ({ input, ctx }) => {
+    console.log('📍 Updating destination progress for user:', ctx.user.id);
+    
+    try {
+      const destinationMode = await destinationModeService.updateDestinationProgress(input);
+      
+      return {
+        success: !!destinationMode,
+        destinationMode,
+      };
+    } catch (error) {
+      console.error('❌ Error updating destination progress:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to update destination progress',
+        cause: error,
+      });
+    }
+  });
+
+/**
+ * Finds trips that help progress towards destination
+ */
+export const findTripsToDestination = protectedProcedure
+  .input(FindTripsToDestinationInputSchema)
+  .output(z.object({
+    trips: z.array(TripQueueEntrySchema.extend({
+      destinationScore: z.number(),
+      progressDistance: z.number(),
+      detourDistance: z.number(),
+    })),
+    totalAvailable: z.number(),
+  }))
+  .query(async ({ input, ctx }) => {
+    console.log('🔍 Finding trips to destination for user:', ctx.user.id);
+    
+    try {
+      const result = await destinationModeService.findTripsToDestination(input);
+      return result;
+    } catch (error) {
+      console.error('❌ Error finding trips to destination:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to find trips to destination',
+        cause: error,
+      });
+    }
+  });
+
+/**
+ * Gets active destination mode for driver
+ */
+export const getActiveDestinationMode = protectedProcedure
+  .output(DestinationModeSchema.nullable())
+  .query(async ({ ctx }) => {
+    console.log('📋 Getting active destination mode for driver:', ctx.user.id);
+    
+    try {
+      const destinationMode = await destinationModeService.getActiveDestinationMode(ctx.user.id);
+      return destinationMode;
+    } catch (error) {
+      console.error('❌ Error getting active destination mode:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to get active destination mode',
+        cause: error,
+      });
+    }
+  });
+
+/**
+ * Deactivates destination mode
+ */
+export const deactivateDestinationMode = protectedProcedure
+  .input(z.object({ destinationModeId: z.string() }))
+  .output(z.object({ success: z.boolean() }))
+  .mutation(async ({ input, ctx }) => {
+    console.log('🛑 Deactivating destination mode:', input.destinationModeId);
+    
+    try {
+      const success = await destinationModeService.deactivateDestinationMode(input.destinationModeId);
+      
+      return { success };
+    } catch (error) {
+      console.error('❌ Error deactivating destination mode:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to deactivate destination mode',
+        cause: error,
+      });
+    }
+  });
+
+/**
+ * Gets destination mode statistics for driver
+ */
+export const getDestinationModeStats = protectedProcedure
+  .output(z.object({
+    totalDestinationModes: z.number(),
+    activeDestinationMode: DestinationModeSchema.nullable(),
+    averageProgress: z.number(),
+    tripsTowardsDestination: z.number(),
+  }))
+  .query(async ({ ctx }) => {
+    console.log('📊 Getting destination mode stats for driver:', ctx.user.id);
+    
+    try {
+      const stats = await destinationModeService.getDestinationModeStats(ctx.user.id);
+      return stats;
+    } catch (error) {
+      console.error('❌ Error getting destination mode stats:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to get destination mode stats',
+        cause: error,
+      });
+    }
+  });
+
+/**
+ * Adds mock trips to queue for testing destination mode
+ */
+export const addMockTripsForDestination = protectedProcedure
+  .input(z.object({
+    count: z.number().min(1).max(50).default(10),
+    centerLocation: z.object({
+      latitude: z.number().min(-90).max(90),
+      longitude: z.number().min(-180).max(180),
+    }),
+    radiusKm: z.number().positive().default(10),
+  }))
+  .output(z.object({ success: z.boolean(), tripsAdded: z.number() }))
+  .mutation(async ({ input, ctx }) => {
+    console.log('🧪 Adding mock trips for destination testing:', input.count);
+    
+    try {
+      const mockTrips = [];
+      
+      for (let i = 0; i < input.count; i++) {
+        // Generate random locations within radius
+        const angle = Math.random() * 2 * Math.PI;
+        const radius = Math.random() * input.radiusKm;
+        
+        const pickupLat = input.centerLocation.latitude + (radius / 111) * Math.cos(angle);
+        const pickupLng = input.centerLocation.longitude + (radius / 111) * Math.sin(angle);
+        
+        const dropoffAngle = Math.random() * 2 * Math.PI;
+        const dropoffRadius = Math.random() * input.radiusKm;
+        const dropoffLat = input.centerLocation.latitude + (dropoffRadius / 111) * Math.cos(dropoffAngle);
+        const dropoffLng = input.centerLocation.longitude + (dropoffRadius / 111) * Math.sin(dropoffAngle);
+        
+        const tripId = `mock_trip_${Date.now()}_${i}`;
+        const queueId = `queue_${Date.now()}_${i}`;
+        
+        const mockTrip = {
+          id: queueId,
+          tripId,
+          passengerId: `passenger_${i}`,
+          routeId: `route_${i}`,
+          requestedTime: new Date(),
+          pickupLocation: {
+            latitude: pickupLat,
+            longitude: pickupLng,
+            address: `Pickup Location ${i + 1}`,
+          },
+          dropoffLocation: {
+            latitude: dropoffLat,
+            longitude: dropoffLng,
+            address: `Dropoff Location ${i + 1}`,
+          },
+          priority: Math.floor(Math.random() * 10) + 1,
+          maxWaitTime: 300 + Math.random() * 600, // 5-15 minutes
+          proximityRadius: 1000 + Math.random() * 4000, // 1-5km
+          status: 'queued' as const,
+          createdAt: new Date(),
+          expiresAt: new Date(Date.now() + (15 * 60 * 1000)), // 15 minutes from now
+        };
+        
+        mockTrips.push(mockTrip);
+      }
+      
+      destinationModeService.addMockTripsToQueue(mockTrips);
+      
+      return {
+        success: true,
+        tripsAdded: mockTrips.length,
+      };
+    } catch (error) {
+      console.error('❌ Error adding mock trips:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to add mock trips',
+        cause: error,
+      });
+    }
+  });
+
+/**
+ * Clears all mock data for testing
+ */
+export const clearDestinationMockData = protectedProcedure
+  .output(z.object({ success: z.boolean() }))
+  .mutation(async ({ ctx }) => {
+    console.log('🧹 Clearing destination mock data for user:', ctx.user.id);
+    
+    try {
+      destinationModeService.clearMockData();
+      
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Error clearing mock data:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to clear mock data',
+        cause: error,
+      });
+    }
+  });

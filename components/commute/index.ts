@@ -8,6 +8,10 @@ export { default as RouteCard } from './RouteCard';
 export { default as TransportModeSelector } from './TransportModeSelector';
 export { default as CommuteModal } from './CommuteModal';
 export { default as CommuteButton } from './CommuteButton';
+export { default as DriverDashboard } from './DriverDashboard';
+export { default as TripChainingStatus } from './TripChainingStatus';
+export { default as DestinationSelector } from './DestinationSelector';
+export { default as DestinationTrips } from './DestinationTrips';
 
 // Re-export types for convenience
 export type { 
