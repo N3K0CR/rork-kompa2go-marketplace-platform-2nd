@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, MapPin, Clock, Users, Car, Bus, Bike, Zap } from 'lucide-react-native';
+import { Plus, MapPin, Clock, Users, Car, Bus, Bike, Zap, Settings } from 'lucide-react-native';
 import { useCommute } from '@/hooks/useCommute';
 import { CommuteButton, CommuteModal, RouteCard } from '@/components/commute';
 import { Colors, Spacing, BorderRadius, Shadows, Typography } from '@/context-package/design-system';
@@ -101,6 +101,17 @@ export default function CommuteHome() {
           onPress={() => router.push('/commute/driver')}
           variant="outline"
           size="medium"
+        />
+      </View>
+      
+      <View style={styles.validationSection}>
+        <CommuteButton
+          title="Validar Sistema"
+          subtitle="Verificar estado de 2Kommute"
+          icon={<Settings size={16} color={Colors.neutral[600]} />}
+          onPress={() => router.push('/kommute-validation')}
+          variant="ghost"
+          size="small"
         />
       </View>
     </View>
@@ -424,5 +435,11 @@ const styles = StyleSheet.create({
     ...Typography.textStyles.caption,
     color: Colors.neutral[500],
     textAlign: 'center',
+  },
+  validationSection: {
+    marginTop: Spacing[3],
+    paddingTop: Spacing[3],
+    borderTopWidth: 1,
+    borderTopColor: Colors.neutral[200],
   },
 });

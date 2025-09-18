@@ -71,6 +71,7 @@ function RootLayoutNav() {
       <Stack.Screen name="commute/search" options={{ title: "Buscar Viaje" }} />
       <Stack.Screen name="commute/driver" options={{ title: "Modo Conductor" }} />
       <Stack.Screen name="commute/trip/[tripId]" options={{ title: "Detalles del Viaje" }} />
+      <Stack.Screen name="kommute-validation" options={{ title: "2Kommute - Validación" }} />
     </Stack>
   );
 }
