@@ -242,12 +242,12 @@ const useLocationTracking = () => {
 // EXPORT ALL HOOKS
 // ============================================================================
 
-// Import and re-export trip chaining hooks
-export {
-  useTripChaining,
-  useDestinationMode,
-  useZoneSaturation,
-} from './useTripChaining';
+// Import and re-export trip chaining hooks (when available)
+// export {
+//   useTripChaining,
+//   useDestinationMode,
+//   useZoneSaturation,
+// } from './useTripChaining';
 
 export {
   useCommute,

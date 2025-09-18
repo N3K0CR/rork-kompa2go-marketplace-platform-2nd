@@ -4,7 +4,7 @@
 // Context provider integration for the entire application
 
 import React from 'react';
-import { CommuteContext } from '../modules/commute';
+import { CommuteContext } from '../modules/commute/context/CommuteContext';
 
 interface IntegratedContextProviderProps {
   children: React.ReactNode;

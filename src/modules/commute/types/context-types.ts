@@ -1,9 +1,9 @@
-import React from "react";
 // ============================================================================
 // 2KOMMUTE CONTEXT TYPES
 // ============================================================================
 // Type definitions for React contexts and hooks
 
+import React from 'react';
 import type {
   TransportMode,
   Route,
@@ -121,6 +121,7 @@ export interface UseRoutesReturn extends RouteContextType {
 
 export interface UseCarbonFootprintReturn extends CarbonFootprintContextType {
   // Additional properties specific to the hook
+  period?: 'daily' | 'weekly' | 'monthly';
 }
 
 export interface UseKommuteAdminReturn {

@@ -3,13 +3,11 @@
 // ============================================================================
 // Navigation integration between Kompa2Go and 2Kommute
 
-import { useKommuteEnabled } from '../modules/commute';
-
 /**
  * Navigation configuration that includes 2Kommute routes when enabled
+ * Note: This should be used within a React component context
  */
-export const getNavigationConfig = () => {
-  const isKommuteEnabled = useKommuteEnabled();
+export const getNavigationConfig = (isKommuteEnabled: boolean = false) => {
   
   const baseConfig = {
     // Existing Kompa2Go navigation
@@ -48,6 +46,7 @@ export const getNavigationConfig = () => {
  * Check if a route belongs to 2Kommute module
  */
 export const isCommuteRoute = (routeName: string): boolean => {
+  if (!routeName?.trim()) return false;
   return routeName.startsWith('commute/');
 };
 
@@ -55,8 +54,22 @@ export const isCommuteRoute = (routeName: string): boolean => {
  * Get the appropriate layout for a route
  */
 export const getRouteLayout = (routeName: string) => {
+  if (!routeName?.trim()) return 'default';
   if (isCommuteRoute(routeName)) {
     return 'commute';
   }
   return 'default';
+};
+
+/**
+ * Hook to get navigation configuration with Kommute status
+ */
+export const useNavigationConfig = () => {
+  // This would be used in a React component
+  // const { useKommuteEnabled } = require('../modules/commute/hooks/useCommute');
+  // const isKommuteEnabled = useKommuteEnabled();
+  // return getNavigationConfig(isKommuteEnabled);
+  
+  // For now, return base config
+  return getNavigationConfig(false);
 };
