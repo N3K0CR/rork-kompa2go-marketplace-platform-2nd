@@ -6,8 +6,6 @@
 import { useCallback, useMemo } from 'react';
 import { useCommute } from '../context/CommuteContext';
 import type {
-  RouteContextType,
-  CarbonFootprintContextType,
   UseRoutesReturn,
   UseCarbonFootprintReturn,
   UseKommuteAdminReturn,
@@ -23,7 +21,7 @@ import type {
 /**
  * Hook for route management operations
  */
-export const useRoutes = (): UseRoutesReturn => {
+const useRoutes = (): UseRoutesReturn => {
   const { 
     routes, 
     createRoute, 
@@ -63,7 +61,7 @@ export const useRoutes = (): UseRoutesReturn => {
 /**
  * Hook for carbon footprint tracking
  */
-export const useCarbonFootprint = (): UseCarbonFootprintReturn => {
+const useCarbonFootprint = (): UseCarbonFootprintReturn => {
   const { trips, featureFlags, transportModes } = useCommute();
 
   const calculateFootprint = useCallback(async (period: { startDate: Date; endDate: Date }): Promise<CarbonFootprint> => {
@@ -135,7 +133,7 @@ export const useCarbonFootprint = (): UseCarbonFootprintReturn => {
 /**
  * Hook to check if Kommute features are enabled
  */
-export const useKommuteEnabled = (): boolean => {
+const useKommuteEnabled = (): boolean => {
   const { featureFlags } = useCommute();
   return featureFlags.KOMMUTE_ENABLED;
 };
@@ -147,7 +145,7 @@ export const useKommuteEnabled = (): boolean => {
 /**
  * Hook for development/admin purposes to manage feature flags
  */
-export const useKommuteAdmin = (): UseKommuteAdminReturn => {
+const useKommuteAdmin = (): UseKommuteAdminReturn => {
   const { featureFlags, updateFeatureFlags } = useCommute();
   
   const enableKommute = useCallback(async () => {
@@ -178,8 +176,8 @@ export const useKommuteAdmin = (): UseKommuteAdminReturn => {
 /**
  * Hook for trip analytics and insights
  */
-export const useTripAnalytics = () => {
-  const { trips, routes } = useCommute();
+const useTripAnalytics = () => {
+  const { trips } = useCommute();
 
   const analytics = useMemo(() => {
     const completedTrips = trips.filter(trip => trip.status === 'completed');
@@ -213,7 +211,7 @@ export const useTripAnalytics = () => {
 /**
  * Hook for location tracking functionality
  */
-export const useLocationTracking = () => {
+const useLocationTracking = () => {
   const { currentLocation, hasLocationPermission, isTracking, updateLocation } = useCommute();
 
   const startLocationTracking = useCallback(() => {
@@ -243,6 +241,13 @@ export const useLocationTracking = () => {
 // ============================================================================
 // EXPORT ALL HOOKS
 // ============================================================================
+
+// Import and re-export trip chaining hooks
+export {
+  useTripChaining,
+  useDestinationMode,
+  useZoneSaturation,
+} from './useTripChaining';
 
 export {
   useCommute,
