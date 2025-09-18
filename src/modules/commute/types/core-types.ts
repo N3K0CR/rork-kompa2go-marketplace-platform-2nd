@@ -76,6 +76,11 @@ export interface Trip {
   status: 'planned' | 'in_progress' | 'completed' | 'cancelled';
   trackingPoints: TrackingPoint[];
   notes?: string;
+  // Trip chaining properties
+  chainId?: string;
+  previousTripId?: string;
+  nextTripId?: string;
+  isChainedTrip?: boolean;
 }
 
 // Carbon footprint tracking
@@ -183,6 +188,166 @@ export interface CommuteError {
   details?: Record<string, any>;
 }
 
+// ============================================================================
+// TRIP CHAINING TYPES
+// ============================================================================
+
+// Trip chain status
+export type TripChainStatus = 'active' | 'completed' | 'cancelled' | 'paused';
+
+// Trip queue entry status
+export type TripQueueStatus = 'queued' | 'matched' | 'expired' | 'cancelled';
+
+// Trip chain definition
+export interface TripChain {
+  id: string;
+  driverId: string;
+  trips: Trip[];
+  status: TripChainStatus;
+  totalDistance: number; // in meters
+  totalDuration: number; // in seconds
+  totalEarnings: number; // in currency units
+  maxChainLength?: number;
+  targetDestination?: RoutePoint;
+  createdAt: Date;
+  updatedAt: Date;
+  metadata?: {
+    averageRating?: number;
+    completionRate?: number;
+    preferredAreas?: string[];
+    driverNotes?: string;
+  };
+}
+
+// Trip queue entry for matching
+export interface TripQueueEntry {
+  id: string;
+  tripId: string;
+  passengerId: string;
+  pickupLocation: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  };
+  dropoffLocation: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  };
+  requestedTime: Date;
+  maxWaitTime: number; // in seconds
+  priority: number; // 1-10, higher is more priority
+  estimatedFare: number;
+  status: TripQueueStatus;
+  createdAt: Date;
+  expiresAt: Date;
+  requirements?: {
+    vehicleType?: string;
+    accessibility?: boolean;
+    childSeat?: boolean;
+    petFriendly?: boolean;
+  };
+  passengerPreferences?: {
+    maxDetour?: number; // in meters
+    shareRide?: boolean;
+    preferredDriverRating?: number;
+  };
+}
+
+// Trip chaining configuration
+export interface TripChainingConfig {
+  enabled: boolean;
+  maxChainLength: number;
+  proximityRadius: number; // in meters
+  advanceNoticeTime: number; // in seconds (e.g., 300 for 5 minutes)
+  maxWaitTime: number; // in seconds
+  minTripGap: number; // minimum time between trips in seconds
+  allowedTransitionTime: number; // max time to get to next pickup
+  priorityWeights: {
+    distance: number;
+    fare: number;
+    rating: number;
+    waitTime: number;
+  };
+}
+
+// Driver availability for chaining
+export interface DriverAvailability {
+  driverId: string;
+  currentTripId?: string;
+  currentLocation: {
+    latitude: number;
+    longitude: number;
+    timestamp: Date;
+  };
+  estimatedCompletionTime?: Date;
+  isAcceptingChainedTrips: boolean;
+  maxChainLength: number;
+  preferredAreas?: {
+    latitude: number;
+    longitude: number;
+    radius: number;
+  }[];
+  targetDestination?: {
+    latitude: number;
+    longitude: number;
+    address: string;
+    arrivalBy?: Date;
+  };
+  vehicleInfo: {
+    type: string;
+    capacity: number;
+    accessibility: boolean;
+    petFriendly: boolean;
+  };
+  driverRating: number;
+  completedTripsToday: number;
+  earningsToday: number;
+}
+
+// Trip matching result
+export interface TripMatch {
+  id: string;
+  driverId: string;
+  queueEntryId: string;
+  tripId: string;
+  confidence: number; // 0-1
+  estimatedPickupTime: Date;
+  estimatedTransitionTime: number; // seconds from current trip end to pickup
+  distanceToPickup: number; // in meters
+  matchScore: number; // calculated score based on various factors
+  reasons: string[]; // why this match was suggested
+  warnings?: string[]; // potential issues with this match
+  createdAt: Date;
+  expiresAt: Date;
+}
+
+// Trip chaining analytics
+export interface TripChainingAnalytics {
+  driverId: string;
+  period: {
+    startDate: Date;
+    endDate: Date;
+  };
+  totalChains: number;
+  completedChains: number;
+  averageChainLength: number;
+  totalChainedTrips: number;
+  chainCompletionRate: number;
+  averageTransitionTime: number;
+  totalEarningsFromChains: number;
+  efficiencyMetrics: {
+    deadMileageReduction: number; // percentage
+    timeUtilization: number; // percentage
+    fuelSavings: number; // estimated
+  };
+  topPerformingAreas: {
+    area: string;
+    chainCount: number;
+    averageEarnings: number;
+  }[];
+}
+
 // Utility types
 export type CommuteStatus = 'idle' | 'loading' | 'tracking' | 'error';
 export type TripStatus = Trip['status'];
@@ -199,7 +364,12 @@ export type CommuteEventType =
   | 'match_found'
   | 'match_cancelled'
   | 'emergency_alert'
-  | 'team_notification';
+  | 'team_notification'
+  | 'trip_chain_started'
+  | 'trip_chain_completed'
+  | 'next_trip_accepted'
+  | 'trip_queue_updated'
+  | 'proximity_match_found';
 
 export interface CommuteEvent {
   id: string;
@@ -207,6 +377,7 @@ export interface CommuteEvent {
   userId: string;
   tripId?: string;
   teamId?: string;
+  chainId?: string;
   data: Record<string, any>;
   timestamp: Date;
   priority: 'low' | 'medium' | 'high' | 'critical';

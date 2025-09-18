@@ -12,6 +12,12 @@ import type {
   TeamTransport,
   CarbonFootprint,
   CommuteEvent,
+  TripChain,
+  TripQueueEntry,
+  TripMatch,
+  DriverAvailability,
+  TripChainingConfig,
+  TripChainingAnalytics,
 } from './core-types';
 
 // ============================================================================
@@ -220,7 +226,7 @@ export const RealTimeEventSchema = z.object({
   userId: z.string(),
   tripId: z.string().optional(),
   teamId: z.string().optional(),
-  data: z.record(z.any()),
+  data: z.record(z.string(), z.any()),
   timestamp: z.date(),
   priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
 });
@@ -272,7 +278,7 @@ export const CommuteErrorSchema = z.object({
     'VALIDATION_ERROR'
   ]),
   message: z.string(),
-  details: z.record(z.any()).optional(),
+  details: z.record(z.string(), z.any()).optional(),
 });
 
 // ============================================================================
@@ -405,21 +411,67 @@ export interface BatchDeleteRoutesInput {
   routeIds: string[];
 }
 
-// Export validation schemas for use in tRPC procedures
+// ============================================================================
+// TRIP CHAINING IMPORTS
+// ============================================================================
+// Import trip chaining types and schemas from dedicated file
+
+export type {
+  // Input types
+  CreateTripChainInput,
+  AddTripToQueueInput,
+  FindNextTripsInput,
+  AcceptNextTripInput,
+  UpdateDriverAvailabilityInput,
+  GetTripChainingAnalyticsInput,
+  // Response types
+  CreateTripChainResponse,
+  GetTripChainsResponse,
+  AddTripToChainResponse,
+  CompleteTripChainResponse,
+  AddTripToQueueResponse,
+  GetQueueStatusResponse,
+  FindNextTripsResponse,
+  AcceptNextTripResponse,
+  UpdateDriverAvailabilityResponse,
+  GetDriverAvailabilityResponse,
+  GetTripChainingAnalyticsResponse,
+  GetTripMatchesResponse,
+  // Event types
+  TripChainEvent,
+  // Batch operations
+  BatchAddTripsToQueueInput,
+  BatchUpdateDriverAvailabilityInput,
+  BatchProcessQueueInput,
+  // Utility types
+  TripChainStatus,
+  TripQueueStatus,
+  LocationCoordinates,
+  LocationWithAddress,
+  LocationWithTimestamp,
+  DriverChainState,
+  TripTransition,
+  MatchingCriteria,
+  MatchingScore,
+  ChainEfficiencyMetrics,
+  DriverPerformanceMetrics,
+  TripChainingSettings,
+  TripChainingErrorCode,
+  TripChainingError,
+} from './trip-chaining-types';
+
 export {
-  TransportModeSchema,
-  RoutePointSchema,
-  RouteSchema,
-  TripSchema,
-  CreateRouteInputSchema,
-  UpdateRouteInputSchema,
-  StartTripInputSchema,
-  UpdateTripInputSchema,
-  AddTrackingPointInputSchema,
-  MatchingRequestSchema,
-  MatchingResponseSchema,
-  RealTimeEventSchema,
-  AnalyticsRequestSchema,
-  CarbonFootprintSchema,
-  CommuteErrorSchema,
-};
+  // Validation schemas
+  TripChainValidationSchema,
+  TripQueueEntryValidationSchema,
+  DriverAvailabilityValidationSchema,
+  TripChainingConfigValidationSchema,
+  TripMatchValidationSchema,
+  // Input schemas
+  CreateTripChainInputSchema,
+  AddTripToQueueInputSchema,
+  FindNextTripsInputSchema,
+  AcceptNextTripInputSchema,
+  UpdateDriverAvailabilityInputSchema,
+  GetTripChainingAnalyticsInputSchema,
+} from './trip-chaining-types';
