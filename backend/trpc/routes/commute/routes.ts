@@ -11,6 +11,21 @@ import { RealTimeService } from './realtime-service';
 import { TripChainingService } from './trip-chaining-service';
 import { destinationModeService } from './destination-service';
 import {
+  createZoneProcedure,
+  updateZoneProcedure,
+  deleteZoneProcedure,
+  getAllZonesProcedure,
+  getZoneByIdProcedure,
+  joinZoneProcedure,
+  leaveZoneProcedure,
+  getDriverZoneAssignmentsProcedure,
+  getZoneSaturationProcedure,
+  getZoneRecommendationsProcedure,
+  getZoneAnalyticsProcedure,
+  getZoneStatusProcedure,
+  getNearbyZonesProcedure,
+} from './zone-saturation-routes';
+import {
   CreateRouteInputSchema,
   UpdateRouteInputSchema,
   StartTripInputSchema,
@@ -33,6 +48,15 @@ import {
   UpdateDestinationProgressInputSchema,
   FindTripsToDestinationInputSchema,
   DestinationModeSchema,
+  // Zone saturation schemas
+  CreateZoneInputSchema,
+  UpdateZoneInputSchema,
+  JoinZoneInputSchema,
+  LeaveZoneInputSchema,
+  GetZoneSaturationInputSchema,
+  GetZoneRecommendationsInputSchema,
+  ZoneSchema,
+  ZoneSaturationStatusSchema,
 } from './types';
 
 // ============================================================================
@@ -1271,3 +1295,24 @@ export const clearDestinationMockData = protectedProcedure
       });
     }
   });
+
+// ============================================================================
+// ZONE SATURATION PROCEDURES
+// ============================================================================
+
+// Export zone saturation procedures
+export {
+  createZoneProcedure as createZone,
+  updateZoneProcedure as updateZone,
+  deleteZoneProcedure as deleteZone,
+  getAllZonesProcedure as getAllZones,
+  getZoneByIdProcedure as getZoneById,
+  joinZoneProcedure as joinZone,
+  leaveZoneProcedure as leaveZone,
+  getDriverZoneAssignmentsProcedure as getDriverZoneAssignments,
+  getZoneSaturationProcedure as getZoneSaturation,
+  getZoneRecommendationsProcedure as getZoneRecommendations,
+  getZoneAnalyticsProcedure as getZoneAnalytics,
+  getZoneStatusProcedure as getZoneStatus,
+  getNearbyZonesProcedure as getNearbyZones,
+};

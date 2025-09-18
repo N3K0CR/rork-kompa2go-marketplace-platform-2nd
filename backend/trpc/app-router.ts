@@ -62,6 +62,21 @@ export const appRouter = createTRPCRouter({
     getDestinationModeStats: commuteRoutes.getDestinationModeStats,
     addMockTripsForDestination: commuteRoutes.addMockTripsForDestination,
     clearDestinationMockData: commuteRoutes.clearDestinationMockData,
+    
+    // Zone Saturation Service
+    createZone: commuteRoutes.createZone,
+    updateZone: commuteRoutes.updateZone,
+    deleteZone: commuteRoutes.deleteZone,
+    getAllZones: commuteRoutes.getAllZones,
+    getZoneById: commuteRoutes.getZoneById,
+    joinZone: commuteRoutes.joinZone,
+    leaveZone: commuteRoutes.leaveZone,
+    getDriverZoneAssignments: commuteRoutes.getDriverZoneAssignments,
+    getZoneSaturation: commuteRoutes.getZoneSaturation,
+    getZoneRecommendations: commuteRoutes.getZoneRecommendations,
+    getZoneAnalytics: commuteRoutes.getZoneAnalytics,
+    getZoneStatus: commuteRoutes.getZoneStatus,
+    getNearbyZones: commuteRoutes.getNearbyZones,
   }),
 });
 

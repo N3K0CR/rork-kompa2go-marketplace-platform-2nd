@@ -242,6 +242,155 @@ export const UpdateDestinationProgressInputSchema = z.object({
   progressPercentage: z.number().min(0).max(100),
 });
 
+// Zone saturation schemas
+export const ZoneSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  coordinates: z.array(z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  })).min(3), // Minimum 3 points for a polygon
+  center: z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  }),
+  radius: z.number().positive().optional(), // For circular zones
+  maxDrivers: z.number().positive(),
+  currentDrivers: z.number().min(0),
+  saturationLevel: z.number().min(0).max(100),
+  status: z.enum(['active', 'inactive', 'saturated', 'high_demand']),
+  priority: z.number().min(1).max(10).default(5),
+  incentives: z.object({
+    bonusMultiplier: z.number().min(1).default(1),
+    minimumTrips: z.number().min(0).default(0),
+    timeBasedBonus: z.boolean().default(false),
+  }).optional(),
+  restrictions: z.object({
+    minRating: z.number().min(0).max(5).optional(),
+    minExperience: z.number().min(0).optional(), // days
+    vehicleTypes: z.array(z.string()).optional(),
+  }).optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const DriverZoneAssignmentSchema = z.object({
+  id: z.string(),
+  driverId: z.string(),
+  zoneId: z.string(),
+  status: z.enum(['active', 'inactive', 'pending', 'rejected']),
+  assignedAt: z.date(),
+  lastActiveAt: z.date().optional(),
+  performanceMetrics: z.object({
+    tripsCompleted: z.number().min(0),
+    averageRating: z.number().min(0).max(5),
+    acceptanceRate: z.number().min(0).max(100),
+    cancellationRate: z.number().min(0).max(100),
+  }).optional(),
+  earnings: z.object({
+    totalEarnings: z.number().min(0),
+    bonusEarnings: z.number().min(0),
+    tripsCount: z.number().min(0),
+  }).optional(),
+});
+
+export const ZoneSaturationStatusSchema = z.object({
+  zoneId: z.string(),
+  currentDrivers: z.number().min(0),
+  maxDrivers: z.number().positive(),
+  saturationLevel: z.number().min(0).max(100),
+  status: z.enum(['low', 'optimal', 'high', 'saturated']),
+  waitingList: z.number().min(0),
+  estimatedWaitTime: z.number().min(0).optional(), // minutes
+  recommendations: z.array(z.object({
+    type: z.enum(['move_to_zone', 'wait', 'try_later', 'alternative_zone']),
+    message: z.string(),
+    alternativeZoneId: z.string().optional(),
+  })),
+  lastUpdated: z.date(),
+});
+
+// Input schemas for zone operations
+export const CreateZoneInputSchema = z.object({
+  name: z.string().min(1).max(100),
+  description: z.string().max(500).optional(),
+  coordinates: z.array(z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  })).min(3),
+  maxDrivers: z.number().positive(),
+  priority: z.number().min(1).max(10).default(5),
+  incentives: z.object({
+    bonusMultiplier: z.number().min(1).default(1),
+    minimumTrips: z.number().min(0).default(0),
+    timeBasedBonus: z.boolean().default(false),
+  }).optional(),
+  restrictions: z.object({
+    minRating: z.number().min(0).max(5).optional(),
+    minExperience: z.number().min(0).optional(),
+    vehicleTypes: z.array(z.string()).optional(),
+  }).optional(),
+});
+
+export const UpdateZoneInputSchema = z.object({
+  zoneId: z.string(),
+  name: z.string().min(1).max(100).optional(),
+  description: z.string().max(500).optional(),
+  coordinates: z.array(z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  })).min(3).optional(),
+  maxDrivers: z.number().positive().optional(),
+  status: z.enum(['active', 'inactive', 'saturated', 'high_demand']).optional(),
+  priority: z.number().min(1).max(10).optional(),
+  incentives: z.object({
+    bonusMultiplier: z.number().min(1).default(1),
+    minimumTrips: z.number().min(0).default(0),
+    timeBasedBonus: z.boolean().default(false),
+  }).optional(),
+  restrictions: z.object({
+    minRating: z.number().min(0).max(5).optional(),
+    minExperience: z.number().min(0).optional(),
+    vehicleTypes: z.array(z.string()).optional(),
+  }).optional(),
+});
+
+export const JoinZoneInputSchema = z.object({
+  zoneId: z.string(),
+  driverLocation: z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  }),
+});
+
+export const LeaveZoneInputSchema = z.object({
+  zoneId: z.string(),
+  reason: z.enum(['manual', 'auto_timeout', 'low_demand', 'end_shift']).optional(),
+});
+
+export const GetZoneSaturationInputSchema = z.object({
+  location: z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  }),
+  radius: z.number().positive().default(10000), // 10km
+});
+
+export const GetZoneRecommendationsInputSchema = z.object({
+  driverId: z.string(),
+  currentLocation: z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  }),
+  maxDistance: z.number().positive().default(20000), // 20km
+  preferences: z.object({
+    prioritizeEarnings: z.boolean().default(true),
+    prioritizeDistance: z.boolean().default(false),
+    minBonusMultiplier: z.number().min(1).default(1),
+  }).optional(),
+});
+
 export const FindTripsToDestinationInputSchema = z.object({
   destinationModeId: z.string(),
   currentLocation: z.object({
@@ -479,3 +628,14 @@ export type TripQueueEntry = z.infer<typeof TripQueueEntrySchema>;
 export type AcceptNextTripInput = z.infer<typeof AcceptNextTripInputSchema>;
 export type FindNextTripsInput = z.infer<typeof FindNextTripsInputSchema>;
 export type CreateTripChainInput = z.infer<typeof CreateTripChainInputSchema>;
+
+// Zone saturation types
+export type Zone = z.infer<typeof ZoneSchema>;
+export type DriverZoneAssignment = z.infer<typeof DriverZoneAssignmentSchema>;
+export type ZoneSaturationStatus = z.infer<typeof ZoneSaturationStatusSchema>;
+export type CreateZoneInput = z.infer<typeof CreateZoneInputSchema>;
+export type UpdateZoneInput = z.infer<typeof UpdateZoneInputSchema>;
+export type JoinZoneInput = z.infer<typeof JoinZoneInputSchema>;
+export type LeaveZoneInput = z.infer<typeof LeaveZoneInputSchema>;
+export type GetZoneSaturationInput = z.infer<typeof GetZoneSaturationInputSchema>;
+export type GetZoneRecommendationsInput = z.infer<typeof GetZoneRecommendationsInputSchema>;
