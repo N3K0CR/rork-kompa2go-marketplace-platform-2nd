@@ -1,0 +1,143 @@
+{
+  "appName": "Kompa2Go",
+  "version": "1.0.0",
+  "structure": {
+    "navigation": {
+      "type": "tabs",
+      "tabs": [
+        {
+          "name": "index",
+          "path": "/(tabs)/index.tsx",
+          "title": "Home",
+          "icon": "home"
+        },
+        {
+          "name": "search",
+          "path": "/(tabs)/search.tsx",
+          "title": "Buscar",
+          "icon": "search"
+        },
+        {
+          "name": "calendar",
+          "path": "/(tabs)/calendar.tsx",
+          "title": "Calendario",
+          "icon": "calendar"
+        },
+        {
+          "name": "chat",
+          "path": "/(tabs)/chat.tsx",
+          "title": "Chat",
+          "icon": "message-circle"
+        },
+        {
+          "name": "analytics",
+          "path": "/(tabs)/analytics.tsx",
+          "title": "Analytics",
+          "icon": "bar-chart"
+        },
+        {
+          "name": "programas",
+          "path": "/(tabs)/programas.tsx",
+          "title": "Programas",
+          "icon": "gift"
+        },
+        {
+          "name": "profile",
+          "path": "/(tabs)/profile.tsx",
+          "title": "Perfil",
+          "icon": "user"
+        }
+      ]
+    },
+    "contexts": [
+      "AuthContext",
+      "LanguageContext",
+      "WalletContext",
+      "OKoinsContext",
+      "AppointmentsContext",
+      "TeamCalendarContext",
+      "ReservationAlertContext",
+      "ProviderContext",
+      "ReservationPlansContext",
+      "PendingPaymentsContext",
+      "LocationSearchContext",
+      "PaymentBackendContext",
+      "ChatContext",
+      "K2GProductsContext",
+      "ReportedProblemsContext",
+      "LemonSqueezyContext",
+      "KompiBrainContext",
+      "DatabaseContext"
+    ],
+    "pages": {
+      "auth": "/auth.tsx",
+      "onboarding": "/onboarding.tsx",
+      "provider": {
+        "detail": "/provider/[id].tsx",
+        "editProfile": "/provider/edit-profile.tsx",
+        "history": "/provider/history.tsx"
+      },
+      "booking": "/booking/[providerId].tsx",
+      "client": {
+        "editProfile": "/client/edit-profile.tsx",
+        "history": "/client/history.tsx"
+      },
+      "chat": {
+        "list": "/chats.tsx",
+        "detail": "/chat/[chatId].tsx"
+      },
+      "admin": {
+        "products": "/admin-products.tsx",
+        "collaborators": "/collaborators.tsx",
+        "reportedProblems": "/reported-problems.tsx",
+        "pendingPayments": "/pending-payments.tsx",
+        "databaseManagement": "/database-management.tsx"
+      },
+      "payments": {
+        "demo": "/payment-demo.tsx",
+        "purchasePlan": "/purchase-plan.tsx",
+        "success": "/payment-success.tsx"
+      },
+      "achievements": "/achievements.tsx",
+      "testKompi": "/test-kompi.tsx"
+    },
+    "components": [
+      "FloatingKompi",
+      "LanguageSwitcher",
+      "ConsolidatedTeamView",
+      "ReservationAlertModal",
+      "ExtendRadiusDialog",
+      "ReservationDetailCard",
+      "OKoinsProgramInfo",
+      "OKoinsHistory",
+      "OKoinsBalanceDisplay",
+      "CardPaymentCheckout"
+    ],
+    "backend": {
+      "framework": "Hono",
+      "trpc": true,
+      "routes": [
+        "example/hi",
+        "payments"
+      ],
+      "database": {
+        "orm": "Drizzle",
+        "type": "PostgreSQL",
+        "security": true
+      }
+    },
+    "features": {
+      "authentication": true,
+      "multiLanguage": true,
+      "payments": true,
+      "chat": true,
+      "calendar": true,
+      "okoins": true,
+      "reservations": true,
+      "analytics": true,
+      "floatingAssistant": true,
+      "database": true,
+      "security": true
+    }
+  }
+}
