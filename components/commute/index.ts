@@ -14,6 +14,7 @@ export { default as DestinationSelector } from './DestinationSelector';
 export { default as DestinationTrips } from './DestinationTrips';
 export { default as ZoneSelector } from './ZoneSelector';
 export { ZoneSaturationStatus } from './ZoneSaturationStatus';
+export { default as ZoneMapView } from './ZoneMapView';
 
 // Re-export types for convenience
 export type { 
