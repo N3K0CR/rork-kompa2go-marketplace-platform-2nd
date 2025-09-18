@@ -1,4 +1,10 @@
-// Core types for Kompa2Go application
+// ============================================================================
+// KOMPA2GO CORE TYPES - MANTENER INTACTO
+// ============================================================================
+// Estos tipos son la base estable de Kompa2Go y NO deben modificarse
+// para mantener compatibilidad con el código existente
+
+// Core User types
 export interface User {
   id: string;
   email: string;
@@ -354,3 +360,333 @@ export type DeepPartial<T> = {
 export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
 export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
+
+// ============================================================================
+// 2KOMMUTE TYPES - EN DESARROLLO (INACTIVO)
+// ============================================================================
+// Estos tipos están preparados para el módulo de transporte avanzado
+// pero NO están activos hasta que se habilite el feature flag
+
+// Transport-related types
+export interface TransportMode {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  carbonFactor: number; // kg CO2 per km
+  costFactor: number; // cost per km
+  speedFactor: number; // average speed km/h
+  available: boolean;
+}
+
+export interface RoutePoint {
+  id: string;
+  latitude: number;
+  longitude: number;
+  address: string;
+  name?: string;
+  type: 'origin' | 'destination' | 'waypoint';
+  estimatedArrival?: Date;
+  actualArrival?: Date;
+}
+
+export interface Route {
+  id: string;
+  userId: string;
+  name: string;
+  points: RoutePoint[];
+  transportModes: TransportMode[];
+  distance: number; // in meters
+  duration: number; // in seconds
+  estimatedCost: number;
+  carbonFootprint: number; // kg CO2
+  status: 'planned' | 'active' | 'completed' | 'cancelled';
+  isRecurring: boolean;
+  recurringPattern?: RecurringPattern;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface RecurringPattern {
+  type: 'daily' | 'weekly' | 'monthly';
+  daysOfWeek?: number[]; // 0-6 (Sunday-Saturday)
+  startDate: Date;
+  endDate?: Date;
+  exceptions?: Date[]; // dates to skip
+}
+
+export interface Trip {
+  id: string;
+  routeId: string;
+  userId: string;
+  startTime: Date;
+  endTime?: Date;
+  actualDistance?: number;
+  actualDuration?: number;
+  actualCost?: number;
+  actualCarbonFootprint?: number;
+  status: 'planned' | 'in_progress' | 'completed' | 'cancelled';
+  trackingPoints: TrackingPoint[];
+  notes?: string;
+}
+
+export interface TrackingPoint {
+  id: string;
+  tripId: string;
+  latitude: number;
+  longitude: number;
+  timestamp: Date;
+  speed?: number; // km/h
+  accuracy?: number; // meters
+  altitude?: number; // meters
+}
+
+export interface CarbonFootprint {
+  id: string;
+  userId: string;
+  period: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  startDate: Date;
+  endDate: Date;
+  totalEmissions: number; // kg CO2
+  transportBreakdown: {
+    transportModeId: string;
+    emissions: number;
+    distance: number;
+    trips: number;
+  }[];
+  comparisonData?: {
+    previousPeriod: number;
+    average: number;
+    target?: number;
+  };
+}
+
+export interface TeamTransport {
+  id: string;
+  name: string;
+  description?: string;
+  adminId: string;
+  members: TeamMember[];
+  routes: Route[];
+  settings: TeamTransportSettings;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TeamMember {
+  userId: string;
+  role: 'admin' | 'member';
+  joinedAt: Date;
+  preferences: {
+    canDrive: boolean;
+    hasVehicle: boolean;
+    vehicleCapacity?: number;
+    preferredTransportModes: string[];
+  };
+}
+
+export interface TeamTransportSettings {
+  allowCarpooling: boolean;
+  maxDetourDistance: number; // meters
+  costSharingEnabled: boolean;
+  carbonTrackingEnabled: boolean;
+  notificationsEnabled: boolean;
+}
+
+export interface TransportAnalytics {
+  userId: string;
+  period: {
+    startDate: Date;
+    endDate: Date;
+  };
+  summary: {
+    totalTrips: number;
+    totalDistance: number; // meters
+    totalDuration: number; // seconds
+    totalCost: number;
+    totalCarbonFootprint: number; // kg CO2
+    averageSpeed: number; // km/h
+  };
+  transportModeBreakdown: {
+    transportModeId: string;
+    trips: number;
+    distance: number;
+    duration: number;
+    cost: number;
+    carbonFootprint: number;
+  }[];
+  trends: {
+    period: string;
+    trips: number;
+    distance: number;
+    cost: number;
+    carbonFootprint: number;
+  }[];
+  achievements: TransportAchievement[];
+}
+
+export interface TransportAchievement {
+  id: string;
+  userId: string;
+  type: 'distance' | 'carbon_saved' | 'cost_saved' | 'consistency' | 'team_participation';
+  title: string;
+  description: string;
+  icon: string;
+  progress: number; // 0-100
+  target: number;
+  current: number;
+  unlockedAt?: Date;
+  reward?: {
+    type: 'badge' | 'okoins' | 'discount';
+    value: number;
+  };
+}
+
+// Feature flag types
+export interface FeatureFlags {
+  KOMMUTE_ENABLED: boolean;
+  KOMMUTE_TEAM_FEATURES: boolean;
+  KOMMUTE_CARBON_TRACKING: boolean;
+  KOMMUTE_OFFLINE_MAPS: boolean;
+  KOMMUTE_EXTERNAL_APIS: boolean;
+}
+
+// Integration types between Kompa2Go and 2Kommute
+export interface IntegratedUser extends User {
+  transportPreferences?: {
+    defaultTransportModes: string[];
+    homeLocation?: Location;
+    workLocation?: Location;
+    carbonTrackingEnabled: boolean;
+    teamTransportEnabled: boolean;
+  };
+  transportStats?: {
+    totalTrips: number;
+    totalDistance: number;
+    carbonFootprintSaved: number;
+    okoinsEarned: number;
+  };
+}
+
+export interface IntegratedAnalytics {
+  kompa2go: {
+    bookings: number;
+    revenue: number;
+    okoinsEarned: number;
+  };
+  kommute: {
+    trips: number;
+    distance: number;
+    carbonSaved: number;
+    costSaved: number;
+  };
+  combined: {
+    totalOkoinsEarned: number;
+    sustainabilityScore: number;
+    efficiencyRating: number;
+  };
+}
+
+// API Response types for 2Kommute
+export interface TransportApiResponse<T> extends ApiResponse<T> {
+  metadata?: {
+    featureFlags: Partial<FeatureFlags>;
+    version: string;
+    timestamp: Date;
+  };
+}
+
+// Navigation types for 2Kommute
+export type TransportTabParamList = {
+  transport: undefined;
+  routes: undefined;
+};
+
+export type TransportStackParamList = {
+  'transport/route-planner': { routeId?: string };
+  'transport/live-tracking': { tripId: string };
+  'transport/trip-history': undefined;
+  'transport/settings': undefined;
+  'transport/team-coordination': { teamId?: string };
+  'transport/analytics': { period?: string };
+  'transport/carbon-tracker': undefined;
+};
+
+// Context types for 2Kommute
+export interface TransportContextType {
+  isEnabled: boolean;
+  currentTrip: Trip | null;
+  activeRoute: Route | null;
+  transportModes: TransportMode[];
+  isTracking: boolean;
+  startTrip: (routeId: string) => Promise<void>;
+  endTrip: (tripId: string) => Promise<void>;
+  updateLocation: (point: Omit<TrackingPoint, 'id' | 'tripId'>) => void;
+}
+
+export interface RouteContextType {
+  routes: Route[];
+  isLoading: boolean;
+  createRoute: (route: Omit<Route, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Route>;
+  updateRoute: (routeId: string, updates: Partial<Route>) => Promise<void>;
+  deleteRoute: (routeId: string) => Promise<void>;
+  optimizeRoute: (routeId: string) => Promise<Route>;
+}
+
+export interface CarbonFootprintContextType {
+  currentFootprint: CarbonFootprint | null;
+  isLoading: boolean;
+  calculateFootprint: (period: { startDate: Date; endDate: Date }) => Promise<CarbonFootprint>;
+  getComparison: (period: string) => Promise<{ current: number; previous: number; average: number }>;
+  setTarget: (target: number) => Promise<void>;
+}
+
+// Component props types for 2Kommute
+export interface RouteMapProps {
+  route?: Route;
+  currentLocation?: { latitude: number; longitude: number };
+  onRouteChange?: (route: Route) => void;
+  showTraffic?: boolean;
+  interactive?: boolean;
+}
+
+export interface TransportModeSelectorProps {
+  modes: TransportMode[];
+  selectedModes: string[];
+  onSelectionChange: (modeIds: string[]) => void;
+  maxSelection?: number;
+}
+
+export interface LiveTrackingIndicatorProps {
+  trip: Trip;
+  onStop: () => void;
+  showDetails?: boolean;
+}
+
+export interface CarbonFootprintDisplayProps {
+  footprint: CarbonFootprint;
+  showComparison?: boolean;
+  showBreakdown?: boolean;
+  compact?: boolean;
+}
+
+// Extended types that combine both systems
+export type ExtendedTabParamList = TabParamList & TransportTabParamList;
+export type ExtendedRootStackParamList = RootStackParamList & TransportStackParamList;
+
+// Migration and compatibility types
+export interface MigrationStatus {
+  kommuteEnabled: boolean;
+  dataVersion: string;
+  lastMigration: Date;
+  pendingMigrations: string[];
+  rollbackAvailable: boolean;
+}
+
+export interface CompatibilityCheck {
+  kompa2goVersion: string;
+  kommuteVersion: string;
+  compatible: boolean;
+  issues: string[];
+  recommendations: string[];
+}

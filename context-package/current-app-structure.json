@@ -1,7 +1,26 @@
 {
-  "appName": "Kompa2Go",
-  "version": "1.0.0",
-  "structure": {
+  "project": {
+    "name": "Kompa2Go + 2Kommute",
+    "version": "2.0.0",
+    "description": "Marketplace de servicios + Módulo de transporte avanzado",
+    "status": "DEVELOPMENT_PHASE"
+  },
+  "kompa2go": {
+    "description": "Marketplace de servicios existente - MANTENER INTACTO",
+    "status": "PRODUCTION_STABLE",
+    "version": "1.0.0",
+    "core_features": [
+      "Provider marketplace",
+      "Booking system",
+      "Payment processing",
+      "Chat system",
+      "Analytics",
+      "Team calendar",
+      "OKoins rewards",
+      "Multi-language support",
+      "Real-time notifications",
+      "Admin dashboard"
+    ],
     "navigation": {
       "type": "tabs",
       "tabs": [
@@ -9,44 +28,73 @@
           "name": "index",
           "path": "/(tabs)/index.tsx",
           "title": "Home",
-          "icon": "home"
+          "icon": "home",
+          "active": true
         },
         {
           "name": "search",
           "path": "/(tabs)/search.tsx",
           "title": "Buscar",
-          "icon": "search"
+          "icon": "search",
+          "active": true
         },
         {
           "name": "calendar",
           "path": "/(tabs)/calendar.tsx",
           "title": "Calendario",
-          "icon": "calendar"
+          "icon": "calendar",
+          "active": true
         },
         {
           "name": "chat",
           "path": "/(tabs)/chat.tsx",
           "title": "Chat",
-          "icon": "message-circle"
+          "icon": "message-circle",
+          "active": true
         },
         {
           "name": "analytics",
           "path": "/(tabs)/analytics.tsx",
           "title": "Analytics",
-          "icon": "bar-chart"
+          "icon": "bar-chart",
+          "active": true
         },
         {
           "name": "programas",
           "path": "/(tabs)/programas.tsx",
           "title": "Programas",
-          "icon": "gift"
+          "icon": "gift",
+          "active": true
         },
         {
           "name": "profile",
           "path": "/(tabs)/profile.tsx",
           "title": "Perfil",
-          "icon": "user"
+          "icon": "user",
+          "active": true
         }
+      ],
+      "stack_routes": [
+        "onboarding",
+        "auth",
+        "provider/[id]",
+        "booking/[providerId]",
+        "collaborators",
+        "achievements",
+        "pending-payments",
+        "payment-demo",
+        "purchase-plan",
+        "chats",
+        "chat/[chatId]",
+        "admin-products",
+        "client/edit-profile",
+        "client/history",
+        "provider/edit-profile",
+        "provider/history",
+        "reported-problems",
+        "payment-success",
+        "test-kompi",
+        "database-management"
       ]
     },
     "contexts": [
@@ -69,75 +117,157 @@
       "KompiBrainContext",
       "DatabaseContext"
     ],
-    "pages": {
-      "auth": "/auth.tsx",
-      "onboarding": "/onboarding.tsx",
-      "provider": {
-        "detail": "/provider/[id].tsx",
-        "editProfile": "/provider/edit-profile.tsx",
-        "history": "/provider/history.tsx"
-      },
-      "booking": "/booking/[providerId].tsx",
-      "client": {
-        "editProfile": "/client/edit-profile.tsx",
-        "history": "/client/history.tsx"
-      },
-      "chat": {
-        "list": "/chats.tsx",
-        "detail": "/chat/[chatId].tsx"
-      },
-      "admin": {
-        "products": "/admin-products.tsx",
-        "collaborators": "/collaborators.tsx",
-        "reportedProblems": "/reported-problems.tsx",
-        "pendingPayments": "/pending-payments.tsx",
-        "databaseManagement": "/database-management.tsx"
-      },
-      "payments": {
-        "demo": "/payment-demo.tsx",
-        "purchasePlan": "/purchase-plan.tsx",
-        "success": "/payment-success.tsx"
-      },
-      "achievements": "/achievements.tsx",
-      "testKompi": "/test-kompi.tsx"
-    },
-    "components": [
-      "FloatingKompi",
-      "LanguageSwitcher",
-      "ConsolidatedTeamView",
-      "ReservationAlertModal",
-      "ExtendRadiusDialog",
-      "ReservationDetailCard",
-      "OKoinsProgramInfo",
-      "OKoinsHistory",
-      "OKoinsBalanceDisplay",
-      "CardPaymentCheckout"
-    ],
     "backend": {
-      "framework": "Hono",
-      "trpc": true,
+      "framework": "Hono + tRPC",
+      "database": "PostgreSQL + Drizzle ORM",
+      "security": "DDoS protection enabled",
       "routes": [
         "example/hi",
-        "payments"
+        "payments/*"
+      ]
+    }
+  },
+  "2kommute": {
+    "description": "Módulo de transporte avanzado - EN DESARROLLO",
+    "status": "DEVELOPMENT_INACTIVE",
+    "version": "0.1.0",
+    "activation_flag": "KOMMUTE_ENABLED",
+    "integration_strategy": "MODULAR_NON_BREAKING",
+    "planned_features": [
+      "Route planning & optimization",
+      "Real-time GPS tracking",
+      "Multi-modal transport (car, bike, walk, public)",
+      "Cost optimization algorithms",
+      "Carbon footprint tracking",
+      "Team coordination & carpooling",
+      "Advanced analytics & insights",
+      "Smart notifications",
+      "Offline mode support",
+      "Integration with external APIs"
+    ],
+    "navigation": {
+      "new_tabs": [
+        {
+          "name": "transport",
+          "path": "/(tabs)/transport.tsx",
+          "title": "Transporte",
+          "icon": "car",
+          "active": false,
+          "feature_flag": "KOMMUTE_ENABLED"
+        },
+        {
+          "name": "routes",
+          "path": "/(tabs)/routes.tsx",
+          "title": "Rutas",
+          "icon": "route",
+          "active": false,
+          "feature_flag": "KOMMUTE_ENABLED"
+        }
       ],
-      "database": {
-        "orm": "Drizzle",
-        "type": "PostgreSQL",
-        "security": true
-      }
+      "new_stack_routes": [
+        "transport/route-planner",
+        "transport/live-tracking",
+        "transport/trip-history",
+        "transport/settings",
+        "transport/team-coordination",
+        "transport/analytics",
+        "transport/carbon-tracker"
+      ]
     },
-    "features": {
-      "authentication": true,
-      "multiLanguage": true,
-      "payments": true,
-      "chat": true,
-      "calendar": true,
-      "okoins": true,
-      "reservations": true,
-      "analytics": true,
-      "floatingAssistant": true,
-      "database": true,
-      "security": true
+    "contexts": [
+      "TransportContext",
+      "RouteContext",
+      "LocationTrackingContext",
+      "CarbonFootprintContext",
+      "TeamTransportContext",
+      "TransportAnalyticsContext",
+      "OfflineMapsContext"
+    ],
+    "components": [
+      "RouteMap",
+      "TransportModeSelector",
+      "LiveTrackingIndicator",
+      "CarbonFootprintDisplay",
+      "TeamCoordinationPanel",
+      "RouteOptimizer",
+      "TransportAnalyticsDashboard",
+      "OfflineMapDownloader"
+    ],
+    "backend_routes": [
+      "transport/routes",
+      "transport/tracking",
+      "transport/analytics",
+      "transport/carbon",
+      "transport/team"
+    ],
+    "architecture": {
+      "approach": "Feature flag controlled",
+      "activation": "Manual toggle required",
+      "isolation": "Separate contexts and routes",
+      "fallback": "Graceful degradation to Kompa2Go",
+      "data_sharing": "Shared user authentication and database"
+    },
+    "integration_points": [
+      "Shared authentication system",
+      "Common navigation structure",
+      "Unified database schema",
+      "Cross-feature analytics",
+      "Shared notification system",
+      "Common payment processing"
+    ]
+  },
+  "development_guidelines": {
+    "critical_restrictions": [
+      "NO usar Alert.alert (problemático en web)",
+      "NO integrar OKoins inicialmente",
+      "NO romper funcionalidad existente de Kompa2Go",
+      "Usar modales personalizados exclusivamente",
+      "Mantener arquitectura tRPC existente",
+      "Integración completamente modular",
+      "Feature flags para activación controlada",
+      "Compatibilidad web obligatoria"
+    ],
+    "activation_process": [
+      "1. Crear toda la estructura de archivos",
+      "2. Implementar código base con feature flags",
+      "3. Testing exhaustivo en todas las plataformas",
+      "4. Validación de no-regresión en Kompa2Go",
+      "5. Feature flag activation gradual",
+      "6. Monitoreo y rollback capability"
+    ],
+    "testing_strategy": [
+      "Unit tests para cada módulo",
+      "Integration tests entre módulos",
+      "E2E tests para flujos críticos",
+      "Performance testing",
+      "Cross-platform compatibility testing",
+      "Regression testing para Kompa2Go"
+    ]
+  },
+  "technical_stack": {
+    "frontend": {
+      "framework": "React Native + Expo 53",
+      "language": "TypeScript (strict mode)",
+      "navigation": "Expo Router",
+      "state_management": "React Query + Context API",
+      "styling": "StyleSheet + Design System",
+      "icons": "Lucide React Native",
+      "maps": "React Native Maps",
+      "location": "Expo Location",
+      "storage": "AsyncStorage"
+    },
+    "backend": {
+      "framework": "Hono + tRPC",
+      "database": "PostgreSQL + Drizzle ORM",
+      "authentication": "JWT + Refresh Tokens",
+      "security": "DDoS protection + Rate limiting",
+      "external_apis": "Google Maps, OpenStreetMap, Transit APIs"
+    },
+    "deployment": {
+      "mobile": "Expo Go (development)",
+      "web": "React Native Web",
+      "backend": "Node.js server",
+      "database": "PostgreSQL instance"
     }
   }
 }
