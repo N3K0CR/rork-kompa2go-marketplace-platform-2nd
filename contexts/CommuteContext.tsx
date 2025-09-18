@@ -715,6 +715,6 @@ export const useKommuteAdmin = () => {
 export default CommuteContext;
 
 // Debug logging for development
-if (__DEV__) {
+if (process.env.NODE_ENV === 'development') {
   console.log('[CommuteContext] Module loaded - 2Kommute context ready (disabled by default)');
 }

@@ -3,7 +3,7 @@
 // ============================================================================
 // Specialized hooks for Trip Chaining, Destination Mode, and Zone Saturation
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useCommute } from '../context/CommuteContext';
 import type {
   TripChain,
@@ -27,7 +27,8 @@ import type {
  * Manages consecutive trips for drivers with 5-minute advance notice
  */
 export const useTripChaining = () => {
-  const { trips, featureFlags } = useCommute();
+  const { featureFlags } = useCommute();
+  // Note: trips variable removed as it's not used in this hook
   const [tripChains, setTripChains] = useState<TripChain[]>([]);
   const [queueEntries, setQueueEntries] = useState<TripQueueEntry[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -573,9 +574,9 @@ export const useZoneSaturation = () => {
   }, [activeZone, updateZoneSaturation]);
 
   // Initialize zones on first load
-  useState(() => {
+  useEffect(() => {
     initializeZones();
-  });
+  }, [initializeZones]);
 
   return {
     zones,

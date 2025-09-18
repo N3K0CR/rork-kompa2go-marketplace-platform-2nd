@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
-import { useCommute, useRoutes, useCarbonFootprint, useKommuteEnabled } from '../contexts/CommuteContext';
-import type { Route, TransportMode, TrackingPoint } from '../context-package/kompa2go-core-types';
+import { useCommute, useRoutes, useCarbonFootprint, useKommuteEnabled } from '@/contexts/CommuteContext';
+import type { Route, TransportMode, TrackingPoint } from '@/src/modules/commute/types/core-types';
 
 // ============================================================================
 // BASIC COMMUTE HOOKS
@@ -389,4 +389,4 @@ export {
   useRoutes,
   useCarbonFootprint,
   useKommuteEnabled,
-} from '../contexts/CommuteContext';
+} from '@/contexts/CommuteContext';
