@@ -64,7 +64,7 @@ export const TripSchema = z.object({
   actualDuration: z.number().positive().optional(),
   actualCost: z.number().min(0).optional(),
   actualCarbonFootprint: z.number().min(0).optional(),
-  status: z.enum(['planned', 'in_progress', 'completed', 'cancelled']),
+  status: z.enum(['planned', 'in_progress', 'completing', 'completed', 'cancelled']),
   trackingPoints: z.array(z.object({
     id: z.string(),
     tripId: z.string(),
@@ -76,6 +76,50 @@ export const TripSchema = z.object({
     altitude: z.number().optional(),
   })),
   notes: z.string().optional(),
+  // Trip chaining fields
+  nextTripId: z.string().optional(),
+  previousTripId: z.string().optional(),
+  chainId: z.string().optional(),
+  estimatedCompletionTime: z.date().optional(),
+  canAcceptNextTrip: z.boolean().default(false),
+});
+
+// Trip chain validation schema
+export const TripChainSchema = z.object({
+  id: z.string(),
+  driverId: z.string(),
+  trips: z.array(TripSchema),
+  status: z.enum(['active', 'completed', 'cancelled']),
+  totalDistance: z.number().min(0),
+  totalDuration: z.number().min(0),
+  totalEarnings: z.number().min(0),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+// Queue entry for trip matching
+export const TripQueueEntrySchema = z.object({
+  id: z.string(),
+  tripId: z.string(),
+  passengerId: z.string(),
+  routeId: z.string(),
+  requestedTime: z.date(),
+  pickupLocation: z.object({
+    latitude: z.number(),
+    longitude: z.number(),
+    address: z.string(),
+  }),
+  dropoffLocation: z.object({
+    latitude: z.number(),
+    longitude: z.number(),
+    address: z.string(),
+  }),
+  priority: z.number().min(0).max(10).default(5),
+  maxWaitTime: z.number().positive().default(300), // 5 minutes
+  proximityRadius: z.number().positive().default(2000), // 2km
+  status: z.enum(['queued', 'matched', 'expired', 'cancelled']),
+  createdAt: z.date(),
+  expiresAt: z.date(),
 });
 
 // Validation schemas for team transport
@@ -151,8 +195,33 @@ export const UpdateTripInputSchema = z.object({
   actualDuration: z.number().positive().optional(),
   actualCost: z.number().min(0).optional(),
   actualCarbonFootprint: z.number().min(0).optional(),
-  status: z.enum(['in_progress', 'completed', 'cancelled']).optional(),
+  status: z.enum(['in_progress', 'completing', 'completed', 'cancelled']).optional(),
   notes: z.string().optional(),
+  estimatedCompletionTime: z.date().optional(),
+  canAcceptNextTrip: z.boolean().optional(),
+});
+
+// Trip chaining input schemas
+export const AcceptNextTripInputSchema = z.object({
+  currentTripId: z.string(),
+  nextTripId: z.string(),
+  estimatedTransitionTime: z.number().positive().default(300), // 5 minutes
+});
+
+export const FindNextTripsInputSchema = z.object({
+  currentTripId: z.string(),
+  currentLocation: z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  }),
+  maxProximityRadius: z.number().positive().default(5000), // 5km
+  maxWaitTime: z.number().positive().default(900), // 15 minutes
+  minTimeBeforeCompletion: z.number().positive().default(300), // 5 minutes
+});
+
+export const CreateTripChainInputSchema = z.object({
+  driverId: z.string(),
+  initialTripId: z.string(),
 });
 
 export const AddTrackingPointInputSchema = z.object({
@@ -237,6 +306,11 @@ export const RealTimeEventSchema = z.object({
   type: z.enum([
     'trip_started',
     'trip_ended',
+    'trip_completing',
+    'next_trip_available',
+    'next_trip_accepted',
+    'trip_chain_started',
+    'trip_chain_completed',
     'location_update',
     'route_deviation',
     'delay_detected',
@@ -248,6 +322,7 @@ export const RealTimeEventSchema = z.object({
   userId: z.string(),
   tripId: z.string().optional(),
   teamId: z.string().optional(),
+  chainId: z.string().optional(),
   data: z.record(z.string(), z.any()),
   timestamp: z.date(),
   priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
@@ -341,3 +416,10 @@ export type SubscriptionInput = z.infer<typeof SubscriptionInputSchema>;
 export type AnalyticsRequest = z.infer<typeof AnalyticsRequestSchema>;
 export type CarbonFootprint = z.infer<typeof CarbonFootprintSchema>;
 export type CommuteError = z.infer<typeof CommuteErrorSchema>;
+
+// Trip chaining types
+export type TripChain = z.infer<typeof TripChainSchema>;
+export type TripQueueEntry = z.infer<typeof TripQueueEntrySchema>;
+export type AcceptNextTripInput = z.infer<typeof AcceptNextTripInputSchema>;
+export type FindNextTripsInput = z.infer<typeof FindNextTripsInputSchema>;
+export type CreateTripChainInput = z.infer<typeof CreateTripChainInputSchema>;

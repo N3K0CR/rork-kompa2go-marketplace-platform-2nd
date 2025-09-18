@@ -8,6 +8,7 @@ import { protectedProcedure } from '@/backend/trpc/create-context';
 import { TRPCError } from '@trpc/server';
 import { MatchingService } from './matching-service';
 import { RealTimeService } from './realtime-service';
+import { TripChainingService } from './trip-chaining-service';
 import {
   CreateRouteInputSchema,
   UpdateRouteInputSchema,
@@ -20,6 +21,12 @@ import {
   RouteSchema,
   TripSchema,
   RealTimeEventSchema,
+  // Trip chaining schemas
+  AcceptNextTripInputSchema,
+  FindNextTripsInputSchema,
+  CreateTripChainInputSchema,
+  TripChainSchema,
+  TripQueueEntrySchema,
 } from './types';
 
 // ============================================================================
@@ -279,6 +286,7 @@ export const startTrip = protectedProcedure
         status: 'in_progress' as const,
         trackingPoints: [],
         notes: input.notes,
+        canAcceptNextTrip: false,
       };
       
       // Agregar al servicio de matching
@@ -330,10 +338,34 @@ export const updateTrip = protectedProcedure
         ...input,
       };
       
+      // Handle trip chaining status changes
+      if (input.status === 'completing' && input.canAcceptNextTrip) {
+        // Trip is approaching completion and can accept next trips
+        console.log('🔄 Trip entering completion phase, enabling next trip acceptance');
+        
+        // Emit event for nearby drivers (simplified - in real implementation would use RealTimeService)
+        console.log('📡 Trip completing event:', {
+          type: 'trip_completing',
+          userId: ctx.user.id,
+          tripId: input.tripId,
+          estimatedCompletionTime: input.estimatedCompletionTime,
+        });
+      }
+      
       // Si el viaje se completa o cancela, detener tracking
       if (input.status === 'completed' || input.status === 'cancelled') {
         await RealTimeService.stopTripTracking(input.tripId, ctx.user.id);
         MatchingService.removeTrip(input.tripId);
+        
+        // Complete trip chain if this was the last trip
+        const driverChains = TripChainingService.getDriverChains(ctx.user.id);
+        for (const chain of driverChains) {
+          const tripInChain = chain.trips.find(t => t.id === input.tripId);
+          if (tripInChain && !tripInChain.nextTripId) {
+            // This is the last trip in the chain
+            TripChainingService.completeTripChain(chain.id);
+          }
+        }
       }
       
       return {
@@ -605,6 +637,282 @@ export const getRealTimeStats = protectedProcedure
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to get real-time stats',
+        cause: error,
+      });
+    }
+  });
+
+// ============================================================================
+// TRIP CHAINING PROCEDURES
+// ============================================================================
+
+/**
+ * Creates a new trip chain for a driver
+ */
+export const createTripChain = protectedProcedure
+  .input(CreateTripChainInputSchema)
+  .output(z.object({
+    success: z.boolean(),
+    chain: TripChainSchema,
+  }))
+  .mutation(async ({ input, ctx }) => {
+    console.log('🔗 Creating trip chain for driver:', ctx.user.id);
+    
+    try {
+      const chainInput = {
+        ...input,
+        driverId: ctx.user.id, // Ensure driver is the authenticated user
+      };
+      
+      const chain = TripChainingService.createTripChain(chainInput);
+      
+      return {
+        success: true,
+        chain,
+      };
+    } catch (error) {
+      console.error('❌ Error creating trip chain:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to create trip chain',
+        cause: error,
+      });
+    }
+  });
+
+/**
+ * Finds next available trips for a driver
+ */
+export const findNextTrips = protectedProcedure
+  .input(FindNextTripsInputSchema)
+  .output(z.array(TripQueueEntrySchema))
+  .query(async ({ input, ctx }) => {
+    console.log('🔍 Finding next trips for user:', ctx.user.id);
+    
+    try {
+      // Verify the current trip belongs to the user
+      const activeTrips = MatchingService.getActiveTrips();
+      const currentTrip = activeTrips.find(t => t.id === input.currentTripId && t.userId === ctx.user.id);
+      
+      if (!currentTrip) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Current trip not found or access denied',
+        });
+      }
+      
+      const nextTrips = TripChainingService.findNextTrips(input);
+      return nextTrips;
+    } catch (error) {
+      console.error('❌ Error finding next trips:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to find next trips',
+        cause: error,
+      });
+    }
+  });
+
+/**
+ * Accepts a next trip and creates the chain link
+ */
+export const acceptNextTrip = protectedProcedure
+  .input(AcceptNextTripInputSchema)
+  .output(z.object({ success: z.boolean() }))
+  .mutation(async ({ input, ctx }) => {
+    console.log('✅ Accepting next trip for user:', ctx.user.id);
+    
+    try {
+      // Verify the current trip belongs to the user
+      const activeTrips = MatchingService.getActiveTrips();
+      const currentTrip = activeTrips.find(t => t.id === input.currentTripId && t.userId === ctx.user.id);
+      
+      if (!currentTrip) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Current trip not found or access denied',
+        });
+      }
+      
+      const success = TripChainingService.acceptNextTrip(input);
+      
+      if (!success) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Failed to accept next trip',
+        });
+      }
+      
+      return { success };
+    } catch (error) {
+      console.error('❌ Error accepting next trip:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to accept next trip',
+        cause: error,
+      });
+    }
+  });
+
+/**
+ * Gets active trip chains for the current driver
+ */
+export const getDriverChains = protectedProcedure
+  .output(z.array(TripChainSchema))
+  .query(async ({ ctx }) => {
+    console.log('📋 Getting trip chains for driver:', ctx.user.id);
+    
+    try {
+      const chains = TripChainingService.getDriverChains(ctx.user.id);
+      return chains;
+    } catch (error) {
+      console.error('❌ Error getting driver chains:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to get driver chains',
+        cause: error,
+      });
+    }
+  });
+
+/**
+ * Adds a trip to the queue for matching
+ */
+export const addTripToQueue = protectedProcedure
+  .input(z.object({
+    tripId: z.string(),
+    routeId: z.string(),
+    requestedTime: z.date(),
+    pickupLocation: z.object({
+      latitude: z.number(),
+      longitude: z.number(),
+      address: z.string(),
+    }),
+    dropoffLocation: z.object({
+      latitude: z.number(),
+      longitude: z.number(),
+      address: z.string(),
+    }),
+    priority: z.number().min(0).max(10).default(5),
+    maxWaitTime: z.number().positive().default(300),
+    proximityRadius: z.number().positive().default(2000),
+  }))
+  .output(TripQueueEntrySchema)
+  .mutation(async ({ input, ctx }) => {
+    console.log('📋 Adding trip to queue for user:', ctx.user.id);
+    
+    try {
+      const queueEntry = TripChainingService.addTripToQueue({
+        ...input,
+        passengerId: ctx.user.id,
+        status: 'queued',
+      });
+      
+      return queueEntry;
+    } catch (error) {
+      console.error('❌ Error adding trip to queue:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to add trip to queue',
+        cause: error,
+      });
+    }
+  });
+
+/**
+ * Gets trip chaining statistics
+ */
+export const getTripChainingStats = protectedProcedure
+  .output(z.object({
+    totalQueued: z.number(),
+    totalMatched: z.number(),
+    totalExpired: z.number(),
+    activeChains: z.number(),
+    lastUpdate: z.date(),
+  }))
+  .query(async () => {
+    console.log('📊 Getting trip chaining stats');
+    
+    try {
+      return TripChainingService.getQueueStats();
+    } catch (error) {
+      console.error('❌ Error getting trip chaining stats:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to get trip chaining stats',
+        cause: error,
+      });
+    }
+  });
+
+/**
+ * Updates driver location for proximity matching
+ */
+export const updateDriverLocation = protectedProcedure
+  .input(z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  }))
+  .output(z.object({ success: z.boolean() }))
+  .mutation(async ({ input, ctx }) => {
+    console.log('📍 Updating driver location for user:', ctx.user.id);
+    
+    try {
+      TripChainingService.updateDriverLocation(ctx.user.id, input);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Error updating driver location:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to update driver location',
+        cause: error,
+      });
+    }
+  });
+
+/**
+ * Checks if a trip is approaching completion and finds nearby trips
+ */
+export const checkTripCompletionAndFindNearby = protectedProcedure
+  .input(z.object({
+    tripId: z.string(),
+    currentLocation: z.object({
+      latitude: z.number().min(-90).max(90),
+      longitude: z.number().min(-180).max(180),
+    }),
+  }))
+  .output(z.object({
+    isNearCompletion: z.boolean(),
+    nearbyTrips: z.array(TripQueueEntrySchema),
+  }))
+  .query(async ({ input, ctx }) => {
+    console.log('🎯 Checking trip completion for user:', ctx.user.id);
+    
+    try {
+      // Verify trip ownership
+      const activeTrips = MatchingService.getActiveTrips();
+      const trip = activeTrips.find(t => t.id === input.tripId && t.userId === ctx.user.id);
+      
+      if (!trip) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Trip not found or access denied',
+        });
+      }
+      
+      const isNearCompletion = TripChainingService.checkTripCompletion(input.tripId, input.currentLocation);
+      const nearbyTrips = isNearCompletion ? 
+        TripChainingService.findNearbyTripsForCompletion(input.tripId, input.currentLocation) : [];
+      
+      return {
+        isNearCompletion,
+        nearbyTrips,
+      };
+    } catch (error) {
+      console.error('❌ Error checking trip completion:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to check trip completion',
         cause: error,
       });
     }
