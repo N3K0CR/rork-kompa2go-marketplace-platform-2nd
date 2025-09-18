@@ -166,7 +166,7 @@ export const updateRoute = protectedProcedure
           points = input.points.map((point, index) => ({
             ...point,
             id: `point_${input.routeId}_${index}`,
-          })) as typeof existingRoute.points;
+          }));
         }
         
         const transportModeIds = input.transportModeIds || existingRoute.transportModes.map(tm => tm.id);
