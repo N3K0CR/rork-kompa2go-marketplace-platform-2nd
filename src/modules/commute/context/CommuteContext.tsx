@@ -8,6 +8,7 @@ import { Platform } from 'react-native';
 import createContextHook from '@nkzw/create-context-hook';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { withErrorRecovery, handleStorageError } from '../utils/error-recovery';
 
 // Import types from the modular structure
 import type {
@@ -15,7 +16,7 @@ import type {
   Route,
   Trip,
   TrackingPoint,
-  CarbonFootprint,
+
   FeatureFlags,
 } from '../types/core-types';
 
@@ -118,55 +119,82 @@ const DEFAULT_TRANSPORT_MODES: TransportMode[] = [
 // ============================================================================
 
 const getStorageData = async (): Promise<CommuteStorageData | null> => {
-  try {
-    const data = await AsyncStorage.getItem(KOMMUTE_STORAGE_KEY);
-    return data ? JSON.parse(data) : null;
-  } catch (error) {
-    console.error('[CommuteContext] Error reading storage:', error);
-    return null;
-  }
+  return await handleStorageError(
+    new Error('Storage operation'),
+    { 
+      component: 'CommuteContext', 
+      operation: 'get_storage',
+      additionalData: { storageKey: KOMMUTE_STORAGE_KEY }
+    },
+    null
+  ).catch(async () => {
+    try {
+      const data = await AsyncStorage.getItem(KOMMUTE_STORAGE_KEY);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.error('[CommuteContext] Error reading storage:', error);
+      return null;
+    }
+  });
 };
 
 const setStorageData = async (data: CommuteStorageData): Promise<void> => {
-  try {
-    if (!data || typeof data !== 'object') {
-      console.error('[CommuteContext] Invalid data provided to setStorageData');
-      return;
+  await withErrorRecovery(
+    async () => {
+      if (!data || typeof data !== 'object') {
+        console.error('[CommuteContext] Invalid data provided to setStorageData');
+        return;
+      }
+      const serializedData = JSON.stringify(data);
+      if (serializedData.length > 0) {
+        await AsyncStorage.setItem(KOMMUTE_STORAGE_KEY, serializedData);
+      }
+      return { success: true };
+    },
+    { 
+      component: 'CommuteContext', 
+      operation: 'set_storage',
+      additionalData: { storageKey: KOMMUTE_STORAGE_KEY }
     }
-    const serializedData = JSON.stringify(data);
-    if (serializedData.length > 0) {
-      await AsyncStorage.setItem(KOMMUTE_STORAGE_KEY, serializedData);
-    }
-  } catch (error) {
-    console.error('[CommuteContext] Error writing storage:', error);
-  }
+  );
 };
 
 const getFeatureFlags = async (): Promise<FeatureFlags> => {
-  try {
-    const flags = await AsyncStorage.getItem(FEATURE_FLAGS_KEY);
-    return flags ? { ...DEFAULT_FEATURE_FLAGS, ...JSON.parse(flags) } : DEFAULT_FEATURE_FLAGS;
-  } catch (error) {
-    console.error('[CommuteContext] Error reading feature flags:', error);
-    return DEFAULT_FEATURE_FLAGS;
-  }
+  return await withErrorRecovery(
+    async () => {
+      const flags = await AsyncStorage.getItem(FEATURE_FLAGS_KEY);
+      return flags ? { ...DEFAULT_FEATURE_FLAGS, ...JSON.parse(flags) } : DEFAULT_FEATURE_FLAGS;
+    },
+    { 
+      component: 'CommuteContext', 
+      operation: 'get_feature_flags',
+      additionalData: { storageKey: FEATURE_FLAGS_KEY }
+    },
+    DEFAULT_FEATURE_FLAGS
+  ) || DEFAULT_FEATURE_FLAGS;
 };
 
 const setFeatureFlags = async (flags: Partial<FeatureFlags>): Promise<void> => {
-  try {
-    if (!flags || typeof flags !== 'object') {
-      console.error('[CommuteContext] Invalid flags provided to setFeatureFlags');
-      return;
+  await withErrorRecovery(
+    async () => {
+      if (!flags || typeof flags !== 'object') {
+        console.error('[CommuteContext] Invalid flags provided to setFeatureFlags');
+        return;
+      }
+      const currentFlags = await getFeatureFlags();
+      const updatedFlags = { ...currentFlags, ...flags };
+      const serializedFlags = JSON.stringify(updatedFlags);
+      if (serializedFlags.length > 0) {
+        await AsyncStorage.setItem(FEATURE_FLAGS_KEY, serializedFlags);
+      }
+      return { success: true };
+    },
+    { 
+      component: 'CommuteContext', 
+      operation: 'set_feature_flags',
+      additionalData: { storageKey: FEATURE_FLAGS_KEY }
     }
-    const currentFlags = await getFeatureFlags();
-    const updatedFlags = { ...currentFlags, ...flags };
-    const serializedFlags = JSON.stringify(updatedFlags);
-    if (serializedFlags.length > 0) {
-      await AsyncStorage.setItem(FEATURE_FLAGS_KEY, serializedFlags);
-    }
-  } catch (error) {
-    console.error('[CommuteContext] Error writing feature flags:', error);
-  }
+  );
 };
 
 // ============================================================================
@@ -174,66 +202,74 @@ const setFeatureFlags = async (flags: Partial<FeatureFlags>): Promise<void> => {
 // ============================================================================
 
 const requestLocationPermissions = async (): Promise<boolean> => {
-  try {
-    if (Platform.OS === 'web') {
-      return new Promise((resolve) => {
-        if ('geolocation' in navigator) {
-          navigator.geolocation.getCurrentPosition(
-            () => resolve(true),
-            () => resolve(false)
-          );
-        } else {
-          resolve(false);
-        }
-      });
-    } else {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      return status === 'granted';
-    }
-  } catch (error) {
-    console.error('[CommuteContext] Error requesting location permissions:', error);
-    return false;
-  }
+  return await withErrorRecovery(
+    async () => {
+      if (Platform.OS === 'web') {
+        return new Promise((resolve) => {
+          if ('geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(
+              () => resolve(true),
+              () => resolve(false)
+            );
+          } else {
+            resolve(false);
+          }
+        });
+      } else {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        return status === 'granted';
+      }
+    },
+    { 
+      component: 'CommuteContext', 
+      operation: 'request_location_permissions'
+    },
+    false
+  ) || false;
 };
 
 const getCurrentLocation = async (): Promise<{ latitude: number; longitude: number } | null> => {
-  try {
-    if (Platform.OS === 'web') {
-      return new Promise((resolve) => {
-        if ('geolocation' in navigator) {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              resolve({
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-              });
-            },
-            () => resolve(null)
-          );
-        } else {
-          resolve(null);
-        }
-      });
-    } else {
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      return {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      };
-    }
-  } catch (error) {
-    console.error('[CommuteContext] Error getting current location:', error);
-    return null;
-  }
+  return await withErrorRecovery(
+    async () => {
+      if (Platform.OS === 'web') {
+        return new Promise<{ latitude: number; longitude: number } | null>((resolve) => {
+          if ('geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                resolve({
+                  latitude: position.coords.latitude,
+                  longitude: position.coords.longitude,
+                });
+              },
+              () => resolve(null)
+            );
+          } else {
+            resolve(null);
+          }
+        });
+      } else {
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        return {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        };
+      }
+    },
+    { 
+      component: 'CommuteContext', 
+      operation: 'get_current_location'
+    },
+    null
+  );
 };
 
 // ============================================================================
 // MAIN COMMUTE CONTEXT
 // ============================================================================
 
-export const [CommuteContext, useCommute] = createContextHook((): CommuteContextType => {
+const contextHook = createContextHook((): CommuteContextType => {
   // State management
   const [featureFlags, setFeatureFlagsState] = useState<FeatureFlags>(DEFAULT_FEATURE_FLAGS);
   const [routes, setRoutes] = useState<Route[]>([]);
@@ -281,48 +317,80 @@ export const [CommuteContext, useCommute] = createContextHook((): CommuteContext
   // ============================================================================
 
   const initializeCommute = useCallback(async () => {
-    try {
-      console.log('[CommuteContext] Initializing...');
-      
-      // Load feature flags
-      const flags = await getFeatureFlags();
-      setFeatureFlagsState(flags);
-      
-      // Only proceed if Kommute is enabled
-      if (!flags.KOMMUTE_ENABLED) {
-        console.log('[CommuteContext] Kommute is disabled, skipping initialization');
+    await withErrorRecovery(
+      async () => {
+        console.log('[CommuteContext] Initializing...');
+        
+        // Load feature flags with error recovery
+        const flags = await withErrorRecovery(
+          () => getFeatureFlags(),
+          { component: 'CommuteContext', operation: 'load_feature_flags' },
+          DEFAULT_FEATURE_FLAGS
+        );
+        
+        if (flags) {
+          setFeatureFlagsState(flags);
+        }
+        
+        // Only proceed if Kommute is enabled
+        if (!flags?.KOMMUTE_ENABLED) {
+          console.log('[CommuteContext] Kommute is disabled, skipping initialization');
+          setIsInitialized(true);
+          return { success: true, disabled: true };
+        }
+        
+        // Request location permissions with error recovery
+        const hasPermission = await withErrorRecovery(
+          () => requestLocationPermissions(),
+          { component: 'CommuteContext', operation: 'location_permissions' },
+          false
+        );
+        
+        setHasLocationPermission(hasPermission || false);
+        
+        // Load stored data with error recovery
+        const storedData = await withErrorRecovery(
+          () => getStorageData(),
+          { 
+            component: 'CommuteContext', 
+            operation: 'load_storage',
+            additionalData: { storageKey: KOMMUTE_STORAGE_KEY }
+          },
+          null
+        );
+        
+        if (storedData) {
+          setRoutes(storedData.routes || []);
+          setTrips(storedData.trips || []);
+          console.log('[CommuteContext] Loaded stored data:', {
+            routes: storedData.routes?.length || 0,
+            trips: storedData.trips?.length || 0,
+          });
+        }
+        
+        // Get current location if permission granted
+        if (hasPermission) {
+          const location = await withErrorRecovery(
+            () => getCurrentLocation(),
+            { component: 'CommuteContext', operation: 'get_location' },
+            null
+          );
+          setCurrentLocation(location);
+        }
+        
         setIsInitialized(true);
-        return;
-      }
-      
-      // Request location permissions
-      const hasPermission = await requestLocationPermissions();
-      setHasLocationPermission(hasPermission);
-      
-      // Load stored data
-      const storedData = await getStorageData();
-      if (storedData) {
-        setRoutes(storedData.routes || []);
-        setTrips(storedData.trips || []);
-        console.log('[CommuteContext] Loaded stored data:', {
-          routes: storedData.routes?.length || 0,
-          trips: storedData.trips?.length || 0,
-        });
-      }
-      
-      // Get current location if permission granted
-      if (hasPermission) {
-        const location = await getCurrentLocation();
-        setCurrentLocation(location);
-      }
-      
+        console.log('[CommuteContext] Initialization complete');
+        return { success: true };
+      },
+      { component: 'CommuteContext', operation: 'initialization' },
+      { success: false }
+    );
+
+    // Ensure initialization is marked complete even if recovery fails
+    if (!isInitialized) {
       setIsInitialized(true);
-      console.log('[CommuteContext] Initialization complete');
-    } catch (error) {
-      console.error('[CommuteContext] Initialization error:', error);
-      setIsInitialized(true); // Set to true even on error to prevent infinite loading
     }
-  }, []);
+  }, [isInitialized]);
 
   // Initialize on mount
   useEffect(() => {
@@ -334,24 +402,31 @@ export const [CommuteContext, useCommute] = createContextHook((): CommuteContext
   // ============================================================================
 
   const updateFeatureFlags = useCallback(async (flags: Partial<FeatureFlags>) => {
-    try {
-      if (!flags || typeof flags !== 'object' || Object.keys(flags).length === 0) {
-        console.error('[CommuteContext] Invalid flags provided to updateFeatureFlags');
-        return;
+    await withErrorRecovery(
+      async () => {
+        if (!flags || typeof flags !== 'object' || Object.keys(flags).length === 0) {
+          console.error('[CommuteContext] Invalid flags provided to updateFeatureFlags');
+          return;
+        }
+        
+        await setFeatureFlags(flags);
+        const updatedFlags = await getFeatureFlags();
+        setFeatureFlagsState(updatedFlags);
+        
+        // If Kommute was just enabled, initialize
+        if (flags.KOMMUTE_ENABLED && !featureFlags.KOMMUTE_ENABLED) {
+          await initializeCommute();
+        }
+        
+        console.log('[CommuteContext] Feature flags updated:', updatedFlags);
+        return updatedFlags;
+      },
+      { 
+        component: 'CommuteContext', 
+        operation: 'update_feature_flags',
+        additionalData: { flags }
       }
-      await setFeatureFlags(flags);
-      const updatedFlags = await getFeatureFlags();
-      setFeatureFlagsState(updatedFlags);
-      
-      // If Kommute was just enabled, initialize
-      if (flags.KOMMUTE_ENABLED && !featureFlags.KOMMUTE_ENABLED) {
-        await initializeCommute();
-      }
-      
-      console.log('[CommuteContext] Feature flags updated:', updatedFlags);
-    } catch (error) {
-      console.error('[CommuteContext] Error updating feature flags:', error);
-    }
+    );
   }, [featureFlags.KOMMUTE_ENABLED, initializeCommute]);
 
   // ============================================================================
@@ -359,23 +434,29 @@ export const [CommuteContext, useCommute] = createContextHook((): CommuteContext
   // ============================================================================
 
   const saveData = useCallback(async (newRoutes?: Route[], newTrips?: Trip[]) => {
-    try {
-      const dataToSave: CommuteStorageData = {
-        routes: newRoutes || routes,
-        trips: newTrips || trips,
-        preferences: {
-          defaultTransportModes: ['walking', 'cycling'],
-          carbonTrackingEnabled: featureFlags.KOMMUTE_CARBON_TRACKING,
-          teamTransportEnabled: featureFlags.KOMMUTE_TEAM_FEATURES,
-        },
-        lastSync: new Date(),
-      };
-      
-      await setStorageData(dataToSave);
-      console.log('[CommuteContext] Data saved successfully');
-    } catch (error) {
-      console.error('[CommuteContext] Error saving data:', error);
-    }
+    await withErrorRecovery(
+      async () => {
+        const dataToSave: CommuteStorageData = {
+          routes: newRoutes || routes,
+          trips: newTrips || trips,
+          preferences: {
+            defaultTransportModes: ['walking', 'cycling'],
+            carbonTrackingEnabled: featureFlags.KOMMUTE_CARBON_TRACKING,
+            teamTransportEnabled: featureFlags.KOMMUTE_TEAM_FEATURES,
+          },
+          lastSync: new Date(),
+        };
+        
+        await setStorageData(dataToSave);
+        console.log('[CommuteContext] Data saved successfully');
+        return dataToSave;
+      },
+      { 
+        component: 'CommuteContext', 
+        operation: 'save_data',
+        additionalData: { storageKey: KOMMUTE_STORAGE_KEY }
+      }
+    );
   }, [routes, trips, featureFlags]);
 
   // Auto-save when data changes
@@ -431,58 +512,76 @@ export const [CommuteContext, useCommute] = createContextHook((): CommuteContext
   // ============================================================================
 
   const startTrip = useCallback(async (routeId: string): Promise<void> => {
-    try {
-      const route = routes.find(r => r.id === routeId);
-      if (!route) {
-        throw new Error('Route not found');
+    const result = await withErrorRecovery(
+      async () => {
+        const route = routes.find(r => r.id === routeId);
+        if (!route) {
+          throw new Error('Route not found');
+        }
+        
+        const newTrip: Trip = {
+          id: `trip_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          routeId,
+          userId: 'current_user', // This should come from AuthContext
+          startTime: new Date(),
+          status: 'in_progress',
+          trackingPoints: [],
+        };
+        
+        setCurrentTrip(newTrip);
+        setActiveRoute(route);
+        setIsTracking(true);
+        
+        const updatedTrips = [...trips, newTrip];
+        setTrips(updatedTrips);
+        
+        console.log('[CommuteContext] Trip started:', newTrip.id);
+        return newTrip;
+      },
+      { 
+        component: 'CommuteContext', 
+        operation: 'start_trip',
+        additionalData: { routeId }
       }
-      
-      const newTrip: Trip = {
-        id: `trip_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        routeId,
-        userId: 'current_user', // This should come from AuthContext
-        startTime: new Date(),
-        status: 'in_progress',
-        trackingPoints: [],
-      };
-      
-      setCurrentTrip(newTrip);
-      setActiveRoute(route);
-      setIsTracking(true);
-      
-      const updatedTrips = [...trips, newTrip];
-      setTrips(updatedTrips);
-      
-      console.log('[CommuteContext] Trip started:', newTrip.id);
-    } catch (error) {
-      console.error('[CommuteContext] Error starting trip:', error);
-      throw error;
+    );
+
+    if (!result) {
+      throw new Error('Failed to start trip after error recovery');
     }
   }, [routes, trips]);
 
   const endTrip = useCallback(async (tripId: string): Promise<void> => {
-    try {
-      const updatedTrips = trips.map(trip => 
-        trip.id === tripId 
-          ? { 
-              ...trip, 
-              endTime: new Date(), 
-              status: 'completed' as const,
-              actualDistance: trip.trackingPoints.length > 0 ? calculateDistance(trip.trackingPoints) : undefined,
-              actualDuration: trip.startTime ? Date.now() - trip.startTime.getTime() : undefined,
-            }
-          : trip
-      );
-      
-      setTrips(updatedTrips);
-      setCurrentTrip(null);
-      setActiveRoute(null);
-      setIsTracking(false);
-      
-      console.log('[CommuteContext] Trip ended:', tripId);
-    } catch (error) {
-      console.error('[CommuteContext] Error ending trip:', error);
-      throw error;
+    const result = await withErrorRecovery(
+      async () => {
+        const updatedTrips = trips.map(trip => 
+          trip.id === tripId 
+            ? { 
+                ...trip, 
+                endTime: new Date(), 
+                status: 'completed' as const,
+                actualDistance: trip.trackingPoints.length > 0 ? calculateDistance(trip.trackingPoints) : undefined,
+                actualDuration: trip.startTime ? Date.now() - trip.startTime.getTime() : undefined,
+              }
+            : trip
+        );
+        
+        setTrips(updatedTrips);
+        setCurrentTrip(null);
+        setActiveRoute(null);
+        setIsTracking(false);
+        
+        console.log('[CommuteContext] Trip ended:', tripId);
+        return { success: true };
+      },
+      { 
+        component: 'CommuteContext', 
+        operation: 'end_trip',
+        additionalData: { tripId }
+      }
+    );
+
+    if (!result) {
+      throw new Error('Failed to end trip after error recovery');
     }
   }, [trips, calculateDistance]);
 
@@ -539,5 +638,7 @@ export const [CommuteContext, useCommute] = createContextHook((): CommuteContext
     calculateDistance,
   };
 });
+
+export const [CommuteContext, useCommute] = contextHook;
 
 export default CommuteContext;
