@@ -27,8 +27,7 @@ import type {
  * Manages consecutive trips for drivers with 5-minute advance notice
  */
 export const useTripChaining = () => {
-  const { featureFlags } = useCommute();
-  // Note: trips variable removed as it's not used in this hook
+  const { featureFlags, trips } = useCommute();
   const [tripChains, setTripChains] = useState<TripChain[]>([]);
   const [queueEntries, setQueueEntries] = useState<TripQueueEntry[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
