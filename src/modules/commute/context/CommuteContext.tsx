@@ -8,7 +8,14 @@ import { Platform } from 'react-native';
 import createContextHook from '@nkzw/create-context-hook';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { withErrorRecovery, handleStorageError } from '../utils/error-recovery';
+import { 
+  withErrorRecovery, 
+  handleStorageError, 
+  handleContextError,
+  handleSmartError,
+  defaultInputTruncator,
+  globalErrorRecovery 
+} from '../utils/error-recovery';
 
 // Import types from the modular structure
 import type {
@@ -41,6 +48,9 @@ interface CommuteContextType {
   hasLocationPermission: boolean;
   isInitialized: boolean;
   calculateDistance: (points: TrackingPoint[]) => number;
+  resetContext: () => Promise<void>;
+  getErrorHistory: () => any[];
+  clearErrorHistory: () => Promise<void>;
 }
 
 interface CommuteStorageData {
@@ -62,6 +72,7 @@ interface CommuteStorageData {
 
 const KOMMUTE_STORAGE_KEY = '@kommute_data';
 const FEATURE_FLAGS_KEY = '@kommute_feature_flags';
+const ERROR_RECOVERY_ENABLED = true; // Enable error recovery by default
 
 const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   KOMMUTE_ENABLED: false, // CRITICAL: Disabled by default
@@ -610,6 +621,50 @@ const contextHook = createContextHook((): CommuteContextType => {
   }, [currentTrip, isTracking, trips]);
 
   // ============================================================================
+  // ERROR RECOVERY FUNCTIONS
+  // ============================================================================
+
+  const resetContext = useCallback(async (): Promise<void> => {
+    await withErrorRecovery(
+      async () => {
+        console.log('[CommuteContext] Resetting context...');
+        
+        // Clear all state
+        setFeatureFlagsState(DEFAULT_FEATURE_FLAGS);
+        setRoutes([]);
+        setTrips([]);
+        setCurrentTrip(null);
+        setActiveRoute(null);
+        setIsTracking(false);
+        setCurrentLocation(null);
+        setHasLocationPermission(false);
+        setIsInitialized(false);
+        
+        // Clear storage
+        await AsyncStorage.multiRemove([KOMMUTE_STORAGE_KEY, FEATURE_FLAGS_KEY]);
+        
+        // Re-initialize
+        await initializeCommute();
+        
+        console.log('[CommuteContext] Context reset complete');
+        return { success: true };
+      },
+      { 
+        component: 'CommuteContext', 
+        operation: 'reset_context'
+      }
+    );
+  }, [initializeCommute]);
+
+  const getErrorHistory = useCallback(() => {
+    return globalErrorRecovery.getErrorHistory();
+  }, []);
+
+  const clearErrorHistory = useCallback(async (): Promise<void> => {
+    await globalErrorRecovery.clearErrorHistory();
+  }, []);
+
+  // ============================================================================
   // CONTEXT VALUE
   // ============================================================================
 
@@ -636,6 +691,11 @@ const contextHook = createContextHook((): CommuteContextType => {
     hasLocationPermission,
     isInitialized,
     calculateDistance,
+    
+    // Error recovery functions
+    resetContext,
+    getErrorHistory,
+    clearErrorHistory,
   };
 });
 

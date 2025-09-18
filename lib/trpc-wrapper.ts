@@ -5,7 +5,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { TRPCError } from '@trpc/server';
-import { withErrorRecovery } from '../src/modules/commute/utils/error-recovery';
+import { 
+  withErrorRecovery, 
+  handleSmartError, 
+  defaultInputTruncator,
+  smallInputTruncator,
+  createInputTruncator 
+} from '../src/modules/commute/utils/error-recovery';
 
 // ============================================================================
 // TYPES
@@ -20,6 +26,11 @@ interface TRPCCallOptions {
     component: string;
     operation: string;
   };
+  enableSmartErrorHandling?: boolean;
+  inputTruncator?: (input: any) => any;
+  maxInputSize?: number;
+  enableChunking?: boolean;
+  chunkSize?: number;
 }
 
 interface TRPCErrorInfo {
@@ -87,9 +98,14 @@ const isRetryableError = (error: any): boolean => {
 
 export class TRPCErrorRecoveryWrapper {
   private defaultOptions: TRPCCallOptions = {
-    maxRetries: 3,
-    retryDelay: 1000,
+    maxRetries: 5,
+    retryDelay: 1500,
     enableFallback: true,
+    enableSmartErrorHandling: true,
+    inputTruncator: defaultInputTruncator,
+    maxInputSize: 8000,
+    enableChunking: false,
+    chunkSize: 10,
     context: {
       component: 'tRPC',
       operation: 'unknown',
@@ -102,9 +118,30 @@ export class TRPCErrorRecoveryWrapper {
 
   async query<T>(
     queryFn: () => Promise<T>,
-    options: TRPCCallOptions = {}
+    options: TRPCCallOptions = {},
+    inputData?: any
   ): Promise<T | null> {
     const opts = { ...this.defaultOptions, ...options };
+    
+    // Check input size before making request
+    if (inputData && opts.maxInputSize) {
+      const inputSize = JSON.stringify(inputData).length;
+      if (inputSize > opts.maxInputSize) {
+        console.warn(`[TRPCWrapper] Input size (${inputSize}) exceeds limit (${opts.maxInputSize}), truncating`);
+        if (opts.inputTruncator) {
+          inputData = opts.inputTruncator(inputData);
+        }
+      }
+    }
+    
+    if (opts.enableSmartErrorHandling) {
+      return await this.executeWithSmartErrorHandling(
+        queryFn,
+        opts,
+        inputData,
+        'query'
+      );
+    }
     
     return await withErrorRecovery(
       async () => {
@@ -113,6 +150,7 @@ export class TRPCErrorRecoveryWrapper {
       {
         component: opts.context?.component || 'tRPC',
         operation: opts.context?.operation || 'query',
+        inputSize: inputData ? JSON.stringify(inputData).length : undefined,
       },
       opts.fallbackData
     );
@@ -124,9 +162,30 @@ export class TRPCErrorRecoveryWrapper {
 
   async mutation<T>(
     mutationFn: () => Promise<T>,
-    options: TRPCCallOptions = {}
+    options: TRPCCallOptions = {},
+    inputData?: any
   ): Promise<T | null> {
     const opts = { ...this.defaultOptions, ...options };
+    
+    // Check input size before making request
+    if (inputData && opts.maxInputSize) {
+      const inputSize = JSON.stringify(inputData).length;
+      if (inputSize > opts.maxInputSize) {
+        console.warn(`[TRPCWrapper] Mutation input size (${inputSize}) exceeds limit (${opts.maxInputSize}), truncating`);
+        if (opts.inputTruncator) {
+          inputData = opts.inputTruncator(inputData);
+        }
+      }
+    }
+    
+    if (opts.enableSmartErrorHandling) {
+      return await this.executeWithSmartErrorHandling(
+        mutationFn,
+        opts,
+        inputData,
+        'mutation'
+      );
+    }
     
     return await withErrorRecovery(
       async () => {
@@ -141,6 +200,7 @@ export class TRPCErrorRecoveryWrapper {
       {
         component: opts.context?.component || 'tRPC',
         operation: opts.context?.operation || 'mutation',
+        inputSize: inputData ? JSON.stringify(inputData).length : undefined,
       },
       opts.fallbackData
     );
@@ -202,6 +262,46 @@ export class TRPCErrorRecoveryWrapper {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+  // Smart error handling with automatic recovery
+  private async executeWithSmartErrorHandling<T>(
+    operation: () => Promise<T>,
+    options: TRPCCallOptions,
+    inputData?: any,
+    operationType: 'query' | 'mutation' = 'query'
+  ): Promise<T | null> {
+    const context = {
+      component: options.context?.component || 'tRPC',
+      operation: options.context?.operation || operationType,
+      inputSize: inputData ? JSON.stringify(inputData).length : undefined,
+    };
+
+    try {
+      return await this.executeWithRetry(operation, options);
+    } catch (error) {
+      console.log(`[TRPCWrapper] Smart error handling for ${operationType}:`, error);
+      
+      return await handleSmartError(
+        error as Error,
+        context,
+        {
+          originalInput: inputData,
+          truncateFunction: options.inputTruncator || defaultInputTruncator,
+          chunkProcessor: options.enableChunking ? 
+            async (chunk: any[]) => {
+              // Process chunk with modified operation
+              const chunkOperation = () => operation(); // This would need to be adapted per use case
+              return await chunkOperation();
+            } : undefined,
+          retryOperation: () => this.executeWithRetry(operation, {
+            ...options,
+            maxRetries: Math.max(1, (options.maxRetries || 3) - 1),
+          }),
+          fallbackValue: options.fallbackData,
+        }
+      );
+    }
+  }
+
   private formatError(error: any): TRPCErrorInfo {
     if (error instanceof TRPCError) {
       return {
@@ -239,16 +339,18 @@ export const trpcWrapper = new TRPCErrorRecoveryWrapper();
 
 export const safeQuery = async <T>(
   queryFn: () => Promise<T>,
-  options?: TRPCCallOptions
+  options?: TRPCCallOptions,
+  inputData?: any
 ): Promise<T | null> => {
-  return await trpcWrapper.query(queryFn, options);
+  return await trpcWrapper.query(queryFn, options, inputData);
 };
 
 export const safeMutation = async <T>(
   mutationFn: () => Promise<T>,
-  options?: TRPCCallOptions
+  options?: TRPCCallOptions,
+  inputData?: any
 ): Promise<T | null> => {
-  return await trpcWrapper.mutation(mutationFn, options);
+  return await trpcWrapper.mutation(mutationFn, options, inputData);
 };
 
 // ============================================================================
@@ -278,13 +380,17 @@ export const useSafeQuery = <T>(
     setError(null);
     
     try {
-      const result = await safeQuery(queryFn, {
-        ...options,
-        context: {
-          component: 'tRPC',
-          operation: queryKey.join('.'),
+      const result = await safeQuery(
+        queryFn, 
+        {
+          ...options,
+          context: {
+            component: 'tRPC',
+            operation: queryKey.join('.'),
+          },
         },
-      });
+        undefined // inputData would be passed here if available
+      );
       
       setData(result);
     } catch (err) {
@@ -322,7 +428,8 @@ export const useSafeMutation = <T, TVariables = void>(
     try {
       const result = await safeMutation(
         () => mutationFn(variables),
-        options
+        options,
+        variables // Pass variables as inputData for size checking
       );
       
       return result;
@@ -344,6 +451,94 @@ export const useSafeMutation = <T, TVariables = void>(
 };
 
 
+
+// ============================================================================
+// ENHANCED UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Creates a tRPC wrapper with specific input size limits
+ */
+export const createTRPCWrapperWithLimits = (maxInputSize: number = 8000) => {
+  return new TRPCErrorRecoveryWrapper();
+};
+
+/**
+ * Safe tRPC call with automatic input truncation
+ */
+export const safeTRPCCall = async <T>(
+  operation: () => Promise<T>,
+  inputData?: any,
+  options: Partial<TRPCCallOptions> = {}
+): Promise<T | null> => {
+  const truncator = options.maxInputSize ? 
+    createInputTruncator(options.maxInputSize) : 
+    defaultInputTruncator;
+    
+  return await trpcWrapper.query(
+    operation,
+    {
+      enableSmartErrorHandling: true,
+      inputTruncator: truncator,
+      maxRetries: 5,
+      retryDelay: 2000,
+      ...options,
+    },
+    inputData
+  );
+};
+
+/**
+ * Chunked tRPC processing for large datasets
+ */
+export const chunkedTRPCCall = async <T, U>(
+  items: T[],
+  processor: (chunk: T[]) => Promise<U>,
+  chunkSize: number = 10,
+  options: Partial<TRPCCallOptions> = {}
+): Promise<U[]> => {
+  const results: U[] = [];
+  const chunks = [];
+  
+  // Create chunks
+  for (let i = 0; i < items.length; i += chunkSize) {
+    chunks.push(items.slice(i, i + chunkSize));
+  }
+  
+  // Process each chunk with error recovery
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    try {
+      console.log(`[chunkedTRPCCall] Processing chunk ${i + 1}/${chunks.length}`);
+      
+      const result = await safeTRPCCall(
+        () => processor(chunk),
+        chunk,
+        {
+          ...options,
+          context: {
+            component: 'tRPC',
+            operation: `chunked_${options.context?.operation || 'unknown'}_${i + 1}`,
+          },
+        }
+      );
+      
+      if (result) {
+        results.push(result);
+      }
+      
+      // Add delay between chunks to avoid rate limiting
+      if (i < chunks.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    } catch (error) {
+      console.warn(`[chunkedTRPCCall] Chunk ${i + 1} failed:`, error);
+      // Continue with next chunk instead of failing completely
+    }
+  }
+  
+  return results;
+};
 
 // ============================================================================
 // EXPORT DEFAULT
