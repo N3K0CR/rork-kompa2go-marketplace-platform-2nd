@@ -6,7 +6,7 @@ import * as Location from 'expo-location';
 // Note: AsyncStorage usage is temporary for development - will be replaced with proper storage provider
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Import types from the core types file
+// Import types from the modular structure
 import type {
   TransportMode,
   Route,
@@ -14,10 +14,34 @@ import type {
   TrackingPoint,
   CarbonFootprint,
   FeatureFlags,
-  TransportContextType,
-  RouteContextType,
-  CarbonFootprintContextType,
-} from '../context-package/kompa2go-core-types';
+} from '@/src/modules/commute/types/core-types';
+
+// Define context types locally to avoid circular dependencies
+interface TransportContextType {
+  isEnabled: boolean;
+  currentTrip: Trip | null;
+  activeRoute: Route | null;
+  transportModes: TransportMode[];
+  isTracking: boolean;
+  startTrip: (routeId: string) => Promise<void>;
+  endTrip: (tripId: string) => Promise<void>;
+  updateLocation: (point: Omit<TrackingPoint, 'id' | 'tripId'>) => void;
+}
+
+interface RouteContextType {
+  createRoute: (route: Omit<Route, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Route>;
+  updateRoute: (routeId: string, updates: Partial<Route>) => Promise<void>;
+  deleteRoute: (routeId: string) => Promise<void>;
+  optimizeRoute: (routeId: string) => Promise<Route>;
+}
+
+interface CarbonFootprintContextType {
+  currentFootprint: CarbonFootprint | null;
+  isLoading: boolean;
+  calculateFootprint: (period: { startDate: Date; endDate: Date }) => Promise<CarbonFootprint>;
+  getComparison: (period: string) => Promise<{ current: number; previous: number; average: number }>;
+  setTarget: (target: number) => Promise<void>;
+}
 
 // ============================================================================
 // FEATURE FLAGS & CONFIGURATION
@@ -465,7 +489,7 @@ export const [CommuteContext, useCommute] = createContextHook(() => {
       console.error('[CommuteContext] Error ending trip:', error);
       throw error;
     }
-  }, [trips]);
+  }, [trips, calculateDistance]);
 
   const updateLocation = useCallback((point: Omit<TrackingPoint, 'id' | 'tripId'>) => {
     if (!currentTrip || !isTracking) return;

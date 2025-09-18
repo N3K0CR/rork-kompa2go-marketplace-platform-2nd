@@ -17,9 +17,43 @@ import type {
   TrackingPoint,
   CarbonFootprint,
   FeatureFlags,
-  CommuteContextType,
-  CommuteStorageData,
-} from '../types';
+} from '../types/core-types';
+
+// Define context types locally to avoid circular dependencies
+interface CommuteContextType {
+  isEnabled: boolean;
+  currentTrip: Trip | null;
+  activeRoute: Route | null;
+  transportModes: TransportMode[];
+  isTracking: boolean;
+  startTrip: (routeId: string) => Promise<void>;
+  endTrip: (tripId: string) => Promise<void>;
+  updateLocation: (point: Omit<TrackingPoint, 'id' | 'tripId'>) => void;
+  featureFlags: FeatureFlags;
+  updateFeatureFlags: (flags: Partial<FeatureFlags>) => Promise<void>;
+  routes: Route[];
+  trips: Trip[];
+  createRoute: (route: Omit<Route, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Route>;
+  updateRoute: (routeId: string, updates: Partial<Route>) => Promise<void>;
+  deleteRoute: (routeId: string) => Promise<void>;
+  currentLocation: { latitude: number; longitude: number } | null;
+  hasLocationPermission: boolean;
+  isInitialized: boolean;
+  calculateDistance: (points: TrackingPoint[]) => number;
+}
+
+interface CommuteStorageData {
+  routes: Route[];
+  trips: Trip[];
+  preferences: {
+    defaultTransportModes: string[];
+    homeLocation?: { latitude: number; longitude: number; address: string };
+    workLocation?: { latitude: number; longitude: number; address: string };
+    carbonTrackingEnabled: boolean;
+    teamTransportEnabled: boolean;
+  };
+  lastSync: Date;
+}
 
 // ============================================================================
 // CONFIGURATION
