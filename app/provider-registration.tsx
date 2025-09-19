@@ -1,8 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Platform } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, User, MapPin, Building2, Clock, Check, X } from 'lucide-react-native';
+import { ChevronLeft, User, MapPin, Building2, Clock, Check, X, FileText, Upload, CheckCircle, AlertCircle } from 'lucide-react-native';
+import * as DocumentPicker from 'expo-document-picker';
+
+interface DocumentFile {
+  uri: string;
+  name: string;
+  type: string;
+  size: number;
+  uploadedAt: Date;
+  isValid?: boolean;
+  expiryDate?: Date;
+}
 
 interface ProviderFormData {
   businessName: string;
@@ -14,6 +25,12 @@ interface ProviderFormData {
   serviceType: string;
   experience: string;
   description: string;
+  documents: {
+    licencia?: DocumentFile;
+    hojaDelincuencia?: DocumentFile;
+    dekra?: DocumentFile;
+    marchamo?: DocumentFile;
+  };
 }
 
 const serviceTypes = [
@@ -30,6 +47,37 @@ const serviceTypes = [
   'Otro'
 ];
 
+const requiredDocuments = [
+  {
+    key: 'licencia' as const,
+    label: 'Licencia de Conducir',
+    description: 'Licencia vigente (para servicios de transporte)',
+    required: false,
+    validityMonths: 60 // 5 años
+  },
+  {
+    key: 'hojaDelincuencia' as const,
+    label: 'Hoja de Delincuencia',
+    description: 'Certificado de antecedentes penales (máximo 3 meses)',
+    required: true,
+    validityMonths: 3
+  },
+  {
+    key: 'dekra' as const,
+    label: 'Certificado DEKRA',
+    description: 'Revisión técnica vehicular (para servicios de transporte)',
+    required: false,
+    validityMonths: 12
+  },
+  {
+    key: 'marchamo' as const,
+    label: 'Marchamo',
+    description: 'Comprobante de pago de marchamo vigente',
+    required: false,
+    validityMonths: 12
+  }
+];
+
 export default function ProviderRegistrationScreen() {
   const [formData, setFormData] = useState<ProviderFormData>({
     businessName: '',
@@ -40,7 +88,8 @@ export default function ProviderRegistrationScreen() {
     city: '',
     serviceType: '',
     experience: '',
-    description: ''
+    description: '',
+    documents: {}
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,6 +97,7 @@ export default function ProviderRegistrationScreen() {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [uploadingDocument, setUploadingDocument] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
 
   const updateField = (field: keyof ProviderFormData, value: string) => {
@@ -59,12 +109,137 @@ export default function ProviderRegistrationScreen() {
     setShowErrorModal(true);
   };
 
+  const isDocumentExpired = (document: DocumentFile, validityMonths: number): boolean => {
+    if (!document.expiryDate) return false;
+    const now = new Date();
+    return document.expiryDate < now;
+  };
+
+  const getDocumentExpiryDate = (uploadDate: Date, validityMonths: number): Date => {
+    const expiryDate = new Date(uploadDate);
+    expiryDate.setMonth(expiryDate.getMonth() + validityMonths);
+    return expiryDate;
+  };
+
+  const validateDocument = (document: DocumentFile, validityMonths: number): boolean => {
+    // Validate file size (max 5MB)
+    if (document.size > 5 * 1024 * 1024) {
+      showError('El archivo no puede ser mayor a 5MB');
+      return false;
+    }
+
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+    if (!allowedTypes.includes(document.type)) {
+      showError('Solo se permiten archivos PDF, JPG o PNG');
+      return false;
+    }
+
+    // Check if document is expired
+    if (document.expiryDate && isDocumentExpired(document, validityMonths)) {
+      showError('El documento ha expirado. Por favor sube un documento vigente.');
+      return false;
+    }
+
+    return true;
+  };
+
+  const pickDocument = async (documentType: keyof typeof formData.documents) => {
+    try {
+      setUploadingDocument(documentType);
+      
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*'],
+        copyToCacheDirectory: true,
+        multiple: false
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const documentInfo = requiredDocuments.find(doc => doc.key === documentType);
+        
+        if (!documentInfo) {
+          showError('Tipo de documento no válido');
+          return;
+        }
+
+        const uploadDate = new Date();
+        const expiryDate = getDocumentExpiryDate(uploadDate, documentInfo.validityMonths);
+        
+        const documentFile: DocumentFile = {
+          uri: asset.uri,
+          name: asset.name || `${documentType}.pdf`,
+          type: asset.mimeType || 'application/pdf',
+          size: asset.size || 0,
+          uploadedAt: uploadDate,
+          expiryDate,
+          isValid: true
+        };
+
+        if (validateDocument(documentFile, documentInfo.validityMonths)) {
+          setFormData(prev => ({
+            ...prev,
+            documents: {
+              ...prev.documents,
+              [documentType]: documentFile
+            }
+          }));
+          
+          console.log(`Document ${documentType} uploaded successfully:`, documentFile);
+        }
+      }
+    } catch (error) {
+      console.error('Error picking document:', error);
+      showError('Error al seleccionar el documento. Por favor intenta de nuevo.');
+    } finally {
+      setUploadingDocument(null);
+    }
+  };
+
+  const removeDocument = (documentType: keyof typeof formData.documents) => {
+    if (Platform.OS === 'web') {
+      const confirmed = confirm('¿Estás seguro de que quieres eliminar este documento?');
+      if (confirmed) {
+        setFormData(prev => {
+          const newDocuments = { ...prev.documents };
+          delete newDocuments[documentType];
+          return {
+            ...prev,
+            documents: newDocuments
+          };
+        });
+      }
+    } else {
+      Alert.alert(
+        'Eliminar Documento',
+        '¿Estás seguro de que quieres eliminar este documento?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Eliminar',
+            style: 'destructive',
+            onPress: () => {
+              setFormData(prev => {
+                const newDocuments = { ...prev.documents };
+                delete newDocuments[documentType];
+                return {
+                  ...prev,
+                  documents: newDocuments
+                };
+              });
+            }
+          }
+        ]
+      );
+    }
+  };
+
   const validateForm = (): boolean => {
     const required = ['businessName', 'ownerName', 'phone', 'email', 'serviceType'];
     
     for (const field of required) {
       const value = formData[field as keyof ProviderFormData];
-      if (!value?.trim()) {
+      if (typeof value === 'string' && !value?.trim()) {
         showError(`El campo ${getFieldLabel(field)} es obligatorio`);
         return false;
       }
@@ -82,6 +257,34 @@ export default function ProviderRegistrationScreen() {
     if (!phoneRegex.test(formData.phone.trim())) {
       showError('Por favor ingresa un teléfono válido');
       return false;
+    }
+    
+    // Validate required documents
+    const requiredDocs = requiredDocuments.filter(doc => doc.required);
+    for (const docInfo of requiredDocs) {
+      const document = formData.documents[docInfo.key];
+      if (!document) {
+        showError(`El documento ${docInfo.label} es obligatorio`);
+        return false;
+      }
+      
+      if (document.expiryDate && isDocumentExpired(document, docInfo.validityMonths)) {
+        showError(`El documento ${docInfo.label} ha expirado. Por favor sube un documento vigente.`);
+        return false;
+      }
+    }
+    
+    // Validate transport-specific documents if service type is transport
+    if (formData.serviceType === 'Transporte') {
+      const transportDocs = ['licencia', 'dekra', 'marchamo'] as const;
+      for (const docType of transportDocs) {
+        const document = formData.documents[docType];
+        if (!document) {
+          const docInfo = requiredDocuments.find(doc => doc.key === docType);
+          showError(`Para servicios de transporte, el documento ${docInfo?.label} es obligatorio`);
+          return false;
+        }
+      }
     }
     
     return true;
@@ -308,6 +511,98 @@ export default function ProviderRegistrationScreen() {
               maxLength={20}
             />
           </View>
+        </View>
+
+        {/* Documents Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <FileText size={20} color="#D81B60" />
+            <Text style={styles.sectionTitle}>Documentos Requeridos</Text>
+          </View>
+          
+          <Text style={styles.documentsNote}>
+            📄 Sube los documentos vigentes requeridos. Los archivos deben ser PDF, JPG o PNG (máximo 5MB).
+          </Text>
+          
+          {requiredDocuments.map((docInfo) => {
+            const document = formData.documents[docInfo.key];
+            const isRequired = docInfo.required || (formData.serviceType === 'Transporte' && ['licencia', 'dekra', 'marchamo'].includes(docInfo.key));
+            const isExpired = document && document.expiryDate && isDocumentExpired(document, docInfo.validityMonths);
+            
+            return (
+              <View key={docInfo.key} style={styles.documentItem}>
+                <View style={styles.documentHeader}>
+                  <Text style={styles.documentLabel}>
+                    {docInfo.label}
+                    {isRequired && <Text style={styles.requiredAsterisk}> *</Text>}
+                  </Text>
+                  {document && (
+                    <View style={[styles.documentStatus, isExpired ? styles.documentExpired : styles.documentValid]}>
+                      {isExpired ? (
+                        <AlertCircle size={16} color="#F44336" />
+                      ) : (
+                        <CheckCircle size={16} color="#4CAF50" />
+                      )}
+                      <Text style={[styles.documentStatusText, isExpired ? styles.expiredText : styles.validText]}>
+                        {isExpired ? 'Expirado' : 'Válido'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                
+                <Text style={styles.documentDescription}>{docInfo.description}</Text>
+                
+                {document ? (
+                  <View style={styles.uploadedDocument}>
+                    <View style={styles.documentInfo}>
+                      <FileText size={20} color="#4CAF50" />
+                      <View style={styles.documentDetails}>
+                        <Text style={styles.documentName} numberOfLines={1}>{document.name}</Text>
+                        <Text style={styles.documentMeta}>
+                          {(document.size / 1024 / 1024).toFixed(2)} MB • 
+                          Subido: {document.uploadedAt.toLocaleDateString()}
+                          {document.expiryDate && (
+                            <Text style={isExpired ? styles.expiredDate : styles.validDate}>
+                              {' • '}Vence: {document.expiryDate.toLocaleDateString()}
+                            </Text>
+                          )}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.documentActions}>
+                      <TouchableOpacity
+                        style={styles.replaceButton}
+                        onPress={() => pickDocument(docInfo.key)}
+                        disabled={uploadingDocument === docInfo.key}
+                      >
+                        <Upload size={16} color="#D81B60" />
+                        <Text style={styles.replaceButtonText}>Reemplazar</Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity
+                        style={styles.removeButton}
+                        onPress={() => removeDocument(docInfo.key)}
+                      >
+                        <X size={16} color="#F44336" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.uploadButton, uploadingDocument === docInfo.key && styles.uploadButtonDisabled]}
+                    onPress={() => pickDocument(docInfo.key)}
+                    disabled={uploadingDocument === docInfo.key}
+                  >
+                    <Upload size={20} color={uploadingDocument === docInfo.key ? '#999' : '#D81B60'} />
+                    <Text style={[styles.uploadButtonText, uploadingDocument === docInfo.key && styles.uploadButtonTextDisabled]}>
+                      {uploadingDocument === docInfo.key ? 'Subiendo...' : 'Subir Documento'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })}
         </View>
 
         {/* Submit Button */}
@@ -577,5 +872,146 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  documentsNote: {
+    fontSize: 14,
+    color: '#666',
+    backgroundColor: '#F0F8FF',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  documentItem: {
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  documentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  documentLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    flex: 1,
+  },
+  requiredAsterisk: {
+    color: '#F44336',
+  },
+  documentStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  documentValid: {
+    backgroundColor: '#E8F5E8',
+  },
+  documentExpired: {
+    backgroundColor: '#FFEBEE',
+  },
+  documentStatusText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  validText: {
+    color: '#4CAF50',
+  },
+  expiredText: {
+    color: '#F44336',
+  },
+  documentDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 12,
+    lineHeight: 18,
+  },
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#FFF',
+    borderWidth: 2,
+    borderColor: '#D81B60',
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    padding: 16,
+  },
+  uploadButtonDisabled: {
+    borderColor: '#999',
+  },
+  uploadButtonText: {
+    fontSize: 16,
+    color: '#D81B60',
+    fontWeight: '500',
+  },
+  uploadButtonTextDisabled: {
+    color: '#999',
+  },
+  uploadedDocument: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 12,
+  },
+  documentInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
+  },
+  documentDetails: {
+    flex: 1,
+  },
+  documentName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 2,
+  },
+  documentMeta: {
+    fontSize: 12,
+    color: '#666',
+  },
+  validDate: {
+    color: '#4CAF50',
+  },
+  expiredDate: {
+    color: '#F44336',
+  },
+  documentActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  replaceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#D81B60',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  replaceButtonText: {
+    fontSize: 14,
+    color: '#D81B60',
+    fontWeight: '500',
+  },
+  removeButton: {
+    backgroundColor: '#FFEBEE',
+    borderRadius: 8,
+    padding: 8,
   },
 });
