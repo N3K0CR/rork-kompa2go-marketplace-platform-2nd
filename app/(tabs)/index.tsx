@@ -168,6 +168,28 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Provider Registration Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>💼 ¿Eres Proveedor de Servicios?</Text>
+          <TouchableOpacity 
+            style={styles.providerRegistrationCard}
+            onPress={() => router.push('/provider-registration')}
+          >
+            <View style={styles.providerRegistrationHeader}>
+              <Text style={styles.providerRegistrationTitle}>Únete a 2Kommute</Text>
+              <Text style={styles.providerRegistrationBadge}>REGISTRO</Text>
+            </View>
+            <Text style={styles.providerRegistrationDescription}>
+              Ofrece tus servicios de transporte y genera ingresos adicionales
+            </Text>
+            <View style={styles.providerRegistrationFeatures}>
+              <Text style={styles.providerRegistrationFeature}>📝 Registro fácil</Text>
+              <Text style={styles.providerRegistrationFeature}>💰 Ingresos extra</Text>
+              <Text style={styles.providerRegistrationFeature}>🤝 Comunidad</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('upcoming_appointments')}</Text>
           {upcomingAppointments.length > 0 ? (
@@ -2052,6 +2074,58 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   kommuteFeature: {
+    fontSize: 12,
+    color: '#333',
+    fontWeight: '500',
+    flex: 1,
+    textAlign: 'center',
+  },
+
+  // Provider Registration Styles
+  providerRegistrationCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+  },
+  providerRegistrationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  providerRegistrationTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+  },
+  providerRegistrationBadge: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  providerRegistrationDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  providerRegistrationFeatures: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  providerRegistrationFeature: {
     fontSize: 12,
     color: '#333',
     fontWeight: '500',
