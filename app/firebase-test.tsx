@@ -270,7 +270,7 @@ export default function FirebaseTestScreen() {
       case 'running':
         return <Loader size={20} color="#3B82F6" />;
       default:
-        return <View style={styles.pendingIcon}><Text> </Text></View>;
+        return <View style={styles.pendingIcon} />;
     }
   };
 

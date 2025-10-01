@@ -29,21 +29,18 @@ service cloud.firestore {
     // ============================================================================
     
     match /kommute_routes/{routeId} {
-      // Users can read their own routes or test routes (no auth required for test)
-      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || 
-                     (resource.data.userId is string && resource.data.userId.matches('test_user_.*'));
+      // Allow test users without authentication
+      allow read: if (resource.data.userId is string && resource.data.userId.matches('test_user_.*')) ||
+                     (isAuthenticated() && resource.data.userId == request.auth.uid);
       
-      // Users can create routes for themselves or test routes (no auth required for test)
-      allow create: if (isAuthenticated() && request.resource.data.userId == request.auth.uid) || 
-                       (request.resource.data.userId is string && request.resource.data.userId.matches('test_user_.*'));
+      allow create: if (request.resource.data.userId is string && request.resource.data.userId.matches('test_user_.*')) ||
+                       (isAuthenticated() && request.resource.data.userId == request.auth.uid);
       
-      // Users can update their own routes or test routes (no auth required for test)
-      allow update: if (isAuthenticated() && resource.data.userId == request.auth.uid) || 
-                       (resource.data.userId is string && resource.data.userId.matches('test_user_.*'));
+      allow update: if (resource.data.userId is string && resource.data.userId.matches('test_user_.*')) ||
+                       (isAuthenticated() && resource.data.userId == request.auth.uid);
       
-      // Users can delete their own routes or test routes (no auth required for test)
-      allow delete: if (isAuthenticated() && resource.data.userId == request.auth.uid) || 
-                       (resource.data.userId is string && resource.data.userId.matches('test_user_.*'));
+      allow delete: if (resource.data.userId is string && resource.data.userId.matches('test_user_.*')) ||
+                       (isAuthenticated() && resource.data.userId == request.auth.uid);
     }
     
     // ============================================================================
@@ -51,21 +48,18 @@ service cloud.firestore {
     // ============================================================================
     
     match /kommute_trips/{tripId} {
-      // Users can read their own trips or test trips (no auth required for test)
-      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || 
-                     (resource.data.userId is string && resource.data.userId.matches('test_user_.*'));
+      // Allow test users without authentication
+      allow read: if (resource.data.userId is string && resource.data.userId.matches('test_user_.*')) ||
+                     (isAuthenticated() && resource.data.userId == request.auth.uid);
       
-      // Users can create trips for themselves or test trips (no auth required for test)
-      allow create: if (isAuthenticated() && request.resource.data.userId == request.auth.uid) || 
-                       (request.resource.data.userId is string && request.resource.data.userId.matches('test_user_.*'));
+      allow create: if (request.resource.data.userId is string && request.resource.data.userId.matches('test_user_.*')) ||
+                       (isAuthenticated() && request.resource.data.userId == request.auth.uid);
       
-      // Users can update their own trips or test trips (no auth required for test)
-      allow update: if (isAuthenticated() && resource.data.userId == request.auth.uid) || 
-                       (resource.data.userId is string && resource.data.userId.matches('test_user_.*'));
+      allow update: if (resource.data.userId is string && resource.data.userId.matches('test_user_.*')) ||
+                       (isAuthenticated() && resource.data.userId == request.auth.uid);
       
-      // Users can delete their own trips or test trips (no auth required for test)
-      allow delete: if (isAuthenticated() && resource.data.userId == request.auth.uid) || 
-                       (resource.data.userId is string && resource.data.userId.matches('test_user_.*'));
+      allow delete: if (resource.data.userId is string && resource.data.userId.matches('test_user_.*')) ||
+                       (isAuthenticated() && resource.data.userId == request.auth.uid);
     }
     
     // ============================================================================
