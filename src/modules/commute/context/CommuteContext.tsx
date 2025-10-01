@@ -11,11 +11,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { 
   withErrorRecovery, 
   handleStorageError, 
-  handleContextError,
-  handleSmartError,
-  defaultInputTruncator,
   globalErrorRecovery 
 } from '../utils/error-recovery';
+import firestoreService from '../services/firestore-service';
 
 // Import types from the modular structure
 import type {
@@ -72,7 +70,7 @@ interface CommuteStorageData {
 
 const KOMMUTE_STORAGE_KEY = '@kommute_data';
 const FEATURE_FLAGS_KEY = '@kommute_feature_flags';
-const ERROR_RECOVERY_ENABLED = true; // Enable error recovery by default
+const USE_FIRESTORE = true;
 
 const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   KOMMUTE_ENABLED: false, // CRITICAL: Disabled by default
@@ -359,24 +357,42 @@ const contextHook = createContextHook((): CommuteContextType => {
         
         setHasLocationPermission(hasPermission || false);
         
-        // Load stored data with error recovery
-        const storedData = await withErrorRecovery(
-          () => getStorageData(),
-          { 
-            component: 'CommuteContext', 
-            operation: 'load_storage',
-            additionalData: { storageKey: KOMMUTE_STORAGE_KEY }
-          },
-          null
-        );
-        
-        if (storedData) {
-          setRoutes(storedData.routes || []);
-          setTrips(storedData.trips || []);
-          console.log('[CommuteContext] Loaded stored data:', {
-            routes: storedData.routes?.length || 0,
-            trips: storedData.trips?.length || 0,
+        if (USE_FIRESTORE) {
+          const userId = 'current_user';
+          
+          const unsubscribeRoutes = firestoreService.routes.subscribeToUserRoutes(userId, (firestoreRoutes) => {
+            setRoutes(firestoreRoutes);
+            console.log('[CommuteContext] Routes synced from Firestore:', firestoreRoutes.length);
           });
+          
+          const unsubscribeTrips = firestoreService.trips.subscribeToUserTrips(userId, (firestoreTrips) => {
+            setTrips(firestoreTrips);
+            console.log('[CommuteContext] Trips synced from Firestore:', firestoreTrips.length);
+          });
+          
+          return () => {
+            unsubscribeRoutes();
+            unsubscribeTrips();
+          };
+        } else {
+          const storedData = await withErrorRecovery(
+            () => getStorageData(),
+            { 
+              component: 'CommuteContext', 
+              operation: 'load_storage',
+              additionalData: { storageKey: KOMMUTE_STORAGE_KEY }
+            },
+            null
+          );
+          
+          if (storedData) {
+            setRoutes(storedData.routes || []);
+            setTrips(storedData.trips || []);
+            console.log('[CommuteContext] Loaded stored data:', {
+              routes: storedData.routes?.length || 0,
+              trips: storedData.trips?.length || 0,
+            });
+          }
         }
         
         // Get current location if permission granted
@@ -489,6 +505,10 @@ const contextHook = createContextHook((): CommuteContextType => {
       updatedAt: new Date(),
     };
     
+    if (USE_FIRESTORE) {
+      await firestoreService.routes.create(newRoute);
+    }
+    
     const updatedRoutes = [...routes, newRoute];
     setRoutes(updatedRoutes);
     
@@ -497,9 +517,15 @@ const contextHook = createContextHook((): CommuteContextType => {
   }, [routes]);
 
   const updateRoute = useCallback(async (routeId: string, updates: Partial<Route>): Promise<void> => {
+    const updatedData = { ...updates, updatedAt: new Date() };
+    
+    if (USE_FIRESTORE) {
+      await firestoreService.routes.update(routeId, updatedData);
+    }
+    
     const updatedRoutes = routes.map(route => 
       route.id === routeId 
-        ? { ...route, ...updates, updatedAt: new Date() }
+        ? { ...route, ...updatedData }
         : route
     );
     
@@ -508,10 +534,13 @@ const contextHook = createContextHook((): CommuteContextType => {
   }, [routes]);
 
   const deleteRoute = useCallback(async (routeId: string): Promise<void> => {
+    if (USE_FIRESTORE) {
+      await firestoreService.routes.delete(routeId);
+    }
+    
     const updatedRoutes = routes.filter(route => route.id !== routeId);
     setRoutes(updatedRoutes);
     
-    // Also remove any trips associated with this route
     const updatedTrips = trips.filter(trip => trip.routeId !== routeId);
     setTrips(updatedTrips);
     
@@ -533,11 +562,15 @@ const contextHook = createContextHook((): CommuteContextType => {
         const newTrip: Trip = {
           id: `trip_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           routeId,
-          userId: 'current_user', // This should come from AuthContext
+          userId: 'current_user',
           startTime: new Date(),
           status: 'in_progress',
           trackingPoints: [],
         };
+        
+        if (USE_FIRESTORE) {
+          await firestoreService.trips.create(newTrip);
+        }
         
         setCurrentTrip(newTrip);
         setActiveRoute(route);
@@ -564,16 +597,24 @@ const contextHook = createContextHook((): CommuteContextType => {
   const endTrip = useCallback(async (tripId: string): Promise<void> => {
     const result = await withErrorRecovery(
       async () => {
-        const updatedTrips = trips.map(trip => 
-          trip.id === tripId 
-            ? { 
-                ...trip, 
-                endTime: new Date(), 
-                status: 'completed' as const,
-                actualDistance: trip.trackingPoints.length > 0 ? calculateDistance(trip.trackingPoints) : undefined,
-                actualDuration: trip.startTime ? Date.now() - trip.startTime.getTime() : undefined,
-              }
-            : trip
+        const trip = trips.find(t => t.id === tripId);
+        if (!trip) {
+          throw new Error('Trip not found');
+        }
+        
+        const updates = {
+          endTime: new Date(),
+          status: 'completed' as const,
+          actualDistance: trip.trackingPoints.length > 0 ? calculateDistance(trip.trackingPoints) : undefined,
+          actualDuration: trip.startTime ? Date.now() - trip.startTime.getTime() : undefined,
+        };
+        
+        if (USE_FIRESTORE) {
+          await firestoreService.trips.update(tripId, updates);
+        }
+        
+        const updatedTrips = trips.map(t => 
+          t.id === tripId ? { ...t, ...updates } : t
         );
         
         setTrips(updatedTrips);
@@ -596,7 +637,7 @@ const contextHook = createContextHook((): CommuteContextType => {
     }
   }, [trips, calculateDistance]);
 
-  const updateLocation = useCallback((point: Omit<TrackingPoint, 'id' | 'tripId'>) => {
+  const updateLocation = useCallback(async (point: Omit<TrackingPoint, 'id' | 'tripId'>) => {
     if (!currentTrip || !isTracking) return;
     
     const trackingPoint: TrackingPoint = {
@@ -605,15 +646,24 @@ const contextHook = createContextHook((): CommuteContextType => {
       tripId: currentTrip.id,
     };
     
+    if (USE_FIRESTORE) {
+      await firestoreService.tracking.addPoint(trackingPoint);
+    }
+    
     const updatedTrip = {
       ...currentTrip,
       trackingPoints: [...currentTrip.trackingPoints, trackingPoint],
     };
     
+    if (USE_FIRESTORE) {
+      await firestoreService.trips.update(currentTrip.id, {
+        trackingPoints: updatedTrip.trackingPoints,
+      });
+    }
+    
     setCurrentTrip(updatedTrip);
     setCurrentLocation({ latitude: point.latitude, longitude: point.longitude });
     
-    // Update trips array
     const updatedTrips = trips.map(trip => 
       trip.id === currentTrip.id ? updatedTrip : trip
     );

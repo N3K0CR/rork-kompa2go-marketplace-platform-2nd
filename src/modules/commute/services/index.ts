@@ -1,10 +1,7 @@
 // ============================================================================
-// 2KOMMUTE SERVICES INDEX
+// 2KOMMUTE SERVICES EXPORTS
 // ============================================================================
-// Service layer for business logic and external API interactions
+// Central export point for all 2Kommute services
 
-export * from './matching-service';
-export * from './realtime-service';
-export * from './route-optimization';
-export * from './carbon-calculator';
-export * from './location-service';
+export { firestoreService } from './firestore-service';
+export { default as firestoreServiceDefault } from './firestore-service';
