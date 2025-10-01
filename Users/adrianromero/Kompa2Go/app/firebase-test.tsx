@@ -237,7 +237,7 @@ export default function FirebaseTest() {
 
         <View style={styles.resultsContainer}>
           {results.map((result, index) => (
-            <View key={index} style={styles.resultCard}>
+            <View key={index} style={[styles.resultCard, index > 0 && styles.resultCardSpacing]}>
               <View style={styles.resultHeader}>
                 <Text style={styles.resultIcon}>{getStatusIcon(result.status)}</Text>
                 <Text style={styles.resultName}>{result.name}</Text>
@@ -323,7 +323,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   resultsContainer: {
-    gap: 12,
+  },
+  resultCardSpacing: {
+    marginTop: 12,
   },
   resultCard: {
     backgroundColor: '#fff',
