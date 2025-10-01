@@ -468,6 +468,13 @@ export default function ProfileScreen() {
         >
           <Text style={styles.firebaseTestButtonText}>🔥 Test Firebase</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.kommuteTestButton}
+          onPress={() => router.push('/kommute-full-test')}
+        >
+          <Text style={styles.kommuteTestButtonText}>🚗 Prueba Completa Kommute</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Change Password Modal */}
@@ -1361,6 +1368,19 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   firebaseTestButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  kommuteTestButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  kommuteTestButtonText: {
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
