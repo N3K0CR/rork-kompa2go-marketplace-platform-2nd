@@ -22,7 +22,7 @@ export default function CommuteHome() {
   const [editingRoute, setEditingRoute] = useState<Route | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const activeTrips = trips.filter(trip => trip.status === 'in_progress' || trip.status === 'waiting');
+  const activeTrips = trips.filter(trip => trip.status === 'in_progress' || trip.status === 'planned');
 
   console.log('🏠 CommuteHome: Rendered with', routes.length, 'routes');
   console.log('🏠 CommuteHome: Active trips:', activeTrips.length);
@@ -200,6 +200,7 @@ export default function CommuteHome() {
           <RouteCard
             key={route.id}
             route={route}
+            transportModes={transportModes}
             onEdit={() => setEditingRoute(route)}
             onDelete={() => handleDeleteRoute(route.id)}
             showActions
