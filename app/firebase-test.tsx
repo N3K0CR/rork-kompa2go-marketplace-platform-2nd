@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'rea
 import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CheckCircle, XCircle, Loader } from 'lucide-react-native';
+import { signInAnonymously } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { firestoreService } from '@/src/modules/commute/services/firestore-service';
 import type { Route, Trip, TrackingPoint } from '@/src/modules/commute/types/core-types';
 
@@ -16,7 +18,7 @@ type TestResult = {
 export default function FirebaseTestScreen() {
   const insets = useSafeAreaInsets();
   const [tests, setTests] = useState<TestResult[]>([
-    { name: 'Conexión a Firebase', status: 'pending' },
+    { name: 'Autenticación Anónima', status: 'pending' },
     { name: 'Crear Ruta', status: 'pending' },
     { name: 'Leer Ruta', status: 'pending' },
     { name: 'Actualizar Ruta', status: 'pending' },
@@ -30,6 +32,7 @@ export default function FirebaseTestScreen() {
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [testRouteId, setTestRouteId] = useState<string>('');
   const [testTripId, setTestTripId] = useState<string>('');
+  const [authUserId, setAuthUserId] = useState<string>('');
 
   const updateTest = (index: number, updates: Partial<TestResult>) => {
     setTests(prev => prev.map((test, i) => i === index ? { ...test, ...updates } : test));
@@ -39,17 +42,19 @@ export default function FirebaseTestScreen() {
     if (isRunning) return;
     
     setIsRunning(true);
-    const userId = 'test_user_' + Date.now();
     let routeId = '';
     let tripId = '';
+    let userId = '';
 
     try {
       updateTest(0, { status: 'running' });
       const startTime0 = Date.now();
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const userCredential = await signInAnonymously(auth);
+      userId = userCredential.user.uid;
+      setAuthUserId(userId);
       updateTest(0, { 
         status: 'success', 
-        message: 'Conectado a Firebase Firestore',
+        message: `Usuario anónimo: ${userId.substring(0, 8)}...`,
         duration: Date.now() - startTime0
       });
 
@@ -361,6 +366,13 @@ export default function FirebaseTestScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {authUserId ? (
+          <View style={styles.infoBox}>
+            <Text style={styles.infoLabel}>Auth User ID:</Text>
+            <Text style={styles.infoValue}>{authUserId}</Text>
+          </View>
+        ) : null}
 
         <View style={styles.infoSection}>
           <Text style={styles.infoTitle}>ℹ️ Información</Text>
