@@ -335,7 +335,9 @@ export default function KommuteValidation() {
         {/* Estado General */}
         <View style={[styles.overallStatus, { backgroundColor: getStatusColor(overallStatus) }]}>
           <View style={styles.overallStatusHeader}>
-            {getStatusIcon(overallStatus)}
+            <View style={{ marginRight: Spacing[2] }}>
+              {getStatusIcon(overallStatus)}
+            </View>
             <Text style={styles.overallStatusTitle}>
               {overallStatus === 'success' ? '✅ 2Kommute está listo' :
                overallStatus === 'warning' ? '⚠️ 2Kommute funcional con advertencias' :
@@ -354,7 +356,9 @@ export default function KommuteValidation() {
             onPress={() => runValidation(false)}
             disabled={isValidating}
           >
-            <RefreshCw size={16} color="white" />
+            <View style={{ marginRight: Spacing[1] }}>
+              <RefreshCw size={16} color="white" />
+            </View>
             <Text style={styles.controlButtonText}>
               {isValidating ? 'Validando...' : 'Revalidar'}
             </Text>
@@ -365,7 +369,9 @@ export default function KommuteValidation() {
             onPress={() => runValidation(true)}
             disabled={isValidating}
           >
-            <Shield size={16} color="white" />
+            <View style={{ marginRight: Spacing[1] }}>
+              <Shield size={16} color="white" />
+            </View>
             <Text style={styles.controlButtonText}>
               Test Recuperación
             </Text>
@@ -378,7 +384,9 @@ export default function KommuteValidation() {
               style={[styles.controlButton, styles.successButton]}
               onPress={handleEnableKommute}
             >
-              <Play size={16} color="white" />
+              <View style={{ marginRight: Spacing[1] }}>
+                <Play size={16} color="white" />
+              </View>
               <Text style={styles.controlButtonText}>Habilitar 2Kommute</Text>
             </TouchableOpacity>
           ) : (
@@ -386,7 +394,9 @@ export default function KommuteValidation() {
               style={[styles.controlButton, styles.warningButton]}
               onPress={handleDisableKommute}
             >
-              <Settings size={16} color="white" />
+              <View style={{ marginRight: Spacing[1] }}>
+                <Settings size={16} color="white" />
+              </View>
               <Text style={styles.controlButtonText}>Deshabilitar 2Kommute</Text>
             </TouchableOpacity>
           )}
@@ -397,14 +407,18 @@ export default function KommuteValidation() {
           <Text style={styles.sectionTitle}>Resultados de Validación</Text>
           
           {validationResults.map((result, index) => (
-            <View key={`${result.name}-${index}`} style={[styles.resultItem, { backgroundColor: getStatusColor(result.status) }]}>
+            <View key={`${result.name}-${index}`} style={[styles.resultItem, { backgroundColor: getStatusColor(result.status), marginBottom: Spacing[2] }]}>
               <View style={styles.resultHeader}>
                 <View style={styles.resultTitleRow}>
-                  {getStatusIcon(result.status, result)}
+                  <View style={{ marginRight: Spacing[2] }}>
+                    {getStatusIcon(result.status, result)}
+                  </View>
                   <Text style={styles.resultName}>{result.name}</Text>
                   {result.errorRecoveryApplied && (
                     <View style={styles.recoveryBadge}>
-                      <Shield size={12} color={Colors.success[500]} />
+                      <View style={{ marginRight: 2 }}>
+                        <Shield size={12} color={Colors.success[500]} />
+                      </View>
                       <Text style={styles.recoveryText}>Recuperado</Text>
                     </View>
                   )}
@@ -474,7 +488,6 @@ const styles = StyleSheet.create({
   overallStatusHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing[2],
     marginBottom: Spacing[2],
   },
   overallStatusTitle: {
@@ -488,7 +501,6 @@ const styles = StyleSheet.create({
   },
   controls: {
     flexDirection: 'row',
-    gap: Spacing[3],
     paddingHorizontal: Spacing[4],
     marginBottom: Spacing[4],
   },
@@ -497,9 +509,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing[2],
     paddingVertical: Spacing[3],
+    paddingHorizontal: Spacing[2],
     borderRadius: BorderRadius.md,
+    marginHorizontal: Spacing[1],
   },
   primaryButton: {
     backgroundColor: Colors.primary[500],
@@ -542,7 +555,6 @@ const styles = StyleSheet.create({
   resultTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing[2],
     flex: 1,
     flexWrap: 'wrap',
   },
@@ -557,7 +569,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing[1],
     paddingVertical: 2,
     borderRadius: BorderRadius.sm,
-    gap: 2,
+    marginLeft: Spacing[1],
   },
   recoveryText: {
     color: Colors.success[600],
@@ -594,7 +606,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing[4],
   },
   infoGrid: {
-    gap: Spacing[2],
+    marginTop: Spacing[2],
   },
   infoItem: {
     flexDirection: 'row',
