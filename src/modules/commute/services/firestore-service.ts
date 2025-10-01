@@ -177,8 +177,7 @@ export const firestoreService = {
       const routesRef = collection(db, COLLECTIONS.ROUTES);
       const q = query(
         routesRef, 
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
+        where('userId', '==', userId)
       );
       
       const querySnapshot = await getDocs(q);
@@ -254,8 +253,7 @@ export const firestoreService = {
     async getByUser(userId: string, limitCount?: number): Promise<Trip[]> {
       const tripsRef = collection(db, COLLECTIONS.TRIPS);
       const constraints: QueryConstraint[] = [
-        where('userId', '==', userId),
-        orderBy('startTime', 'desc')
+        where('userId', '==', userId)
       ];
       
       if (limitCount) {
