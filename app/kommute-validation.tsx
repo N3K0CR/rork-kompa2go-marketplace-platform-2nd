@@ -267,20 +267,20 @@ export default function KommuteValidation() {
   const handleEnableKommute = async () => {
     try {
       await enableKommute();
-      console.log('✅ 2Kommute habilitado exitosamente');
+      console.log('✅ Kommute habilitado exitosamente');
       setTimeout(() => runValidation(), 1000);
     } catch (error) {
-      console.error('❌ Error habilitando 2Kommute:', error);
+      console.error('❌ Error habilitando Kommute:', error);
     }
   };
 
   const handleDisableKommute = async () => {
     try {
       await disableKommute();
-      console.log('⚠️ 2Kommute deshabilitado');
+      console.log('⚠️ Kommute deshabilitado');
       setTimeout(() => runValidation(), 1000);
     } catch (error) {
-      console.error('❌ Error deshabilitando 2Kommute:', error);
+      console.error('❌ Error deshabilitando Kommute:', error);
     }
   };
 
@@ -324,7 +324,7 @@ export default function KommuteValidation() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen 
         options={{ 
-          title: '2Kommute - Validación',
+          title: 'Kommute - Validación',
           headerStyle: { backgroundColor: Colors.primary[500] },
           headerTintColor: 'white',
           headerTitleStyle: { fontWeight: 'bold' }
@@ -339,9 +339,9 @@ export default function KommuteValidation() {
               {getStatusIcon(overallStatus)}
             </View>
             <Text style={styles.overallStatusTitle}>
-              {overallStatus === 'success' ? '✅ 2Kommute está listo' :
-               overallStatus === 'warning' ? '⚠️ 2Kommute funcional con advertencias' :
-               '❌ 2Kommute tiene errores'}
+              {overallStatus === 'success' ? '✅ Kommute está listo' :
+               overallStatus === 'warning' ? '⚠️ Kommute funcional con advertencias' :
+               '❌ Kommute tiene errores'}
             </Text>
           </View>
           <Text style={styles.overallStatusSubtitle}>
@@ -387,7 +387,7 @@ export default function KommuteValidation() {
               <View style={{ marginRight: Spacing[1] }}>
                 <Play size={16} color="white" />
               </View>
-              <Text style={styles.controlButtonText}>Habilitar 2Kommute</Text>
+              <Text style={styles.controlButtonText}>Habilitar Kommute</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -397,7 +397,7 @@ export default function KommuteValidation() {
               <View style={{ marginRight: Spacing[1] }}>
                 <Settings size={16} color="white" />
               </View>
-              <Text style={styles.controlButtonText}>Deshabilitar 2Kommute</Text>
+              <Text style={styles.controlButtonText}>Deshabilitar Kommute</Text>
             </TouchableOpacity>
           )}
         </View>

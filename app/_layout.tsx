@@ -21,7 +21,7 @@ import { K2GProductsProvider } from "@/contexts/K2GProductsContext";
 import { ReportedProblemsProvider } from "@/contexts/ReportedProblemsContext";
 import { LemonSqueezyProvider } from "@/contexts/LemonSqueezyContext";
 import { KompiBrainProvider } from "@/contexts/KompiBrainContext";
-import CommuteProvider from "@/contexts/CommuteContext";
+import { CommuteContext } from "@/src/modules/commute/context/CommuteContext";
 // import { DatabaseProvider } from "@/contexts/DatabaseContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ReservationAlertModal } from "@/components/ReservationAlertModal";
@@ -66,12 +66,13 @@ function RootLayoutNav() {
       <Stack.Screen name="client/history" options={{ headerShown: false }} />
       <Stack.Screen name="test-kompi" options={{ title: "Test KompiBrain" }} />
       
-      {/* 2Kommute Routes */}
+      {/* Kommute Routes */}
       <Stack.Screen name="commute" options={{ headerShown: false }} />
       <Stack.Screen name="commute/search" options={{ title: "Buscar Viaje" }} />
       <Stack.Screen name="commute/driver" options={{ title: "Modo Conductor" }} />
       <Stack.Screen name="commute/trip/[tripId]" options={{ title: "Detalles del Viaje" }} />
-      <Stack.Screen name="kommute-validation" options={{ title: "2Kommute - Validación" }} />
+      <Stack.Screen name="kommute-validation" options={{ title: "Kommute - Validación" }} />
+      <Stack.Screen name="kommute-full-test" options={{ title: "Kommute - Prueba Completa" }} />
     </Stack>
   );
 }
@@ -103,12 +104,12 @@ export default function RootLayout() {
                                     <ChatProvider>
                                       <K2GProductsProvider>
                                         <ReportedProblemsProvider>
-                                          <CommuteProvider>
+                                          <CommuteContext>
                                             <GestureHandlerRootView style={styles.container}>
                                               <RootLayoutNav />
                                               <ReservationAlertModal />
                                             </GestureHandlerRootView>
-                                          </CommuteProvider>
+                                          </CommuteContext>
                                         </ReportedProblemsProvider>
                                       </K2GProductsProvider>
                                     </ChatProvider>
