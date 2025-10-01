@@ -154,7 +154,7 @@ export default function HomeScreen() {
             onPress={() => router.push('/commute')}
           >
             <View style={styles.kommuteHeader}>
-              <Text style={styles.kommuteTitle}>2Kommute</Text>
+              <Text style={styles.kommuteTitle}>Kommute</Text>
               <Text style={styles.kommuteBadge}>NUEVO</Text>
             </View>
             <Text style={styles.kommuteDescription}>
