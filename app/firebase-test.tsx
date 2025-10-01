@@ -307,7 +307,7 @@ export default function FirebaseTestScreen() {
 
         <View style={styles.testsContainer}>
           {tests.map((test, index) => (
-            <View key={index} style={styles.testItem}>
+            <View key={index} style={[styles.testItem, index < tests.length - 1 && styles.testItemBorder]}>
               <View style={styles.testHeader}>
                 {getStatusIcon(test.status)}
                 <Text style={[styles.testName, { color: getStatusColor(test.status) }]}>
@@ -412,6 +412,8 @@ const styles = StyleSheet.create({
   testItem: {
     marginBottom: 16,
     paddingBottom: 16,
+  },
+  testItemBorder: {
     borderBottomWidth: 1,
     borderBottomColor: '#374151',
   },

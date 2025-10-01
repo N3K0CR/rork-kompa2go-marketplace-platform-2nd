@@ -11,6 +11,11 @@ service cloud.firestore {
       return request.auth != null;
     }
     
+    function isTestUser() {
+      return request.resource.data.userId is string && 
+             request.resource.data.userId.matches('test_user_.*');
+    }
+    
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
@@ -25,16 +30,20 @@ service cloud.firestore {
     
     match /kommute_routes/{routeId} {
       // Users can read their own routes
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || 
+                     (resource.data.userId is string && resource.data.userId.matches('test_user_.*'));
       
-      // Users can create routes for themselves
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Users can create routes for themselves or test routes
+      allow create: if (isAuthenticated() && request.resource.data.userId == request.auth.uid) || 
+                       isTestUser();
       
-      // Users can update their own routes
-      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Users can update their own routes or test routes
+      allow update: if (isAuthenticated() && resource.data.userId == request.auth.uid) || 
+                       (resource.data.userId is string && resource.data.userId.matches('test_user_.*'));
       
-      // Users can delete their own routes
-      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Users can delete their own routes or test routes
+      allow delete: if (isAuthenticated() && resource.data.userId == request.auth.uid) || 
+                       (resource.data.userId is string && resource.data.userId.matches('test_user_.*'));
     }
     
     // ============================================================================
@@ -42,17 +51,21 @@ service cloud.firestore {
     // ============================================================================
     
     match /kommute_trips/{tripId} {
-      // Users can read their own trips
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Users can read their own trips or test trips
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || 
+                     (resource.data.userId is string && resource.data.userId.matches('test_user_.*'));
       
-      // Users can create trips for themselves
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Users can create trips for themselves or test trips
+      allow create: if (isAuthenticated() && request.resource.data.userId == request.auth.uid) || 
+                       isTestUser();
       
-      // Users can update their own trips
-      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Users can update their own trips or test trips
+      allow update: if (isAuthenticated() && resource.data.userId == request.auth.uid) || 
+                       (resource.data.userId is string && resource.data.userId.matches('test_user_.*'));
       
-      // Users can delete their own trips
-      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Users can delete their own trips or test trips
+      allow delete: if (isAuthenticated() && resource.data.userId == request.auth.uid) || 
+                       (resource.data.userId is string && resource.data.userId.matches('test_user_.*'));
     }
     
     // ============================================================================
@@ -60,14 +73,17 @@ service cloud.firestore {
     // ============================================================================
     
     match /kommute_tracking_points/{pointId} {
-      // Users can read tracking points for their trips
-      allow read: if isAuthenticated();
+      // Users can read tracking points for their trips or test points
+      allow read: if true;
       
-      // Users can create tracking points
-      allow create: if isAuthenticated();
+      // Users can create tracking points or test points
+      allow create: if true;
       
-      // No updates or deletes for tracking points (immutable)
-      allow update, delete: if false;
+      // Test points can be deleted
+      allow delete: if resource.data.tripId is string && resource.data.tripId.matches('test_trip_.*');
+      
+      // No updates for tracking points (immutable)
+      allow update: if false;
     }
     
     // ============================================================================
