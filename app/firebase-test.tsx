@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, Component, ReactNode } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +14,37 @@ type TestResult = {
   message?: string;
   duration?: number;
 };
+
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: any) {
+    console.error('[ErrorBoundary] Caught error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Error de renderizado capturado</Text>
+          <Text style={styles.errorDetail}>{this.state.error?.message}</Text>
+        </View>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 export default function FirebaseTestScreen() {
   const insets = useSafeAreaInsets();
@@ -293,7 +324,8 @@ export default function FirebaseTestScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    <ErrorBoundary>
+      <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <Stack.Screen 
         options={{ 
           title: 'Firebase Integration Test',
@@ -387,7 +419,8 @@ export default function FirebaseTestScreen() {
           </Text>
         </View>
       </ScrollView>
-    </View>
+      </View>
+    </ErrorBoundary>
   );
 }
 
@@ -517,5 +550,23 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     marginBottom: 8,
     lineHeight: 20,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#111827',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: '600' as const,
+    color: '#EF4444',
+    marginBottom: 12,
+  },
+  errorDetail: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    textAlign: 'center',
   },
 });
