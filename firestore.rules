@@ -1,0 +1,144 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ============================================================================
+    // HELPER FUNCTIONS
+    // ============================================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isDriver(driverId) {
+      return isAuthenticated() && request.auth.uid == driverId;
+    }
+    
+    // ============================================================================
+    // KOMMUTE ROUTES
+    // ============================================================================
+    
+    match /kommute_routes/{routeId} {
+      // Users can read their own routes
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Users can create routes for themselves
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      
+      // Users can update their own routes
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Users can delete their own routes
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+    
+    // ============================================================================
+    // KOMMUTE TRIPS
+    // ============================================================================
+    
+    match /kommute_trips/{tripId} {
+      // Users can read their own trips
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Users can create trips for themselves
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      
+      // Users can update their own trips
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Users can delete their own trips
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+    
+    // ============================================================================
+    // TRACKING POINTS
+    // ============================================================================
+    
+    match /kommute_tracking_points/{pointId} {
+      // Users can read tracking points for their trips
+      allow read: if isAuthenticated();
+      
+      // Users can create tracking points
+      allow create: if isAuthenticated();
+      
+      // No updates or deletes for tracking points (immutable)
+      allow update, delete: if false;
+    }
+    
+    // ============================================================================
+    // TRIP CHAINS
+    // ============================================================================
+    
+    match /kommute_trip_chains/{chainId} {
+      // Drivers can read their own chains
+      allow read: if isAuthenticated() && resource.data.driverId == request.auth.uid;
+      
+      // Drivers can create chains for themselves
+      allow create: if isAuthenticated() && request.resource.data.driverId == request.auth.uid;
+      
+      // Drivers can update their own chains
+      allow update: if isAuthenticated() && resource.data.driverId == request.auth.uid;
+      
+      // Drivers can delete their own chains
+      allow delete: if isAuthenticated() && resource.data.driverId == request.auth.uid;
+    }
+    
+    // ============================================================================
+    // TRIP QUEUE
+    // ============================================================================
+    
+    match /kommute_trip_queue/{entryId} {
+      // All authenticated users can read active queue entries
+      allow read: if isAuthenticated();
+      
+      // Users can create queue entries
+      allow create: if isAuthenticated();
+      
+      // Drivers can update queue entries (to accept/reject)
+      allow update: if isAuthenticated();
+      
+      // Users can delete their own queue entries
+      allow delete: if isAuthenticated();
+    }
+    
+    // ============================================================================
+    // DRIVER AVAILABILITY
+    // ============================================================================
+    
+    match /kommute_driver_availability/{driverId} {
+      // All authenticated users can read driver availability
+      allow read: if isAuthenticated();
+      
+      // Drivers can create/update their own availability
+      allow create, update: if isAuthenticated() && driverId == request.auth.uid;
+      
+      // Drivers can delete their own availability
+      allow delete: if isAuthenticated() && driverId == request.auth.uid;
+    }
+    
+    // ============================================================================
+    // ANALYTICS (Read-only for users, write for system)
+    // ============================================================================
+    
+    match /kommute_analytics/{docId} {
+      // Users can read their own analytics
+      allow read: if isAuthenticated();
+      
+      // Only system can write analytics (use Firebase Admin SDK)
+      allow write: if false;
+    }
+    
+    // ============================================================================
+    // DEFAULT DENY ALL
+    // ============================================================================
+    
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
