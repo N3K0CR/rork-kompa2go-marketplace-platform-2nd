@@ -4,7 +4,7 @@ import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CheckCircle, XCircle, AlertCircle, Play, Settings, RefreshCw, Shield, Zap } from 'lucide-react-native';
 import { useCommute } from '@/src/modules/commute/context/CommuteContext';
-import { useKommuteAdmin } from '@/contexts/CommuteContext';
+import { useKommuteAdmin } from '@/src/modules/commute/hooks/useCommute';
 import { Colors, Spacing, BorderRadius, Typography } from '@/context-package/design-system';
 
 // Import error recovery system

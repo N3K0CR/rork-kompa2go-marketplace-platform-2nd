@@ -1,29 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, MapPin, Clock, Users, Car, Bus, Bike, Zap, Settings } from 'lucide-react-native';
-import { useCommute } from '@/hooks/useCommute';
+import { Plus, MapPin, Clock, Users, Car, Zap, Settings } from 'lucide-react-native';
+import { useCommute } from '@/src/modules/commute/context/CommuteContext';
 import { CommuteButton, CommuteModal, RouteCard } from '@/components/commute';
 import { Colors, Spacing, BorderRadius, Shadows, Typography } from '@/context-package/design-system';
-import { Route, TransportMode } from '@/backend/trpc/routes/commute/types';
+import type { Route } from '@/src/modules/commute/types/core-types';
 
 export default function CommuteHome() {
   const {
     routes,
     transportModes,
-    activeTrips,
-    isLoading,
+    trips,
     createRoute,
     updateRoute,
     deleteRoute,
     startTrip,
-    refreshData
   } = useCommute();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingRoute, setEditingRoute] = useState<Route | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  const activeTrips = trips.filter(trip => trip.status === 'in_progress' || trip.status === 'waiting');
 
   console.log('🏠 CommuteHome: Rendered with', routes.length, 'routes');
   console.log('🏠 CommuteHome: Active trips:', activeTrips.length);
@@ -32,7 +31,7 @@ export default function CommuteHome() {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await refreshData();
+      console.log('🔄 Refreshing data...');
     } catch (error) {
       console.error('❌ CommuteHome: Error refreshing data:', error);
     } finally {
@@ -43,8 +42,10 @@ export default function CommuteHome() {
   const handleCreateRoute = async (routeData: Partial<Route>) => {
     try {
       console.log('➕ CommuteHome: Creating new route:', routeData.name);
-      await createRoute(routeData);
-      setShowCreateModal(false);
+      if (routeData.userId && routeData.name && routeData.points && routeData.transportModes) {
+        await createRoute(routeData as Omit<Route, 'id' | 'createdAt' | 'updatedAt'>);
+        setShowCreateModal(false);
+      }
     } catch (error) {
       console.error('❌ CommuteHome: Error creating route:', error);
     }
@@ -65,8 +66,8 @@ export default function CommuteHome() {
   const handleStartTrip = async (route: Route) => {
     try {
       console.log('🚀 CommuteHome: Starting trip for route:', route.id);
-      const trip = await startTrip(route.id, 'passenger');
-      router.push(`/commute/trip/${trip.id}`);
+      await startTrip(route.id);
+      console.log('✅ Trip started successfully');
     } catch (error) {
       console.error('❌ CommuteHome: Error starting trip:', error);
     }
@@ -123,46 +124,46 @@ export default function CommuteHome() {
     return (
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Viajes Activos</Text>
-        {activeTrips.map((trip) => (
-          <TouchableOpacity
-            key={trip.id}
-            style={styles.activeTripCard}
-            onPress={() => router.push(`/commute/trip/${trip.id}`)}
-          >
-            <View style={styles.tripHeader}>
-              <View style={styles.tripStatus}>
-                <View style={[
-                  styles.statusIndicator,
-                  { backgroundColor: trip.status === 'in_progress' ? Colors.success[500] : Colors.warning[500] }
-                ]} />
-                <Text style={styles.tripStatusText}>
-                  {trip.status === 'in_progress' ? 'En Progreso' : 'Esperando'}
-                </Text>
-              </View>
-              <Text style={styles.tripRole}>
-                {trip.role === 'driver' ? '🚗 Conductor' : '👤 Pasajero'}
-              </Text>
-            </View>
-            
-            <Text style={styles.tripRouteName}>{trip.route?.name}</Text>
-            
-            <View style={styles.tripDetails}>
-              <View style={styles.tripDetail}>
-                <Clock size={14} color={Colors.neutral[500]} />
-                <Text style={styles.tripDetailText}>
-                  {trip.estimatedDuration ? `${trip.estimatedDuration} min` : 'Calculando...'}
-                </Text>
+        {activeTrips.map((trip) => {
+          const route = routes.find(r => r.id === trip.routeId);
+          return (
+            <TouchableOpacity
+              key={trip.id}
+              style={styles.activeTripCard}
+              onPress={() => router.push(`/commute/trip/${trip.id}`)}
+            >
+              <View style={styles.tripHeader}>
+                <View style={styles.tripStatus}>
+                  <View style={[
+                    styles.statusIndicator,
+                    { backgroundColor: trip.status === 'in_progress' ? Colors.success[500] : Colors.warning[500] }
+                  ]} />
+                  <Text style={styles.tripStatusText}>
+                    {trip.status === 'in_progress' ? 'En Progreso' : 'Esperando'}
+                  </Text>
+                </View>
               </View>
               
-              <View style={styles.tripDetail}>
-                <MapPin size={14} color={Colors.neutral[500]} />
-                <Text style={styles.tripDetailText}>
-                  {trip.estimatedDistance ? `${(trip.estimatedDistance / 1000).toFixed(1)} km` : 'Calculando...'}
-                </Text>
+              <Text style={styles.tripRouteName}>{route?.name || 'Ruta sin nombre'}</Text>
+              
+              <View style={styles.tripDetails}>
+                <View style={styles.tripDetail}>
+                  <Clock size={14} color={Colors.neutral[500]} />
+                  <Text style={styles.tripDetailText}>
+                    {trip.actualDuration ? `${Math.round(trip.actualDuration / 60000)} min` : 'Calculando...'}
+                  </Text>
+                </View>
+                
+                <View style={styles.tripDetail}>
+                  <MapPin size={14} color={Colors.neutral[500]} />
+                  <Text style={styles.tripDetailText}>
+                    {trip.actualDistance ? `${(trip.actualDistance / 1000).toFixed(1)} km` : 'Calculando...'}
+                  </Text>
+                </View>
               </View>
-            </View>
-          </TouchableOpacity>
-        ))}
+            </TouchableOpacity>
+          );
+        })}
       </View>
     );
   };
@@ -199,7 +200,6 @@ export default function CommuteHome() {
           <RouteCard
             key={route.id}
             route={route}
-            onPress={() => handleStartTrip(route)}
             onEdit={() => setEditingRoute(route)}
             onDelete={() => handleDeleteRoute(route.id)}
             showActions
@@ -212,7 +212,7 @@ export default function CommuteHome() {
   const renderStats = () => {
     const totalRoutes = routes.length;
     const totalTrips = activeTrips.length;
-    const carbonSaved = routes.reduce((acc, route) => acc + (route.carbonSaved || 0), 0);
+    const carbonSaved = routes.reduce((acc, route) => acc + (route.carbonFootprint || 0), 0);
     
     return (
       <View style={styles.statsSection}>
@@ -241,7 +241,7 @@ export default function CommuteHome() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <View style={styles.container}>
       <Stack.Screen 
         options={{ 
           title: '2Kommute',
@@ -278,7 +278,7 @@ export default function CommuteHome() {
         initialRoute={editingRoute}
         mode={editingRoute ? 'edit' : 'create'}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -386,10 +386,6 @@ const styles = StyleSheet.create({
     ...Typography.textStyles.bodySmall,
     color: Colors.neutral[600],
     fontWeight: Typography.fontWeight.medium,
-  },
-  tripRole: {
-    ...Typography.textStyles.caption,
-    color: Colors.neutral[500],
   },
   tripRouteName: {
     ...Typography.textStyles.h6,
