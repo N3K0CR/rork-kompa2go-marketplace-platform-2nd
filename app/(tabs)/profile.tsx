@@ -461,6 +461,13 @@ export default function ProfileScreen() {
         >
           <Text style={styles.debugButtonText}>Test Kompi Brain</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.firebaseTestButton}
+          onPress={() => router.push('/firebase-test')}
+        >
+          <Text style={styles.firebaseTestButtonText}>🔥 Test Firebase</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Change Password Modal */}
@@ -1341,6 +1348,19 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   debugButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  firebaseTestButton: {
+    backgroundColor: '#FF6B35',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  firebaseTestButtonText: {
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
