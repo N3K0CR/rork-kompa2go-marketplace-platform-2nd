@@ -11,11 +11,6 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    function isTestUser() {
-      return request.resource.data.userId is string && 
-             request.resource.data.userId.matches('test_user_.*');
-    }
-    
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
@@ -29,11 +24,16 @@ service cloud.firestore {
     // ============================================================================
     
     match /kommute_routes/{routeId} {
-      // Allow authenticated users (including anonymous) to access their own routes
+      // Allow authenticated users to access their own routes
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Allow list queries for user's own routes (needed for stats)
+      allow list: if isAuthenticated() && 
+                     request.query.limit <= 100 &&
+                     resource.data.userId == request.auth.uid;
     }
     
     // ============================================================================
@@ -41,11 +41,16 @@ service cloud.firestore {
     // ============================================================================
     
     match /kommute_trips/{tripId} {
-      // Allow authenticated users (including anonymous) to access their own trips
+      // Allow authenticated users to access their own trips
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Allow list queries for user's own trips (needed for stats)
+      allow list: if isAuthenticated() && 
+                     request.query.limit <= 100 &&
+                     resource.data.userId == request.auth.uid;
     }
     
     // ============================================================================
@@ -57,6 +62,7 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
       allow delete: if isAuthenticated();
+      allow list: if isAuthenticated() && request.query.limit <= 1000;
       // No updates for tracking points (immutable)
       allow update: if false;
     }
@@ -77,6 +83,11 @@ service cloud.firestore {
       
       // Drivers can delete their own chains
       allow delete: if isAuthenticated() && resource.data.driverId == request.auth.uid;
+      
+      // Allow list queries for driver's own chains
+      allow list: if isAuthenticated() && 
+                     request.query.limit <= 100 &&
+                     resource.data.driverId == request.auth.uid;
     }
     
     // ============================================================================
@@ -95,6 +106,9 @@ service cloud.firestore {
       
       // Users can delete their own queue entries
       allow delete: if isAuthenticated();
+      
+      // Allow list queries with reasonable limits
+      allow list: if isAuthenticated() && request.query.limit <= 100;
     }
     
     // ============================================================================
@@ -110,6 +124,9 @@ service cloud.firestore {
       
       // Drivers can delete their own availability
       allow delete: if isAuthenticated() && driverId == request.auth.uid;
+      
+      // Allow list queries for availability
+      allow list: if isAuthenticated() && request.query.limit <= 100;
     }
     
     // ============================================================================
@@ -122,6 +139,9 @@ service cloud.firestore {
       
       // Only system can write analytics (use Firebase Admin SDK)
       allow write: if false;
+      
+      // Allow list queries for analytics
+      allow list: if isAuthenticated() && request.query.limit <= 100;
     }
     
     // ============================================================================
