@@ -306,7 +306,6 @@ const styles = StyleSheet.create({
   userId: {
     fontSize: 12,
     color: '#333',
-    fontFamily: 'monospace',
   },
   button: {
     backgroundColor: '#6200EE',
@@ -359,7 +358,6 @@ const styles = StyleSheet.create({
   },
   resultDataText: {
     fontSize: 12,
-    fontFamily: 'monospace',
     color: '#666',
   },
 });
