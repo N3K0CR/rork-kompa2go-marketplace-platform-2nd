@@ -6,7 +6,7 @@ import { CheckCircle, XCircle, Loader, Play, Database, Zap, MapPin, TrendingUp }
 import { signInAnonymously } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { firestoreService } from '@/src/modules/commute/services/firestore-service';
-import { useCommute } from '@/contexts/CommuteContext';
+import { useCommute } from '@/src/modules/commute/context/CommuteContext';
 
 import type { Route, Trip, TrackingPoint } from '@/src/modules/commute/types/core-types';
 

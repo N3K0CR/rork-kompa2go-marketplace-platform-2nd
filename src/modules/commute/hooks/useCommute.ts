@@ -404,8 +404,10 @@ const useLocationTracking = () => {
 //   useZoneSaturation,
 // } from './useTripChaining';
 
+// Re-export useCommute from context
+export { useCommute } from '../context/CommuteContext';
+
 export {
-  useCommute,
   useRoutes,
   useCarbonFootprint,
   useKommuteEnabled,
