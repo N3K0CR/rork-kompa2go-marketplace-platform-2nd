@@ -474,6 +474,7 @@ export default function LogoServiceScreen() {
         <View style={styles.buttonContainer}>
           {step > 1 && (
             <AccessibleButton
+              label="Atrás"
               text="Atrás"
               onPress={handleBack}
               style={[styles.button, styles.secondaryButton]}
@@ -482,12 +483,14 @@ export default function LogoServiceScreen() {
           
           {step < 3 ? (
             <AccessibleButton
+              label="Siguiente"
               text="Siguiente"
               onPress={handleNext}
               style={styles.button}
             />
           ) : (
             <AccessibleButton
+              label={loading ? 'Procesando...' : 'Crear Solicitud'}
               text={loading ? 'Procesando...' : 'Crear Solicitud'}
               onPress={handleSubmit}
               disabled={loading}
