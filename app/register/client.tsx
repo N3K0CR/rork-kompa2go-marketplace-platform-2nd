@@ -1,123 +1,119 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
   ScrollView,
   StyleSheet,
-  ActivityIndicator,
   Alert,
-  Platform,
+  ActivityIndicator,
+  Switch,
+  Modal,
+  TouchableOpacity,
+  Text,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, Eye, EyeOff, Check } from 'lucide-react-native';
-import { ClientRegistrationSchema, ClientRegistrationType } from '@/src/shared/types/registration-types';
+import { ChevronDown } from 'lucide-react-native';
+import { AccessibleText } from '@/components/AccessibleText';
+import { AccessibleButton } from '@/components/AccessibleButton';
+import { AccessibleInput } from '@/components/AccessibleInput';
+import { DatePicker } from '@/components/DatePicker';
 import { useAccessibility } from '@/contexts/AccessibilityContext';
-import * as Speech from 'expo-speech';
+import { RegistrationService } from '@/src/modules/registration/services/registration-service-wrapper';
+import type { ClientRegistrationData } from '@/src/shared/types/registration-types';
 
 export default function ClientRegistrationScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { preferences } = useAccessibility();
+  const router = useRouter();
+  const { settings, updateSettings, speak } = useAccessibility();
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState(1);
 
-  const [step, setStep] = useState<number>(1);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const [formData, setFormData] = useState<Partial<ClientRegistrationType>>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
-    address: '',
-    city: '',
-    province: '',
-    preferredPaymentMethod: 'card',
-    notificationPreferences: {
-      email: true,
-      sms: true,
-      push: true,
+  const [formData, setFormData] = useState<ClientRegistrationData>({
+    personalInfo: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      cedula: '',
+      dateOfBirth: '',
+      howFoundUs: '',
     },
-    accessibilityNeeds: {
-      hasVisualImpairment: false,
-      hasReadingDifficulty: false,
-      hasHearingImpairment: false,
-      hasMotorImpairment: false,
-      other: '',
+    address: {
+      street: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: 'Costa Rica',
     },
-    accessibilityPreferences: {
-      enableTTS: preferences?.ttsEnabled || false,
-      ttsSpeed: preferences?.ttsSpeed || 'normal',
-      preferTextOnly: false,
-      detailLevel: preferences?.descriptionLevel || 'intermediate',
-      navigationMode: preferences?.navigationMode || 'combined',
+    preferences: {
+      paymentMethod: 'card',
+      notifications: {
+        email: true,
+        sms: true,
+        push: true,
+      },
+    },
+    accessibility: {
+      hasDisability: false,
+      ttsEnabled: false,
+      ttsSpeed: 'normal',
+      highContrast: false,
+      largeText: false,
+      voiceNavigation: false,
+      autoReadMessages: false,
     },
     referralCode: '',
   });
 
-  const speakText = (text: string) => {
-    if (preferences?.ttsEnabled && Platform.OS !== 'web') {
-      Speech.speak(text, {
-        language: 'es-ES',
-        rate: preferences.ttsSpeed === 'slow' ? 0.75 : preferences.ttsSpeed === 'fast' ? 1.25 : 1.0,
-      });
-    }
-  };
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showHowFoundUsModal, setShowHowFoundUsModal] = useState(false);
 
-  const updateField = (field: keyof ClientRegistrationType, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[field];
-        return newErrors;
-      });
-    }
-  };
+  const howFoundUsOptions = [
+    'Redes Sociales (Facebook, Instagram, TikTok)',
+    'Recomendación de un amigo/familiar',
+    'Búsqueda en Google',
+    'Publicidad en línea',
+    'Publicidad en medios tradicionales (TV, Radio)',
+    'Evento o feria',
+    'Otro',
+  ];
 
-  const validateStep = (currentStep: number): boolean => {
+  const validateStep1 = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (currentStep === 1) {
-      if (!formData.firstName || formData.firstName.length < 2) {
-        newErrors.firstName = 'El nombre debe tener al menos 2 caracteres';
-      }
-      if (!formData.lastName || formData.lastName.length < 2) {
-        newErrors.lastName = 'El apellido debe tener al menos 2 caracteres';
-      }
-      if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-        newErrors.email = 'Email inválido';
-      }
-      if (!formData.phone || formData.phone.length < 8) {
-        newErrors.phone = 'Teléfono debe tener al menos 8 dígitos';
-      }
+    if (!formData.personalInfo.firstName.trim()) {
+      newErrors.firstName = 'El nombre es requerido';
+    }
+    if (!formData.personalInfo.lastName.trim()) {
+      newErrors.lastName = 'El apellido es requerido';
+    }
+    if (!formData.personalInfo.email.trim()) {
+      newErrors.email = 'El email es requerido';
+    } else if (!/\S+@\S+\.\S+/.test(formData.personalInfo.email)) {
+      newErrors.email = 'Email inválido';
+    }
+    if (!formData.personalInfo.phone.trim()) {
+      newErrors.phone = 'El teléfono es requerido';
+    }
+    if (!formData.personalInfo.cedula.trim()) {
+      newErrors.cedula = 'La cédula es requerida';
     }
 
-    if (currentStep === 2) {
-      if (!formData.password || formData.password.length < 8) {
-        newErrors.password = 'La contraseña debe tener al menos 8 caracteres';
-      }
-      if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = 'Las contraseñas no coinciden';
-      }
-    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
-    if (currentStep === 3) {
-      if (!formData.address || formData.address.length < 5) {
-        newErrors.address = 'La dirección debe tener al menos 5 caracteres';
-      }
-      if (!formData.city || formData.city.length < 2) {
-        newErrors.city = 'La ciudad es requerida';
-      }
-      if (!formData.province || formData.province.length < 2) {
-        newErrors.province = 'La provincia es requerida';
-      }
+  const validateStep2 = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.address.street.trim()) {
+      newErrors.street = 'La dirección es requerida';
+    }
+    if (!formData.address.city.trim()) {
+      newErrors.city = 'La ciudad es requerida';
+    }
+    if (!formData.address.state.trim()) {
+      newErrors.state = 'La provincia es requerida';
     }
 
     setErrors(newErrors);
@@ -125,43 +121,41 @@ export default function ClientRegistrationScreen() {
   };
 
   const handleNext = () => {
-    if (validateStep(step)) {
-      if (step < 5) {
-        setStep(step + 1);
-        speakText(`Paso ${step + 1} de 5`);
-      } else {
-        handleSubmit();
+    if (step === 1 && validateStep1()) {
+      setStep(2);
+      if (settings.ttsEnabled) {
+        speak('Paso 2: Información de dirección');
       }
-    } else {
-      const errorMessage = Object.values(errors).join('. ');
-      speakText(`Errores en el formulario: ${errorMessage}`);
+    } else if (step === 2 && validateStep2()) {
+      setStep(3);
+      if (settings.ttsEnabled) {
+        speak('Paso 3: Preferencias y accesibilidad');
+      }
     }
   };
 
   const handleBack = () => {
     if (step > 1) {
       setStep(step - 1);
-      speakText(`Paso ${step - 1} de 5`);
-    } else {
-      router.back();
     }
   };
 
   const handleSubmit = async () => {
+    if (!validateStep2()) return;
+
+    setLoading(true);
     try {
-      setLoading(true);
-      speakText('Procesando registro');
+      await updateSettings(formData.accessibility!);
+      
+      await RegistrationService.registerClient(formData);
+      
+      if (settings.ttsEnabled) {
+        speak('Registro completado exitosamente');
+      }
 
-      const validatedData = ClientRegistrationSchema.parse(formData);
-
-      console.log('Client registration data:', validatedData);
-
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      speakText('Registro completado exitosamente');
       Alert.alert(
         'Registro Exitoso',
-        'Tu cuenta ha sido creada. Bienvenido a MiKompa!',
+        'Tu cuenta ha sido creada correctamente',
         [
           {
             text: 'OK',
@@ -169,398 +163,252 @@ export default function ClientRegistrationScreen() {
           },
         ]
       );
-    } catch (error: any) {
+    } catch (error) {
       console.error('Registration error:', error);
-      const errorMessage = error.errors?.[0]?.message || 'Error al registrar. Intenta nuevamente.';
-      speakText(errorMessage);
-      Alert.alert('Error', errorMessage);
+      Alert.alert('Error', 'No se pudo completar el registro. Intenta nuevamente.');
     } finally {
       setLoading(false);
     }
   };
 
   const renderStep1 = () => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle} onPress={() => speakText('Información Personal')}>
-        Información Personal
-      </Text>
+    <View>
+      <AccessibleText text="Información Personal" style={styles.stepTitle} />
+      
+      <AccessibleInput
+        label="Nombre"
+        value={formData.personalInfo.firstName}
+        onChangeText={(text) =>
+          setFormData({
+            ...formData,
+            personalInfo: { ...formData.personalInfo, firstName: text },
+          })
+        }
+        error={errors.firstName}
+        required
+        autoCapitalize="words"
+      />
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label} onPress={() => speakText('Nombre')}>
-          Nombre *
-        </Text>
-        <TextInput
-          style={[styles.input, errors.firstName && styles.inputError]}
-          value={formData.firstName}
-          onChangeText={(value) => updateField('firstName', value)}
-          placeholder="Ingresa tu nombre"
-          placeholderTextColor="#999"
-          accessibilityLabel="Campo de nombre"
-          accessibilityHint="Ingresa tu nombre"
-        />
-        {errors.firstName && (
-          <Text style={styles.errorText} onPress={() => speakText(errors.firstName)}>
-            {errors.firstName}
-          </Text>
-        )}
-      </View>
+      <AccessibleInput
+        label="Apellido"
+        value={formData.personalInfo.lastName}
+        onChangeText={(text) =>
+          setFormData({
+            ...formData,
+            personalInfo: { ...formData.personalInfo, lastName: text },
+          })
+        }
+        error={errors.lastName}
+        required
+        autoCapitalize="words"
+      />
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label} onPress={() => speakText('Apellido')}>
-          Apellido *
-        </Text>
-        <TextInput
-          style={[styles.input, errors.lastName && styles.inputError]}
-          value={formData.lastName}
-          onChangeText={(value) => updateField('lastName', value)}
-          placeholder="Ingresa tu apellido"
-          placeholderTextColor="#999"
-          accessibilityLabel="Campo de apellido"
-          accessibilityHint="Ingresa tu apellido"
-        />
-        {errors.lastName && (
-          <Text style={styles.errorText} onPress={() => speakText(errors.lastName)}>
-            {errors.lastName}
-          </Text>
-        )}
-      </View>
+      <AccessibleInput
+        label="Email"
+        value={formData.personalInfo.email}
+        onChangeText={(text) =>
+          setFormData({
+            ...formData,
+            personalInfo: { ...formData.personalInfo, email: text },
+          })
+        }
+        error={errors.email}
+        required
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label} onPress={() => speakText('Correo Electrónico')}>
-          Correo Electrónico *
-        </Text>
-        <TextInput
-          style={[styles.input, errors.email && styles.inputError]}
-          value={formData.email}
-          onChangeText={(value) => updateField('email', value)}
-          placeholder="correo@ejemplo.com"
-          placeholderTextColor="#999"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          accessibilityLabel="Campo de correo electrónico"
-          accessibilityHint="Ingresa tu correo electrónico"
-        />
-        {errors.email && (
-          <Text style={styles.errorText} onPress={() => speakText(errors.email)}>
-            {errors.email}
-          </Text>
-        )}
-      </View>
+      <AccessibleInput
+        label="Teléfono"
+        value={formData.personalInfo.phone}
+        onChangeText={(text) =>
+          setFormData({
+            ...formData,
+            personalInfo: { ...formData.personalInfo, phone: text },
+          })
+        }
+        error={errors.phone}
+        required
+        keyboardType="phone-pad"
+      />
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label} onPress={() => speakText('Teléfono')}>
-          Teléfono *
-        </Text>
-        <TextInput
-          style={[styles.input, errors.phone && styles.inputError]}
-          value={formData.phone}
-          onChangeText={(value) => updateField('phone', value)}
-          placeholder="8888-8888"
-          placeholderTextColor="#999"
-          keyboardType="phone-pad"
-          accessibilityLabel="Campo de teléfono"
-          accessibilityHint="Ingresa tu número de teléfono"
-        />
-        {errors.phone && (
-          <Text style={styles.errorText} onPress={() => speakText(errors.phone)}>
-            {errors.phone}
+      <AccessibleInput
+        label="Cédula"
+        value={formData.personalInfo.cedula}
+        onChangeText={(text) =>
+          setFormData({
+            ...formData,
+            personalInfo: { ...formData.personalInfo, cedula: text },
+          })
+        }
+        error={errors.cedula}
+        required
+      />
+
+      <DatePicker
+        label="Fecha de Nacimiento"
+        value={formData.personalInfo.dateOfBirth || ''}
+        onDateChange={(date) =>
+          setFormData({
+            ...formData,
+            personalInfo: { ...formData.personalInfo, dateOfBirth: date },
+          })
+        }
+        minAge={18}
+        maxAge={100}
+      />
+
+      <View style={styles.inputContainer}>
+        <AccessibleText text="¿Cómo nos encontraste?" style={styles.label} />
+        <TouchableOpacity
+          style={styles.dropdownButton}
+          onPress={() => setShowHowFoundUsModal(true)}
+        >
+          <Text style={styles.dropdownText}>
+            {formData.personalInfo.howFoundUs || 'Selecciona una opción'}
           </Text>
-        )}
+          <ChevronDown size={20} color="#666" />
+        </TouchableOpacity>
       </View>
     </View>
   );
 
   const renderStep2 = () => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle} onPress={() => speakText('Seguridad')}>
-        Seguridad
-      </Text>
+    <View>
+      <AccessibleText text="Dirección" style={styles.stepTitle} />
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label} onPress={() => speakText('Contraseña')}>
-          Contraseña *
-        </Text>
-        <View style={styles.passwordContainer}>
-          <TextInput
-            style={[styles.passwordInput, errors.password && styles.inputError]}
-            value={formData.password}
-            onChangeText={(value) => updateField('password', value)}
-            placeholder="Mínimo 8 caracteres"
-            placeholderTextColor="#999"
-            secureTextEntry={!showPassword}
-            accessibilityLabel="Campo de contraseña"
-            accessibilityHint="Ingresa tu contraseña"
-          />
-          <TouchableOpacity
-            style={styles.eyeIcon}
-            onPress={() => setShowPassword(!showPassword)}
-            accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-          >
-            {showPassword ? (
-              <EyeOff size={20} color="#666" />
-            ) : (
-              <Eye size={20} color="#666" />
-            )}
-          </TouchableOpacity>
-        </View>
-        {errors.password && (
-          <Text style={styles.errorText} onPress={() => speakText(errors.password)}>
-            {errors.password}
-          </Text>
-        )}
-      </View>
+      <AccessibleInput
+        label="Dirección"
+        value={formData.address.street}
+        onChangeText={(text) =>
+          setFormData({
+            ...formData,
+            address: { ...formData.address, street: text },
+          })
+        }
+        error={errors.street}
+        required
+      />
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label} onPress={() => speakText('Confirmar Contraseña')}>
-          Confirmar Contraseña *
-        </Text>
-        <View style={styles.passwordContainer}>
-          <TextInput
-            style={[styles.passwordInput, errors.confirmPassword && styles.inputError]}
-            value={formData.confirmPassword}
-            onChangeText={(value) => updateField('confirmPassword', value)}
-            placeholder="Repite tu contraseña"
-            placeholderTextColor="#999"
-            secureTextEntry={!showConfirmPassword}
-            accessibilityLabel="Campo de confirmar contraseña"
-            accessibilityHint="Confirma tu contraseña"
-          />
-          <TouchableOpacity
-            style={styles.eyeIcon}
-            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-            accessibilityLabel={showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-          >
-            {showConfirmPassword ? (
-              <EyeOff size={20} color="#666" />
-            ) : (
-              <Eye size={20} color="#666" />
-            )}
-          </TouchableOpacity>
-        </View>
-        {errors.confirmPassword && (
-          <Text style={styles.errorText} onPress={() => speakText(errors.confirmPassword)}>
-            {errors.confirmPassword}
-          </Text>
-        )}
-      </View>
+      <AccessibleInput
+        label="Ciudad"
+        value={formData.address.city}
+        onChangeText={(text) =>
+          setFormData({
+            ...formData,
+            address: { ...formData.address, city: text },
+          })
+        }
+        error={errors.city}
+        required
+      />
+
+      <AccessibleInput
+        label="Provincia"
+        value={formData.address.state}
+        onChangeText={(text) =>
+          setFormData({
+            ...formData,
+            address: { ...formData.address, state: text },
+          })
+        }
+        error={errors.state}
+        required
+      />
+
+      <AccessibleInput
+        label="Código Postal"
+        value={formData.address.zipCode}
+        onChangeText={(text) =>
+          setFormData({
+            ...formData,
+            address: { ...formData.address, zipCode: text },
+          })
+        }
+        keyboardType="numeric"
+      />
     </View>
   );
 
   const renderStep3 = () => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle} onPress={() => speakText('Dirección')}>
-        Dirección
-      </Text>
+    <View>
+      <AccessibleText text="Preferencias y Accesibilidad" style={styles.stepTitle} />
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label} onPress={() => speakText('Dirección Principal')}>
-          Dirección Principal *
-        </Text>
-        <TextInput
-          style={[styles.input, styles.textArea, errors.address && styles.inputError]}
-          value={formData.address}
-          onChangeText={(value) => updateField('address', value)}
-          placeholder="Calle, número, detalles"
-          placeholderTextColor="#999"
-          multiline
-          numberOfLines={3}
-          accessibilityLabel="Campo de dirección"
-          accessibilityHint="Ingresa tu dirección completa"
+      <View style={styles.switchContainer}>
+        <AccessibleText text="¿Tienes alguna discapacidad?" />
+        <Switch
+          value={formData.accessibility?.hasDisability}
+          onValueChange={(value) =>
+            setFormData({
+              ...formData,
+              accessibility: { ...formData.accessibility!, hasDisability: value },
+            })
+          }
         />
-        {errors.address && (
-          <Text style={styles.errorText} onPress={() => speakText(errors.address)}>
-            {errors.address}
-          </Text>
-        )}
       </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label} onPress={() => speakText('Ciudad')}>
-          Ciudad *
-        </Text>
-        <TextInput
-          style={[styles.input, errors.city && styles.inputError]}
-          value={formData.city}
-          onChangeText={(value) => updateField('city', value)}
-          placeholder="Ej: San José"
-          placeholderTextColor="#999"
-          accessibilityLabel="Campo de ciudad"
-          accessibilityHint="Ingresa tu ciudad"
-        />
-        {errors.city && (
-          <Text style={styles.errorText} onPress={() => speakText(errors.city)}>
-            {errors.city}
-          </Text>
-        )}
-      </View>
+      {formData.accessibility?.hasDisability && (
+        <>
+          <View style={styles.switchContainer}>
+            <AccessibleText text="Activar lectura de texto" />
+            <Switch
+              value={formData.accessibility?.ttsEnabled}
+              onValueChange={(value) =>
+                setFormData({
+                  ...formData,
+                  accessibility: { ...formData.accessibility!, ttsEnabled: value },
+                })
+              }
+            />
+          </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label} onPress={() => speakText('Provincia')}>
-          Provincia *
-        </Text>
-        <TextInput
-          style={[styles.input, errors.province && styles.inputError]}
-          value={formData.province}
-          onChangeText={(value) => updateField('province', value)}
-          placeholder="Ej: San José"
-          placeholderTextColor="#999"
-          accessibilityLabel="Campo de provincia"
-          accessibilityHint="Ingresa tu provincia"
-        />
-        {errors.province && (
-          <Text style={styles.errorText} onPress={() => speakText(errors.province)}>
-            {errors.province}
-          </Text>
-        )}
-      </View>
-    </View>
-  );
+          <View style={styles.switchContainer}>
+            <AccessibleText text="Alto contraste" />
+            <Switch
+              value={formData.accessibility?.highContrast}
+              onValueChange={(value) =>
+                setFormData({
+                  ...formData,
+                  accessibility: { ...formData.accessibility!, highContrast: value },
+                })
+              }
+            />
+          </View>
 
-  const renderStep4 = () => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle} onPress={() => speakText('Preferencias')}>
-        Preferencias
-      </Text>
+          <View style={styles.switchContainer}>
+            <AccessibleText text="Texto grande" />
+            <Switch
+              value={formData.accessibility?.largeText}
+              onValueChange={(value) =>
+                setFormData({
+                  ...formData,
+                  accessibility: { ...formData.accessibility!, largeText: value },
+                })
+              }
+            />
+          </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label} onPress={() => speakText('Método de Pago Preferido')}>
-          Método de Pago Preferido
-        </Text>
-        <View style={styles.radioGroup}>
-          {[
-            { value: 'card', label: 'Tarjeta' },
-            { value: 'cash', label: 'Efectivo' },
-            { value: 'transfer', label: 'Transferencia' },
-          ].map((option) => (
-            <TouchableOpacity
-              key={option.value}
-              style={styles.radioOption}
-              onPress={() => updateField('preferredPaymentMethod', option.value)}
-              accessibilityLabel={`Método de pago: ${option.label}`}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: formData.preferredPaymentMethod === option.value }}
-            >
-              <View style={styles.radioCircle}>
-                {formData.preferredPaymentMethod === option.value && (
-                  <View style={styles.radioSelected} />
-                )}
-              </View>
-              <Text
-                style={styles.radioLabel}
-                onPress={() => speakText(option.label)}
-              >
-                {option.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
+          <View style={styles.switchContainer}>
+            <AccessibleText text="Navegación por voz" />
+            <Switch
+              value={formData.accessibility?.voiceNavigation}
+              onValueChange={(value) =>
+                setFormData({
+                  ...formData,
+                  accessibility: { ...formData.accessibility!, voiceNavigation: value },
+                })
+              }
+            />
+          </View>
+        </>
+      )}
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label} onPress={() => speakText('Notificaciones')}>
-          Notificaciones
-        </Text>
-        {[
-          { key: 'email', label: 'Email' },
-          { key: 'sms', label: 'SMS' },
-          { key: 'push', label: 'Push' },
-        ].map((option) => (
-          <TouchableOpacity
-            key={option.key}
-            style={styles.checkboxOption}
-            onPress={() =>
-              setFormData((prev) => ({
-                ...prev,
-                notificationPreferences: {
-                  ...prev.notificationPreferences!,
-                  [option.key]: !prev.notificationPreferences![option.key as keyof typeof prev.notificationPreferences],
-                },
-              }))
-            }
-            accessibilityLabel={`Notificación por ${option.label}`}
-            accessibilityRole="checkbox"
-            accessibilityState={{
-              checked: formData.notificationPreferences?.[option.key as keyof typeof formData.notificationPreferences] || false,
-            }}
-          >
-            <View style={styles.checkbox}>
-              {formData.notificationPreferences?.[option.key as keyof typeof formData.notificationPreferences] && (
-                <Check size={16} color="#fff" />
-              )}
-            </View>
-            <Text style={styles.checkboxLabel} onPress={() => speakText(option.label)}>
-              {option.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
-
-  const renderStep5 = () => (
-    <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle} onPress={() => speakText('Accesibilidad y Referidos')}>
-        Accesibilidad y Referidos
-      </Text>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label} onPress={() => speakText('Necesidades de Accesibilidad')}>
-          Necesidades de Accesibilidad
-        </Text>
-        {[
-          { key: 'hasVisualImpairment', label: 'Discapacidad Visual' },
-          { key: 'hasReadingDifficulty', label: 'Dificultad de Lectura' },
-          { key: 'hasHearingImpairment', label: 'Discapacidad Auditiva' },
-          { key: 'hasMotorImpairment', label: 'Discapacidad Motriz' },
-        ].map((option) => (
-          <TouchableOpacity
-            key={option.key}
-            style={styles.checkboxOption}
-            onPress={() =>
-              setFormData((prev) => ({
-                ...prev,
-                accessibilityNeeds: {
-                  ...prev.accessibilityNeeds!,
-                  [option.key]: !prev.accessibilityNeeds![option.key as keyof typeof prev.accessibilityNeeds],
-                },
-              }))
-            }
-            accessibilityLabel={option.label}
-            accessibilityRole="checkbox"
-            accessibilityState={{
-              checked: (formData.accessibilityNeeds?.[option.key as keyof typeof formData.accessibilityNeeds] as boolean) || false,
-            }}
-          >
-            <View style={styles.checkbox}>
-              {formData.accessibilityNeeds?.[option.key as keyof typeof formData.accessibilityNeeds] && (
-                <Check size={16} color="#fff" />
-              )}
-            </View>
-            <Text style={styles.checkboxLabel} onPress={() => speakText(option.label)}>
-              {option.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label} onPress={() => speakText('Código de Referido (Opcional)')}>
-          Código de Referido (Opcional)
-        </Text>
-        <TextInput
-          style={styles.input}
-          value={formData.referralCode}
-          onChangeText={(value) => updateField('referralCode', value)}
-          placeholder="Ingresa el código si tienes uno"
-          placeholderTextColor="#999"
-          autoCapitalize="characters"
-          accessibilityLabel="Campo de código de referido"
-          accessibilityHint="Ingresa el código de referido si tienes uno"
-        />
-        <Text style={styles.helperText} onPress={() => speakText('Gana 10,000 colones al completar 25 viajes')}>
-          Gana ₡10,000 al completar 25 viajes
-        </Text>
-      </View>
+      <AccessibleInput
+        label="Código de Referido (Opcional)"
+        value={formData.referralCode}
+        onChangeText={(text) => setFormData({ ...formData, referralCode: text })}
+        autoCapitalize="characters"
+      />
     </View>
   );
 
@@ -568,59 +416,80 @@ export default function ClientRegistrationScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={handleBack}
-          style={styles.backButton}
-          accessibilityLabel="Volver"
-          accessibilityRole="button"
-        >
-          <ChevronLeft size={24} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} onPress={() => speakText('Registro de Cliente')}>
-          Registro de Cliente
-        </Text>
-        <View style={styles.placeholder} />
-      </View>
-
-      <View style={styles.progressContainer}>
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${(step / 5) * 100}%` }]} />
-        </View>
-        <Text style={styles.progressText} onPress={() => speakText(`Paso ${step} de 5`)}>
-          Paso {step} de 5
-        </Text>
-      </View>
-
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      <Modal
+        visible={showHowFoundUsModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowHowFoundUsModal(false)}
       >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <AccessibleText text="¿Cómo nos encontraste?" style={styles.modalTitle} />
+            <ScrollView style={styles.optionsList}>
+              {howFoundUsOptions.map((option, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.optionItem}
+                  onPress={() => {
+                    setFormData({
+                      ...formData,
+                      personalInfo: { ...formData.personalInfo, howFoundUs: option },
+                    });
+                    setShowHowFoundUsModal(false);
+                  }}
+                >
+                  <Text style={styles.optionText}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <AccessibleButton
+              text="Cancelar"
+              onPress={() => setShowHowFoundUsModal(false)}
+              style={styles.modalCancelButton}
+            />
+          </View>
+        </View>
+      </Modal>
+      
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+        <AccessibleText text="Registro de Cliente" style={styles.title} />
+        <AccessibleText text={`Paso ${step} de 3`} style={styles.subtitle} />
+
         {step === 1 && renderStep1()}
         {step === 2 && renderStep2()}
         {step === 3 && renderStep3()}
-        {step === 4 && renderStep4()}
-        {step === 5 && renderStep5()}
-      </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-        <TouchableOpacity
-          style={[styles.button, styles.buttonPrimary]}
-          onPress={handleNext}
-          disabled={loading}
-          accessibilityLabel={step === 5 ? 'Registrarse' : 'Siguiente'}
-          accessibilityRole="button"
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>
-              {step === 5 ? 'Registrarse' : 'Siguiente'}
-            </Text>
+        <View style={styles.buttonContainer}>
+          {step > 1 && (
+            <AccessibleButton
+              text="Atrás"
+              onPress={handleBack}
+              style={[styles.button, styles.secondaryButton]}
+            />
           )}
-        </TouchableOpacity>
-      </View>
+          
+          {step < 3 ? (
+            <AccessibleButton
+              text="Siguiente"
+              onPress={handleNext}
+              style={styles.button}
+            />
+          ) : (
+            <AccessibleButton
+              text={loading ? 'Registrando...' : 'Completar Registro'}
+              onPress={handleSubmit}
+              disabled={loading}
+              style={styles.button}
+            />
+          )}
+        </View>
+
+        {loading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+          </View>
+        )}
+      </ScrollView>
     </View>
   );
 }
@@ -628,183 +497,111 @@ export default function ClientRegistrationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600' as const,
-    color: '#333',
-  },
-  placeholder: {
-    width: 40,
-  },
-  progressContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: '#fff',
-  },
-  progressBar: {
-    height: 6,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#4CAF50',
-    borderRadius: 3,
-  },
-  progressText: {
-    marginTop: 8,
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
+    backgroundColor: '#F5F5F5',
   },
   scrollView: {
     flex: 1,
   },
-  scrollContent: {
-    padding: 16,
+  content: {
+    padding: 20,
   },
-  stepContainer: {
-    gap: 20,
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 8,
+    color: '#000',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 24,
   },
   stepTitle: {
-    fontSize: 24,
-    fontWeight: '700' as const,
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 20,
+    color: '#333',
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
+    marginBottom: 12,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
+  },
+  button: {
+    flex: 1,
+  },
+  secondaryButton: {
+    backgroundColor: '#6C757D',
+  },
+  loadingContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
     color: '#333',
     marginBottom: 8,
   },
-  inputGroup: {
-    gap: 8,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: '#333',
-  },
-  input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: '#333',
-  },
-  inputError: {
-    borderColor: '#f44336',
-  },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  passwordContainer: {
-    position: 'relative',
-  },
-  passwordInput: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    paddingRight: 48,
-    fontSize: 16,
-    color: '#333',
-  },
-  eyeIcon: {
-    position: 'absolute',
-    right: 12,
-    top: 12,
-    padding: 4,
-  },
-  errorText: {
-    fontSize: 14,
-    color: '#f44336',
-  },
-  helperText: {
-    fontSize: 14,
-    color: '#666',
-    fontStyle: 'italic' as const,
-  },
-  radioGroup: {
-    gap: 12,
-  },
-  radioOption: {
+  dropdownButton: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 12,
-  },
-  radioCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#4CAF50',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioSelected: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#4CAF50',
-  },
-  radioLabel: {
-    fontSize: 16,
-    color: '#333',
-  },
-  checkboxOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 8,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: '#4CAF50',
-    backgroundColor: '#4CAF50',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxLabel: {
-    fontSize: 16,
-    color: '#333',
-  },
-  footer: {
-    padding: 16,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  button: {
-    padding: 16,
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#DDD',
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 14,
   },
-  buttonPrimary: {
-    backgroundColor: '#4CAF50',
-  },
-  buttonText: {
+  dropdownText: {
     fontSize: 16,
-    fontWeight: '600' as const,
-    color: '#fff',
+    color: '#333',
+    flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '70%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 16,
+    color: '#000',
+  },
+  optionsList: {
+    maxHeight: 400,
+  },
+  optionItem: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
+  },
+  optionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  modalCancelButton: {
+    marginTop: 16,
+    backgroundColor: '#6C757D',
   },
 });

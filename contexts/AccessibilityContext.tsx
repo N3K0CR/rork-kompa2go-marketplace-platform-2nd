@@ -11,6 +11,8 @@ import type { TTSOptions, ScreenReaderAnnouncement } from '@/src/shared/types/ac
 interface AccessibilityContextType {
   preferences: AccessibilityPreferences;
   updatePreferences: (updates: Partial<AccessibilityPreferences>) => Promise<void>;
+  settings: AccessibilityPreferences;
+  updateSettings: (updates: Partial<AccessibilityPreferences>) => Promise<void>;
   
   speak: (options: TTSOptions | string) => Promise<void>;
   stopSpeaking: () => void;
@@ -191,6 +193,8 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
   const value: AccessibilityContextType = {
     preferences,
     updatePreferences,
+    settings: preferences,
+    updateSettings: updatePreferences,
     speak,
     stopSpeaking,
     isSpeaking,

@@ -190,3 +190,150 @@ export interface AccessibilityPreferences {
   largeText: boolean;
   hapticFeedback: boolean;
 }
+
+export interface ClientRegistrationData {
+  personalInfo: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    cedula: string;
+    dateOfBirth: string;
+    howFoundUs: string;
+  };
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  };
+  preferences: {
+    paymentMethod: 'card' | 'cash' | 'transfer';
+    notifications: {
+      email: boolean;
+      sms: boolean;
+      push: boolean;
+    };
+  };
+  accessibility?: {
+    hasDisability: boolean;
+    ttsEnabled: boolean;
+    ttsSpeed: TTSSpeed;
+    highContrast: boolean;
+    largeText: boolean;
+    voiceNavigation: boolean;
+    autoReadMessages: boolean;
+  };
+  referralCode?: string;
+}
+
+export interface ProviderRegistrationData {
+  companyInfo: {
+    businessName: string;
+    taxId: string;
+    address: string;
+    city: string;
+    state: string;
+    country: string;
+  };
+  contactInfo: {
+    contactName: string;
+    email: string;
+    phone: string;
+    howFoundUs: string;
+  };
+  serviceInfo: {
+    vehicleTypes: string[];
+    coverageAreas: string[];
+    serviceNiche: string;
+  };
+  documents: Record<string, any>;
+  accessibility?: {
+    hasDisability: boolean;
+    ttsEnabled: boolean;
+    ttsSpeed: TTSSpeed;
+    highContrast: boolean;
+    largeText: boolean;
+    voiceNavigation: boolean;
+    autoReadMessages: boolean;
+  };
+  referralCode?: string;
+}
+
+export interface VehicleData {
+  brand: string;
+  model: string;
+  year: number;
+  plate: string;
+  color: string;
+  capacity: number;
+  vehicleType: 'sedan' | 'suv' | 'van' | 'truck' | 'motorcycle';
+  documents: Record<string, any>;
+}
+
+export interface FleetDriverData {
+  firstName: string;
+  lastName: string;
+  cedula: string;
+  phone: string;
+  licenseNumber: string;
+}
+
+export interface KommuterRegistrationData {
+  personalInfo: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    cedula: string;
+    dateOfBirth: string;
+    address: string;
+  };
+  driverLicense: {
+    number: string;
+    expirationDate: string;
+    category: string;
+  };
+  vehicleInfo: {
+    isFleet: boolean;
+    vehicles: VehicleData[];
+    fleetDrivers?: FleetDriverData[];
+  };
+  documents: Record<string, any>;
+  accessibility?: {
+    hasDisability: boolean;
+    ttsEnabled: boolean;
+    ttsSpeed: TTSSpeed;
+    highContrast: boolean;
+    largeText: boolean;
+    voiceNavigation: boolean;
+    autoReadMessages: boolean;
+  };
+  referralCode?: string;
+}
+
+export interface UserProfile {
+  id: string;
+  type: 'client' | 'provider' | 'kommuter';
+  status: 'active' | 'pending' | 'suspended';
+  registrationData: ClientRegistrationData | ProviderRegistrationData | KommuterRegistrationData;
+  createdAt: Date;
+  updatedAt: Date;
+  tripsCompleted?: number;
+  rating?: number;
+  backgroundCheckRequired?: boolean;
+  backgroundCheckCompleted?: boolean;
+}
+
+export interface ReferralData {
+  referrerId: string;
+  referredId: string;
+  referralCode: string;
+  status: 'active' | 'completed' | 'expired';
+  referredTripsCompleted: number;
+  referrerRewardPaid: boolean;
+  referredRewardPaid: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
