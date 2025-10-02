@@ -226,14 +226,62 @@ export default function KommuteValidation() {
         timestamp: new Date(),
       });
 
-      // 6. Validar backend (simplificado)
-      const backendValidation = await runValidationWithErrorRecovery(async () => ({
-        name: 'Backend tRPC',
-        status: 'warning' as const,
-        message: 'Backend disponible (no validado en tiempo real)',
-        details: 'La validación completa requiere conexión activa',
-        timestamp: new Date(),
-      }), true);
+      // 6. Validar backend tRPC
+      const backendValidation = await runValidationWithErrorRecovery(async () => {
+        try {
+          // Verificar que la URL base esté configurada
+          const baseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
+          
+          if (!baseUrl) {
+            return {
+              name: 'Backend tRPC',
+              status: 'error' as const,
+              message: 'URL del backend no configurada',
+              details: 'EXPO_PUBLIC_RORK_API_BASE_URL no está definida en .env.local',
+              timestamp: new Date(),
+            };
+          }
+
+          // Intentar hacer una petición simple al backend
+          const healthUrl = `${baseUrl}/api`;
+          console.log('[Validation] Testing backend at:', healthUrl);
+          
+          const response = await fetch(healthUrl, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            return {
+              name: 'Backend tRPC',
+              status: 'success' as const,
+              message: 'Backend conectado correctamente',
+              details: `Estado: ${data.status || 'ok'} - ${data.message || 'API funcionando'}`,
+              timestamp: new Date(),
+            };
+          } else {
+            return {
+              name: 'Backend tRPC',
+              status: 'warning' as const,
+              message: `Backend respondió con código ${response.status}`,
+              details: 'El backend está accesible pero puede tener problemas',
+              timestamp: new Date(),
+            };
+          }
+        } catch (error) {
+          console.error('[Validation] Backend test failed:', error);
+          return {
+            name: 'Backend tRPC',
+            status: 'error' as const,
+            message: 'No se pudo conectar al backend',
+            details: error instanceof Error ? error.message : 'Error de conexión desconocido',
+            timestamp: new Date(),
+          };
+        }
+      }, true);
       results.push(backendValidation);
 
       // 7. Validar sistema de recuperación de errores (si se solicita)

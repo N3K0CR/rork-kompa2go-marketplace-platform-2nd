@@ -10,9 +10,14 @@ const getBaseUrl = () => {
     return process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
   }
 
-  throw new Error(
-    "No base url found, please set EXPO_PUBLIC_RORK_API_BASE_URL"
+  // Return a placeholder URL for development when backend is not configured
+  // This prevents the app from crashing but tRPC calls will fail gracefully
+  console.warn(
+    '⚠️ EXPO_PUBLIC_RORK_API_BASE_URL is not set. Backend tRPC will not work.\n' +
+    'This is automatically set by Rork CLI when running the app.\n' +
+    'If you are running locally, make sure to start the app with: bun start'
   );
+  return 'http://localhost:8081'; // Fallback URL
 };
 
 // Global token storage for tRPC client
