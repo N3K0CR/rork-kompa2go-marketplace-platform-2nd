@@ -2,8 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'kompa2go-frontend',
-      script: 'bun',
-      args: 'expo start --web --tunnel',
+      script: 'bunx',
+      args: 'rork start -p z5be445fq2fb0yuu32aht --web --tunnel',
       cwd: '/home/user/rork-app',
       interpreter: 'none',
       autorestart: true,
@@ -23,15 +23,16 @@ module.exports = {
     },
     {
       name: 'kompa2go-backend',
-      script: 'bun',
-      args: 'run backend/hono.ts',
+      script: 'bunx',
+      args: 'rork start -p z5be445fq2fb0yuu32aht',
       cwd: '/home/user/rork-app',
       interpreter: 'none',
       autorestart: true,
       watch: false,
       max_memory_restart: '512M',
       env: {
-        NODE_ENV: 'development'
+        NODE_ENV: 'development',
+        PORT: 8082
       },
       error_file: './logs/backend-error.log',
       out_file: './logs/backend-out.log',
