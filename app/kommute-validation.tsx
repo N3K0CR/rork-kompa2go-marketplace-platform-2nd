@@ -235,9 +235,9 @@ export default function KommuteValidation() {
           if (!baseUrl) {
             return {
               name: 'Backend tRPC',
-              status: 'error' as const,
-              message: 'URL del backend no configurada',
-              details: 'EXPO_PUBLIC_RORK_API_BASE_URL no está definida en .env.local',
+              status: 'warning' as const,
+              message: 'Backend no configurado (modo desarrollo)',
+              details: 'EXPO_PUBLIC_RORK_API_BASE_URL no está definida. Esto es normal en desarrollo local. El backend se configurará automáticamente cuando uses "bun start" con Rork CLI.',
               timestamp: new Date(),
             };
           }
@@ -246,38 +246,59 @@ export default function KommuteValidation() {
           const healthUrl = `${baseUrl}/api`;
           console.log('[Validation] Testing backend at:', healthUrl);
           
-          const response = await fetch(healthUrl, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
+          
+          try {
+            const response = await fetch(healthUrl, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              signal: controller.signal,
+            });
+            
+            clearTimeout(timeoutId);
 
-          if (response.ok) {
-            const data = await response.json();
-            return {
-              name: 'Backend tRPC',
-              status: 'success' as const,
-              message: 'Backend conectado correctamente',
-              details: `Estado: ${data.status || 'ok'} - ${data.message || 'API funcionando'}`,
-              timestamp: new Date(),
-            };
-          } else {
-            return {
-              name: 'Backend tRPC',
-              status: 'warning' as const,
-              message: `Backend respondió con código ${response.status}`,
-              details: 'El backend está accesible pero puede tener problemas',
-              timestamp: new Date(),
-            };
+            if (response.ok) {
+              const data = await response.json();
+              return {
+                name: 'Backend tRPC',
+                status: 'success' as const,
+                message: 'Backend conectado correctamente',
+                details: `Estado: ${data.status || 'ok'} - ${data.message || 'API funcionando'}`,
+                timestamp: new Date(),
+              };
+            } else {
+              return {
+                name: 'Backend tRPC',
+                status: 'warning' as const,
+                message: `Backend respondió con código ${response.status}`,
+                details: 'El backend está accesible pero puede tener problemas',
+                timestamp: new Date(),
+              };
+            }
+          } catch (fetchError) {
+            clearTimeout(timeoutId);
+            
+            if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+              return {
+                name: 'Backend tRPC',
+                status: 'warning' as const,
+                message: 'Timeout al conectar con el backend',
+                details: `No se pudo conectar a ${healthUrl} en 5 segundos. Verifica que el servidor esté corriendo.`,
+                timestamp: new Date(),
+              };
+            }
+            throw fetchError;
           }
         } catch (error) {
           console.error('[Validation] Backend test failed:', error);
           return {
             name: 'Backend tRPC',
-            status: 'error' as const,
-            message: 'No se pudo conectar al backend',
-            details: error instanceof Error ? error.message : 'Error de conexión desconocido',
+            status: 'warning' as const,
+            message: 'Backend no disponible',
+            details: `${error instanceof Error ? error.message : 'Error de conexión'}. Esto es normal si estás en modo desarrollo sin el servidor backend corriendo.`,
             timestamp: new Date(),
           };
         }
