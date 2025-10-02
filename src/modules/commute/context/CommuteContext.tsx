@@ -14,6 +14,7 @@ import {
   globalErrorRecovery 
 } from '../utils/error-recovery';
 import firestoreService from '../services/firestore-service';
+import { auth } from '@/lib/firebase';
 
 // Import types from the modular structure
 import type {
@@ -358,22 +359,34 @@ const contextHook = createContextHook((): CommuteContextType => {
         setHasLocationPermission(hasPermission || false);
         
         if (USE_FIRESTORE) {
-          const userId = 'current_user';
+          const currentUser = auth.currentUser;
           
-          const unsubscribeRoutes = firestoreService.routes.subscribeToUserRoutes(userId, (firestoreRoutes) => {
-            setRoutes(firestoreRoutes);
-            console.log('[CommuteContext] Routes synced from Firestore:', firestoreRoutes.length);
-          });
-          
-          const unsubscribeTrips = firestoreService.trips.subscribeToUserTrips(userId, (firestoreTrips) => {
-            setTrips(firestoreTrips);
-            console.log('[CommuteContext] Trips synced from Firestore:', firestoreTrips.length);
-          });
-          
-          return () => {
-            unsubscribeRoutes();
-            unsubscribeTrips();
-          };
+          if (!currentUser) {
+            console.log('[CommuteContext] No authenticated user, skipping Firestore sync');
+            console.log('[CommuteContext] To use Firestore features, please authenticate first');
+          } else {
+            const userId = currentUser.uid;
+            console.log('[CommuteContext] Setting up Firestore subscriptions for user:', userId);
+            
+            try {
+              const unsubscribeRoutes = firestoreService.routes.subscribeToUserRoutes(userId, (firestoreRoutes) => {
+                setRoutes(firestoreRoutes);
+                console.log('[CommuteContext] Routes synced from Firestore:', firestoreRoutes.length);
+              });
+              
+              const unsubscribeTrips = firestoreService.trips.subscribeToUserTrips(userId, (firestoreTrips) => {
+                setTrips(firestoreTrips);
+                console.log('[CommuteContext] Trips synced from Firestore:', firestoreTrips.length);
+              });
+              
+              return () => {
+                unsubscribeRoutes();
+                unsubscribeTrips();
+              };
+            } catch (error) {
+              console.error('[CommuteContext] Error setting up Firestore subscriptions:', error);
+            }
+          }
         } else {
           const storedData = await withErrorRecovery(
             () => getStorageData(),
@@ -559,10 +572,13 @@ const contextHook = createContextHook((): CommuteContextType => {
           throw new Error('Route not found');
         }
         
+        const currentUser = auth.currentUser;
+        const userId = currentUser ? currentUser.uid : 'anonymous_user';
+        
         const newTrip: Trip = {
           id: `trip_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           routeId,
-          userId: 'current_user',
+          userId,
           startTime: new Date(),
           status: 'in_progress',
           trackingPoints: [],
