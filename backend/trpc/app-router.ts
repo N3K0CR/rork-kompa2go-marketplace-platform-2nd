@@ -30,11 +30,13 @@ import {
   getMultiZoneSurgePricingProcedure,
   getSurgeHeatmapProcedure,
 } from './routes/commute/surge-pricing-routes';
+import { registrationRouter } from './routes/registration/routes';
 
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
     hi: hiRoute,
   }),
+  registration: registrationRouter,
   payments: createTRPCRouter({
     create: paymentRoutes.createPayment,
     get: paymentRoutes.getPayment,

@@ -22,6 +22,8 @@ import { ReportedProblemsProvider } from "@/contexts/ReportedProblemsContext";
 import { LemonSqueezyProvider } from "@/contexts/LemonSqueezyContext";
 import { KompiBrainProvider } from "@/contexts/KompiBrainContext";
 import { CommuteContext } from "@/src/modules/commute/context/CommuteContext";
+import { AccessibilityProvider } from "@/contexts/AccessibilityContext";
+import { FirebaseAuthProvider } from "@/contexts/FirebaseAuthContext";
 // import { DatabaseProvider } from "@/contexts/DatabaseContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ReservationAlertModal } from "@/components/ReservationAlertModal";
@@ -87,7 +89,9 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         {/* Temporarily disable DatabaseProvider to fix SharedArrayBuffer error */}
         {/* <DatabaseProvider> */}
-          <LanguageProvider>
+          <AccessibilityProvider>
+            <FirebaseAuthProvider>
+              <LanguageProvider>
             <AuthProvider>
             <PaymentBackendProvider>
               <OKoinsProvider>
@@ -126,7 +130,9 @@ export default function RootLayout() {
               </OKoinsProvider>
             </PaymentBackendProvider>
             </AuthProvider>
-          </LanguageProvider>
+              </LanguageProvider>
+            </FirebaseAuthProvider>
+          </AccessibilityProvider>
         {/* </DatabaseProvider> */}
       </QueryClientProvider>
     </trpc.Provider>
