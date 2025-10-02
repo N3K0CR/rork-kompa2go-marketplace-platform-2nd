@@ -1,6 +1,19 @@
 import { useCallback, useMemo } from 'react';
-import { useCommute, useRoutes, useCarbonFootprint, useKommuteEnabled } from '@/contexts/CommuteContext';
+import { useCommute as useCommuteContext } from '@/src/modules/commute/context/CommuteContext';
+import { useRoutes, useCarbonFootprint, useKommuteEnabled } from '@/src/modules/commute/hooks';
 import type { Route, TransportMode, TrackingPoint } from '@/src/modules/commute/types/core-types';
+
+interface Driver {
+  id: string;
+  name: string;
+  rating: number;
+  vehicle: {
+    model: string;
+    plate: string;
+  };
+  distance: number;
+  estimatedArrival: Date;
+}
 
 // ============================================================================
 // BASIC COMMUTE HOOKS
@@ -23,7 +36,7 @@ export const useBasicCommute = () => {
     currentLocation,
     hasLocationPermission,
     isInitialized,
-  } = useCommute();
+  } = useCommuteContext();
 
   const isReady = useMemo(() => {
     return isEnabled && isInitialized && hasLocationPermission;
@@ -69,7 +82,7 @@ export const useBasicCommute = () => {
  */
 export const useSimpleRoutes = () => {
   const { routes, isLoading, createRoute, updateRoute, deleteRoute } = useRoutes();
-  const { isEnabled } = useCommute();
+  const { isEnabled } = useCommuteContext();
 
   const createSimpleRoute = useCallback(async (
     name: string,
@@ -120,7 +133,7 @@ export const useSimpleRoutes = () => {
 
   const recentRoutes = useMemo(() => {
     return routes
-      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+      .sort((a: Route, b: Route) => b.updatedAt.getTime() - a.updatedAt.getTime())
       .slice(0, 10);
   }, [routes]);
 
@@ -139,7 +152,7 @@ export const useSimpleRoutes = () => {
  * Hook for trip tracking with simplified interface
  */
 export const useTripTracking = () => {
-  const { currentTrip, isTracking, updateLocation } = useCommute();
+  const { currentTrip, isTracking, updateLocation } = useCommuteContext();
 
   const addTrackingPoint = useCallback((
     latitude: number,
@@ -196,7 +209,7 @@ export const useTripTracking = () => {
  * Hook for transport mode selection and management
  */
 export const useTransportModes = () => {
-  const { transportModes } = useCommute();
+  const { transportModes } = useCommuteContext();
 
   const getTransportMode = useCallback((id: string): TransportMode | undefined => {
     return transportModes.find(mode => mode.id === id);
@@ -239,7 +252,7 @@ export const useTransportModes = () => {
  */
 export const useSimpleCarbonFootprint = () => {
   const { calculateFootprint, setTarget } = useCarbonFootprint();
-  const { trips } = useCommute();
+  const { trips } = useCommuteContext();
 
   const getTodaysFootprint = useCallback(async () => {
     const today = new Date();
@@ -290,7 +303,7 @@ export const useSimpleCarbonFootprint = () => {
  */
 export const useKommuteFeatures = () => {
   const isEnabled = useKommuteEnabled();
-  const { featureFlags } = useCommute();
+  const { featureFlags } = useCommuteContext();
 
   return {
     isEnabled,
@@ -309,7 +322,7 @@ export const useKommuteFeatures = () => {
  * Hook for location utilities
  */
 export const useLocationUtils = () => {
-  const { currentLocation, hasLocationPermission } = useCommute();
+  const { currentLocation, hasLocationPermission } = useCommuteContext();
 
   const formatCoordinates = useCallback((lat: number, lng: number): string => {
     return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
@@ -383,10 +396,52 @@ export const useTimeUtils = () => {
 // EXPORT ALL HOOKS
 // ============================================================================
 
-export {
-  // Re-export main context hooks
-  useCommute,
-  useRoutes,
-  useCarbonFootprint,
-  useKommuteEnabled,
-} from '@/contexts/CommuteContext';
+// Re-export main context hooks with proper naming
+export { useCommute as useCommuteContext } from '@/src/modules/commute/context/CommuteContext';
+export { useRoutes, useCarbonFootprint, useKommuteEnabled } from '@/src/modules/commute/hooks';
+
+// Main useCommute hook with extended functionality for search and ride requests
+export const useCommute = () => {
+  const context = useCommuteContext();
+
+  const searchDrivers = useCallback(async (params: {
+    routeId: string;
+    transportModeIds: string[];
+    maxDistance: number;
+    departureTime: Date;
+  }): Promise<Driver[]> => {
+    console.log('[useCommute] Searching drivers with params:', params);
+    
+    // Mock implementation - in production this would call the backend
+    // For now, return empty array
+    return [];
+  }, []);
+
+  const requestRide = useCallback(async (params: {
+    routeId: string;
+    driverId: string;
+    pickupPoint: any;
+    dropoffPoint: any;
+  }) => {
+    console.log('[useCommute] Requesting ride with params:', params);
+    
+    // Mock implementation - in production this would call the backend
+    // For now, create a mock trip
+    const mockTrip = {
+      id: `trip_${Date.now()}`,
+      routeId: params.routeId,
+      driverId: params.driverId,
+      status: 'pending' as const,
+      pickupPoint: params.pickupPoint,
+      dropoffPoint: params.dropoffPoint,
+    };
+    
+    return mockTrip;
+  }, []);
+
+  return {
+    ...context,
+    searchDrivers,
+    requestRide,
+  };
+};
