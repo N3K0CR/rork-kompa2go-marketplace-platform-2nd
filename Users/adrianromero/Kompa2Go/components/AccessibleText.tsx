@@ -1,17 +1,17 @@
 import React from 'react';
-import { Text, TextProps, TouchableOpacity, StyleSheet } from 'react-native';
+import { Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useAccessibility } from '@/contexts/AccessibilityContext';
 
-export interface AccessibleTextProps extends TextProps {
+export interface AccessibleTextProps {
   text: string;
   speakOnPress?: boolean;
+  style?: any;
 }
 
 export function AccessibleText({ 
   text, 
   speakOnPress = true, 
-  style,
-  ...props 
+  style
 }: AccessibleTextProps) {
   const { settings, speak } = useAccessibility();
 
@@ -33,7 +33,6 @@ export function AccessibleText({
     return (
       <TouchableOpacity onPress={handlePress} activeOpacity={0.7}>
         <Text 
-          {...props} 
           style={textStyle}
           accessibilityLabel={textContent}
           accessibilityRole="text"
@@ -46,7 +45,6 @@ export function AccessibleText({
 
   return (
     <Text 
-      {...props} 
       style={textStyle}
       accessibilityLabel={textContent}
       accessibilityRole="text"

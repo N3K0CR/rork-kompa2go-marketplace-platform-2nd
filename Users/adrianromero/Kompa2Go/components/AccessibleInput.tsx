@@ -3,17 +3,24 @@ import {
   View, 
   TextInput, 
   Text, 
-  StyleSheet, 
-  TextInputProps,
+  StyleSheet,
   TouchableOpacity
 } from 'react-native';
 import { useAccessibility } from '@/contexts/AccessibilityContext';
 import { Volume2 } from 'lucide-react-native';
 
-export interface AccessibleInputProps extends TextInputProps {
+export interface AccessibleInputProps {
   label: string;
   error?: string;
   required?: boolean;
+  value?: string;
+  onChangeText?: (text: string) => void;
+  placeholder?: string;
+  keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  secureTextEntry?: boolean;
+  multiline?: boolean;
+  numberOfLines?: number;
 }
 
 export function AccessibleInput({
@@ -22,14 +29,19 @@ export function AccessibleInput({
   required = false,
   value,
   onChangeText,
-  ...props
+  placeholder,
+  keyboardType,
+  autoCapitalize,
+  secureTextEntry,
+  multiline,
+  numberOfLines
 }: AccessibleInputProps) {
   const { settings, speak } = useAccessibility();
   const [isFocused, setIsFocused] = useState(false);
 
   const handleFocus = () => {
     setIsFocused(true);
-    if (settings.ttsEnabled && settings.voiceNavigation) {
+    if (settings.ttsEnabled) {
       const message = `${label}${required ? ', campo requerido' : ''}`;
       speak(message);
     }
@@ -75,7 +87,6 @@ export function AccessibleInput({
         )}
       </View>
       <TextInput
-        {...props}
         value={value}
         onChangeText={onChangeText}
         onFocus={handleFocus}
@@ -83,6 +94,12 @@ export function AccessibleInput({
         style={inputStyle}
         accessibilityLabel={label}
         accessibilityHint={error}
+        placeholder={placeholder}
+        keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
+        secureTextEntry={secureTextEntry}
+        multiline={multiline}
+        numberOfLines={numberOfLines}
       />
       {error && (
         <Text style={styles.errorText}>{error}</Text>

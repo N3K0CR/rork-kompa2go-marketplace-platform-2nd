@@ -1,13 +1,13 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle, Platform } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
 import { useAccessibility } from '@/contexts/AccessibilityContext';
 import * as Haptics from 'expo-haptics';
 
 export interface AccessibleButtonProps {
   onPress: () => void;
   text: string;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  style?: any;
+  textStyle?: any;
   disabled?: boolean;
   hapticFeedback?: boolean;
 }
@@ -29,7 +29,7 @@ export function AccessibleButton({
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
 
-    if (settings.ttsEnabled && settings.voiceNavigation) {
+    if (settings.ttsEnabled) {
       speak(text);
     }
 
