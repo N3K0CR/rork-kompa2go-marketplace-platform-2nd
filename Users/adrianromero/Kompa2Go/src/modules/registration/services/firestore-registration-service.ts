@@ -16,8 +16,19 @@ import type {
   ProviderRegistrationData,
   KommuterRegistrationData,
   UserProfile,
-  ReferralData,
 } from '@/src/shared/types/registration-types';
+
+interface SimpleReferralData {
+  referrerId: string;
+  referredId: string;
+  referralCode: string;
+  status: 'pending' | 'active' | 'completed';
+  referredTripsCompleted: number;
+  referrerRewardPaid: boolean;
+  referredRewardPaid: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 const USERS_COLLECTION = 'users';
 const REFERRALS_COLLECTION = 'referrals';
@@ -140,7 +151,7 @@ export class RegistrationService {
       const referrerId = referrerSnapshot.docs[0].id;
       const referralId = `ref_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      const referralData: ReferralData = {
+      const referralData: SimpleReferralData = {
         referrerId,
         referredId,
         referralCode,
@@ -200,7 +211,7 @@ export class RegistrationService {
       if (referralSnapshot.empty) return;
 
       const referralDoc = referralSnapshot.docs[0];
-      const referralData = referralDoc.data() as ReferralData;
+      const referralData = referralDoc.data() as SimpleReferralData;
 
       if (tripsCompleted >= 20 && !referralData.referrerRewardPaid) {
         await updateDoc(doc(db, REFERRALS_COLLECTION, referralDoc.id), {
