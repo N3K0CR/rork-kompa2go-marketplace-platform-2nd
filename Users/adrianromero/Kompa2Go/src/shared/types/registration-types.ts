@@ -5,6 +5,8 @@ export interface ClientRegistrationData {
     email: string;
     phone: string;
     cedula: string;
+    dateOfBirth?: string;
+    howFoundUs?: string;
   };
   address: {
     street: string;
@@ -47,6 +49,7 @@ export interface ProviderRegistrationData {
     contactName: string;
     email: string;
     phone: string;
+    howFoundUs?: string;
   };
   serviceInfo: {
     vehicleTypes: string[];

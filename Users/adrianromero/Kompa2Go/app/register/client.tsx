@@ -6,16 +6,20 @@ import {
   Alert,
   ActivityIndicator,
   Switch,
-  Platform,
+  Modal,
+  TouchableOpacity,
+  Text,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ChevronDown } from 'lucide-react-native';
 import { AccessibleText } from '@/components/AccessibleText';
 import { AccessibleButton } from '@/components/AccessibleButton';
 import { AccessibleInput } from '@/components/AccessibleInput';
+import { DatePicker } from '@/components/DatePicker';
 import { useAccessibility } from '@/contexts/AccessibilityContext';
 import { RegistrationService } from '@/src/modules/registration/services/firestore-registration-service';
-import { ClientRegistrationData } from '@/src/shared/types/registration-types';
+import type { ClientRegistrationData } from '@/src/shared/types/registration-types';
 
 export default function ClientRegistrationScreen() {
   const insets = useSafeAreaInsets();
@@ -31,6 +35,8 @@ export default function ClientRegistrationScreen() {
       email: '',
       phone: '',
       cedula: '',
+      dateOfBirth: '',
+      howFoundUs: '',
     },
     address: {
       street: '',
@@ -60,6 +66,17 @@ export default function ClientRegistrationScreen() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showHowFoundUsModal, setShowHowFoundUsModal] = useState(false);
+
+  const howFoundUsOptions = [
+    'Redes Sociales (Facebook, Instagram, TikTok)',
+    'Recomendación de un amigo/familiar',
+    'Búsqueda en Google',
+    'Publicidad en línea',
+    'Publicidad en medios tradicionales (TV, Radio)',
+    'Evento o feria',
+    'Otro',
+  ];
 
   const validateStep1 = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -130,7 +147,7 @@ export default function ClientRegistrationScreen() {
     try {
       await updateSettings(formData.accessibility!);
       
-      const userId = await RegistrationService.registerClient(formData);
+      await RegistrationService.registerClient(formData);
       
       if (settings.ttsEnabled) {
         speak('Registro completado exitosamente');
@@ -156,7 +173,7 @@ export default function ClientRegistrationScreen() {
 
   const renderStep1 = () => (
     <View>
-      <AccessibleText style={styles.stepTitle}>Información Personal</AccessibleText>
+      <AccessibleText text="Información Personal" style={styles.stepTitle} />
       
       <AccessibleInput
         label="Nombre"
@@ -227,12 +244,38 @@ export default function ClientRegistrationScreen() {
         error={errors.cedula}
         required
       />
+
+      <DatePicker
+        label="Fecha de Nacimiento"
+        value={formData.personalInfo.dateOfBirth || ''}
+        onDateChange={(date) =>
+          setFormData({
+            ...formData,
+            personalInfo: { ...formData.personalInfo, dateOfBirth: date },
+          })
+        }
+        minAge={18}
+        maxAge={100}
+      />
+
+      <View style={styles.inputContainer}>
+        <AccessibleText text="¿Cómo nos encontraste?" style={styles.label} />
+        <TouchableOpacity
+          style={styles.dropdownButton}
+          onPress={() => setShowHowFoundUsModal(true)}
+        >
+          <Text style={styles.dropdownText}>
+            {formData.personalInfo.howFoundUs || 'Selecciona una opción'}
+          </Text>
+          <ChevronDown size={20} color="#666" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
   const renderStep2 = () => (
     <View>
-      <AccessibleText style={styles.stepTitle}>Dirección</AccessibleText>
+      <AccessibleText text="Dirección" style={styles.stepTitle} />
 
       <AccessibleInput
         label="Dirección"
@@ -289,10 +332,10 @@ export default function ClientRegistrationScreen() {
 
   const renderStep3 = () => (
     <View>
-      <AccessibleText style={styles.stepTitle}>Preferencias y Accesibilidad</AccessibleText>
+      <AccessibleText text="Preferencias y Accesibilidad" style={styles.stepTitle} />
 
       <View style={styles.switchContainer}>
-        <AccessibleText>¿Tienes alguna discapacidad?</AccessibleText>
+        <AccessibleText text="¿Tienes alguna discapacidad?" />
         <Switch
           value={formData.accessibility?.hasDisability}
           onValueChange={(value) =>
@@ -307,7 +350,7 @@ export default function ClientRegistrationScreen() {
       {formData.accessibility?.hasDisability && (
         <>
           <View style={styles.switchContainer}>
-            <AccessibleText>Activar lectura de texto</AccessibleText>
+            <AccessibleText text="Activar lectura de texto" />
             <Switch
               value={formData.accessibility?.ttsEnabled}
               onValueChange={(value) =>
@@ -320,7 +363,7 @@ export default function ClientRegistrationScreen() {
           </View>
 
           <View style={styles.switchContainer}>
-            <AccessibleText>Alto contraste</AccessibleText>
+            <AccessibleText text="Alto contraste" />
             <Switch
               value={formData.accessibility?.highContrast}
               onValueChange={(value) =>
@@ -333,7 +376,7 @@ export default function ClientRegistrationScreen() {
           </View>
 
           <View style={styles.switchContainer}>
-            <AccessibleText>Texto grande</AccessibleText>
+            <AccessibleText text="Texto grande" />
             <Switch
               value={formData.accessibility?.largeText}
               onValueChange={(value) =>
@@ -346,7 +389,7 @@ export default function ClientRegistrationScreen() {
           </View>
 
           <View style={styles.switchContainer}>
-            <AccessibleText>Navegación por voz</AccessibleText>
+            <AccessibleText text="Navegación por voz" />
             <Switch
               value={formData.accessibility?.voiceNavigation}
               onValueChange={(value) =>
@@ -372,10 +415,45 @@ export default function ClientRegistrationScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
+
+      <Modal
+        visible={showHowFoundUsModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowHowFoundUsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <AccessibleText text="¿Cómo nos encontraste?" style={styles.modalTitle} />
+            <ScrollView style={styles.optionsList}>
+              {howFoundUsOptions.map((option, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.optionItem}
+                  onPress={() => {
+                    setFormData({
+                      ...formData,
+                      personalInfo: { ...formData.personalInfo, howFoundUs: option },
+                    });
+                    setShowHowFoundUsModal(false);
+                  }}
+                >
+                  <Text style={styles.optionText}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <AccessibleButton
+              text="Cancelar"
+              onPress={() => setShowHowFoundUsModal(false)}
+              style={styles.modalCancelButton}
+            />
+          </View>
+        </View>
+      </Modal>
       
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        <AccessibleText style={styles.title}>Registro de Cliente</AccessibleText>
-        <AccessibleText style={styles.subtitle}>Paso {step} de 3</AccessibleText>
+        <AccessibleText text="Registro de Cliente" style={styles.title} />
+        <AccessibleText text={`Paso ${step} de 3`} style={styles.subtitle} />
 
         {step === 1 && renderStep1()}
         {step === 2 && renderStep2()}
@@ -384,7 +462,7 @@ export default function ClientRegistrationScreen() {
         <View style={styles.buttonContainer}>
           {step > 1 && (
             <AccessibleButton
-              title="Atrás"
+              text="Atrás"
               onPress={handleBack}
               style={[styles.button, styles.secondaryButton]}
             />
@@ -392,13 +470,13 @@ export default function ClientRegistrationScreen() {
           
           {step < 3 ? (
             <AccessibleButton
-              title="Siguiente"
+              text="Siguiente"
               onPress={handleNext}
               style={styles.button}
             />
           ) : (
             <AccessibleButton
-              title={loading ? 'Registrando...' : 'Completar Registro'}
+              text={loading ? 'Registrando...' : 'Completar Registro'}
               onPress={handleSubmit}
               disabled={loading}
               style={styles.button}
@@ -467,5 +545,63 @@ const styles = StyleSheet.create({
   loadingContainer: {
     marginTop: 20,
     alignItems: 'center',
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  dropdownButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#DDD',
+    borderRadius: 8,
+    padding: 14,
+  },
+  dropdownText: {
+    fontSize: 16,
+    color: '#333',
+    flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '70%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 16,
+    color: '#000',
+  },
+  optionsList: {
+    maxHeight: 400,
+  },
+  optionItem: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
+  },
+  optionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  modalCancelButton: {
+    marginTop: 16,
+    backgroundColor: '#6C757D',
   },
 });

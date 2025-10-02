@@ -6,9 +6,13 @@ import {
   Alert,
   ActivityIndicator,
   Switch,
+  Modal,
+  TouchableOpacity,
+  Text,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ChevronDown } from 'lucide-react-native';
 import { AccessibleText } from '@/components/AccessibleText';
 import { AccessibleButton } from '@/components/AccessibleButton';
 import { AccessibleInput } from '@/components/AccessibleInput';
@@ -36,6 +40,7 @@ export default function ProviderRegistrationScreen() {
       contactName: '',
       email: '',
       phone: '',
+      howFoundUs: '',
     },
     serviceInfo: {
       vehicleTypes: [],
@@ -56,6 +61,18 @@ export default function ProviderRegistrationScreen() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showHowFoundUsModal, setShowHowFoundUsModal] = useState(false);
+
+  const howFoundUsOptions = [
+    'Redes Sociales (Facebook, Instagram, TikTok)',
+    'Recomendación de un amigo/familiar',
+    'Búsqueda en Google',
+    'Publicidad en línea',
+    'Publicidad en medios tradicionales (TV, Radio)',
+    'Evento o feria',
+    'Asociación empresarial',
+    'Otro',
+  ];
 
   const validateStep1 = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -262,6 +279,19 @@ export default function ProviderRegistrationScreen() {
         required
         keyboardType="phone-pad"
       />
+
+      <View style={styles.inputContainer}>
+        <AccessibleText text="¿Cómo nos encontraste?" style={styles.label} />
+        <TouchableOpacity
+          style={styles.dropdownButton}
+          onPress={() => setShowHowFoundUsModal(true)}
+        >
+          <Text style={styles.dropdownText}>
+            {formData.contactInfo.howFoundUs || 'Selecciona una opción'}
+          </Text>
+          <ChevronDown size={20} color="#666" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -349,6 +379,41 @@ export default function ProviderRegistrationScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
+
+      <Modal
+        visible={showHowFoundUsModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowHowFoundUsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <AccessibleText text="¿Cómo nos encontraste?" style={styles.modalTitle} />
+            <ScrollView style={styles.optionsList}>
+              {howFoundUsOptions.map((option, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.optionItem}
+                  onPress={() => {
+                    setFormData({
+                      ...formData,
+                      contactInfo: { ...formData.contactInfo, howFoundUs: option },
+                    });
+                    setShowHowFoundUsModal(false);
+                  }}
+                >
+                  <Text style={styles.optionText}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <AccessibleButton
+              text="Cancelar"
+              onPress={() => setShowHowFoundUsModal(false)}
+              style={styles.modalCancelButton}
+            />
+          </View>
+        </View>
+      </Modal>
       
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <AccessibleText text="Registro de Proveedor" style={styles.title} />
@@ -444,5 +509,63 @@ const styles = StyleSheet.create({
   loadingContainer: {
     marginTop: 20,
     alignItems: 'center',
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  dropdownButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#DDD',
+    borderRadius: 8,
+    padding: 14,
+  },
+  dropdownText: {
+    fontSize: 16,
+    color: '#333',
+    flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '70%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 16,
+    color: '#000',
+  },
+  optionsList: {
+    maxHeight: 400,
+  },
+  optionItem: {
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
+  },
+  optionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  modalCancelButton: {
+    marginTop: 16,
+    backgroundColor: '#6C757D',
   },
 });
