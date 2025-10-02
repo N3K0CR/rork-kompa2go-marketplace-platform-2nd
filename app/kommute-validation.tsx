@@ -52,7 +52,7 @@ const validateErrorRecoverySystem = async (): Promise<ValidationResult> => {
 
     // Test 2: Network error simulation
     try {
-      await handleSmartError(
+      const result = await handleSmartError(
         new Error('Network connection lost'),
         { component: 'test', operation: 'network_test' },
         {
@@ -62,10 +62,15 @@ const validateErrorRecoverySystem = async (): Promise<ValidationResult> => {
           fallbackValue: 'fallback_used'
         }
       );
-      details.push('✅ Network error handling working');
-      errorRecoveryApplied = true;
+      
+      if (result === 'fallback_used') {
+        details.push('✅ Network error handling working (fallback used)');
+        errorRecoveryApplied = true;
+      } else {
+        details.push('⚠️ Network error handling returned unexpected value');
+      }
     } catch (error) {
-      details.push('❌ Network error handling failed');
+      details.push('❌ Network error handling failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
       hasErrors = true;
     }
 
