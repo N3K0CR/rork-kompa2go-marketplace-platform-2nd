@@ -150,11 +150,7 @@ export class ErrorRecoveryManager {
 
     // Log error
     if (this.config.logErrors) {
-      console.error(`[ErrorRecovery] ${fullContext.component}:${fullContext.operation}`, {
-        error: error.message,
-        stack: error.stack,
-        context: fullContext,
-      });
+      console.error(`[ErrorRecovery] ${fullContext.component}:${fullContext.operation}`, error.message);
     }
 
     // Store error in history
@@ -247,7 +243,7 @@ export class ErrorRecoveryManager {
           if (attempt === this.config.maxRetries) {
             return await this.handleError(retryError as Error, {
               ...context,
-              operation: `${context.operation}_network_retry`,
+              operation: context.operation ? `${context.operation}_network_retry` : 'network_retry',
             });
           }
         }
