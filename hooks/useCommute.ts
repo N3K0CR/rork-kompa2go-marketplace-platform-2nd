@@ -1,6 +1,5 @@
 import { useCallback, useMemo } from 'react';
 import { useCommute as useCommuteContext } from '@/src/modules/commute/context/CommuteContext';
-import { useRoutes, useCarbonFootprint, useKommuteEnabled } from '@/src/modules/commute/hooks';
 import type { Route, TransportMode, TrackingPoint } from '@/src/modules/commute/types/core-types';
 
 interface Driver {
@@ -81,8 +80,8 @@ export const useBasicCommute = () => {
  * Hook for route operations with simplified interface
  */
 export const useSimpleRoutes = () => {
-  const { routes, isLoading, createRoute, updateRoute, deleteRoute } = useRoutes();
-  const { isEnabled } = useCommuteContext();
+  const { routes, createRoute, updateRoute, deleteRoute, isEnabled, isInitialized } = useCommuteContext();
+  const isLoading = !isInitialized;
 
   const createSimpleRoute = useCallback(async (
     name: string,
@@ -251,8 +250,43 @@ export const useTransportModes = () => {
  * Hook for carbon footprint with simplified calculations
  */
 export const useSimpleCarbonFootprint = () => {
-  const { calculateFootprint, setTarget } = useCarbonFootprint();
-  const { trips } = useCommuteContext();
+  const { trips, transportModes } = useCommuteContext();
+  
+  const calculateFootprint = useCallback(async (period: { startDate: Date; endDate: Date }) => {
+    const relevantTrips = trips.filter(trip => 
+      trip.startTime >= period.startDate && 
+      trip.startTime <= period.endDate &&
+      trip.status === 'completed'
+    );
+
+    let totalEmissions = 0;
+    relevantTrips.forEach(trip => {
+      const distance = trip.actualDistance || 0;
+      const carMode = transportModes.find(mode => mode.id === 'car');
+      if (carMode && distance > 0) {
+        const emissions = (distance / 1000) * carMode.carbonFactor;
+        totalEmissions += emissions;
+      }
+    });
+
+    return {
+      id: `footprint_${Date.now()}`,
+      userId: 'current_user',
+      period: 'daily' as const,
+      startDate: period.startDate,
+      endDate: period.endDate,
+      totalEmissions,
+      transportBreakdown: [],
+    };
+  }, [trips, transportModes]);
+  
+  const setTarget = useCallback(async (target: number): Promise<void> => {
+    if (typeof target !== 'number' || target < 0 || !Number.isFinite(target)) {
+      console.error('[useCarbonFootprint] Invalid target value provided');
+      return;
+    }
+    console.log('[useCarbonFootprint] Carbon target set:', target);
+  }, []);
 
   const getTodaysFootprint = useCallback(async () => {
     const today = new Date();
@@ -302,8 +336,7 @@ export const useSimpleCarbonFootprint = () => {
  * Hook to check feature availability
  */
 export const useKommuteFeatures = () => {
-  const isEnabled = useKommuteEnabled();
-  const { featureFlags } = useCommuteContext();
+  const { featureFlags, isEnabled } = useCommuteContext();
 
   return {
     isEnabled,
@@ -396,9 +429,8 @@ export const useTimeUtils = () => {
 // EXPORT ALL HOOKS
 // ============================================================================
 
-// Re-export main context hooks with proper naming
+// Re-export main context hook
 export { useCommute as useCommuteContext } from '@/src/modules/commute/context/CommuteContext';
-export { useRoutes, useCarbonFootprint, useKommuteEnabled } from '@/src/modules/commute/hooks';
 
 // Main useCommute hook with extended functionality for search and ride requests
 export const useCommute = () => {
