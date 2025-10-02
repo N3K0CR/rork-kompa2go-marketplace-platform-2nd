@@ -1,33 +1,179 @@
-export type UserRole = 'client' | 'provider' | 'kommuter' | 'admin';
+import { z } from 'zod';
 
-export type ProviderNiche = 
-  | 'health'
-  | 'beauty'
-  | 'fitness'
-  | 'education'
-  | 'professional'
-  | 'home_services'
-  | 'automotive'
-  | 'pet_care'
-  | 'events'
-  | 'other';
+export const ClientRegistrationSchema = z.object({
+  firstName: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
+  lastName: z.string().min(2, 'El apellido debe tener al menos 2 caracteres'),
+  email: z.string().email('Email inválido'),
+  phone: z.string().min(8, 'Teléfono debe tener al menos 8 dígitos'),
+  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
+  confirmPassword: z.string(),
+  address: z.string().min(5, 'La dirección debe tener al menos 5 caracteres'),
+  city: z.string().min(2, 'La ciudad es requerida'),
+  province: z.string().min(2, 'La provincia es requerida'),
+  preferredPaymentMethod: z.enum(['card', 'cash', 'transfer']),
+  notificationPreferences: z.object({
+    email: z.boolean(),
+    sms: z.boolean(),
+    push: z.boolean(),
+  }),
+  accessibilityNeeds: z.object({
+    hasVisualImpairment: z.boolean(),
+    hasReadingDifficulty: z.boolean(),
+    hasHearingImpairment: z.boolean(),
+    hasMotorImpairment: z.boolean(),
+    other: z.string().optional(),
+  }).optional(),
+  accessibilityPreferences: z.object({
+    enableTTS: z.boolean(),
+    ttsSpeed: z.enum(['slow', 'normal', 'fast']),
+    preferTextOnly: z.boolean(),
+    detailLevel: z.enum(['basic', 'intermediate', 'complete']),
+    navigationMode: z.enum(['visual', 'audio', 'combined']),
+  }).optional(),
+  referralCode: z.string().optional(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Las contraseñas no coinciden',
+  path: ['confirmPassword'],
+});
 
-export type AccessibilityNeed = 
-  | 'blind'
-  | 'low_vision'
-  | 'reading_difficulty'
-  | 'hearing_impaired'
-  | 'motor_disability'
-  | 'other';
+export const ProviderRegistrationSchema = z.object({
+  companyName: z.string().min(3, 'El nombre de la empresa debe tener al menos 3 caracteres'),
+  businessId: z.string().min(5, 'RUC/NIT es requerido'),
+  email: z.string().email('Email inválido'),
+  phone: z.string().min(8, 'Teléfono debe tener al menos 8 dígitos'),
+  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
+  confirmPassword: z.string(),
+  contactPersonName: z.string().min(3, 'Nombre del contacto es requerido'),
+  contactPersonEmail: z.string().email('Email del contacto inválido'),
+  contactPersonPhone: z.string().min(8, 'Teléfono del contacto es requerido'),
+  businessAddress: z.string().min(5, 'La dirección es requerida'),
+  city: z.string().min(2, 'La ciudad es requerida'),
+  province: z.string().min(2, 'La provincia es requerida'),
+  serviceTypes: z.array(z.string()).min(1, 'Seleccione al menos un tipo de servicio'),
+  vehicleTypes: z.array(z.string()).min(1, 'Seleccione al menos un tipo de vehículo'),
+  coverageAreas: z.array(z.string()).min(1, 'Seleccione al menos un área de cobertura'),
+  businessLicense: z.string().optional(),
+  taxDocument: z.string().optional(),
+  insuranceDocument: z.string().optional(),
+  accessibilityNeeds: z.object({
+    hasVisualImpairment: z.boolean(),
+    hasReadingDifficulty: z.boolean(),
+    hasHearingImpairment: z.boolean(),
+    hasMotorImpairment: z.boolean(),
+    other: z.string().optional(),
+  }).optional(),
+  accessibilityPreferences: z.object({
+    enableTTS: z.boolean(),
+    ttsSpeed: z.enum(['slow', 'normal', 'fast']),
+    preferTextOnly: z.boolean(),
+    detailLevel: z.enum(['basic', 'intermediate', 'complete']),
+    navigationMode: z.enum(['visual', 'audio', 'combined']),
+  }).optional(),
+  referralCode: z.string().optional(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Las contraseñas no coinciden',
+  path: ['confirmPassword'],
+});
+
+export const KommuterRegistrationSchema = z.object({
+  firstName: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
+  lastName: z.string().min(2, 'El apellido debe tener al menos 2 caracteres'),
+  email: z.string().email('Email inválido'),
+  phone: z.string().min(8, 'Teléfono debe tener al menos 8 dígitos'),
+  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
+  confirmPassword: z.string(),
+  cedula: z.string().min(9, 'Cédula debe tener al menos 9 dígitos'),
+  address: z.string().min(5, 'La dirección es requerida'),
+  city: z.string().min(2, 'La ciudad es requerida'),
+  province: z.string().min(2, 'La provincia es requerida'),
+  licenseNumber: z.string().min(5, 'Número de licencia es requerido'),
+  licenseExpiry: z.string().min(1, 'Fecha de vencimiento es requerida'),
+  licenseDocument: z.string().optional(),
+  isFleetManager: z.boolean(),
+  vehicles: z.array(z.object({
+    brand: z.string().min(2, 'Marca es requerida'),
+    model: z.string().min(2, 'Modelo es requerido'),
+    year: z.number().min(1990, 'Año debe ser mayor a 1990').max(new Date().getFullYear() + 1),
+    plate: z.string().min(5, 'Placa es requerida'),
+    color: z.string().min(2, 'Color es requerido'),
+    capacity: z.number().min(1, 'Capacidad debe ser al menos 1'),
+    vehicleType: z.enum(['sedan', 'suv', 'van', 'truck', 'motorcycle']),
+    registrationDocument: z.string().optional(),
+    insuranceDocument: z.string().optional(),
+    technicalInspection: z.string().optional(),
+  })).min(1, 'Debe registrar al menos un vehículo'),
+  fleetDrivers: z.array(z.object({
+    name: z.string().min(3, 'Nombre del conductor es requerido'),
+    cedula: z.string().min(9, 'Cédula es requerida'),
+    licenseNumber: z.string().min(5, 'Número de licencia es requerido'),
+    phone: z.string().min(8, 'Teléfono es requerido'),
+    assignedVehiclePlate: z.string().optional(),
+  })).optional(),
+  profilePhoto: z.string().optional(),
+  accessibilityNeeds: z.object({
+    hasVisualImpairment: z.boolean(),
+    hasReadingDifficulty: z.boolean(),
+    hasHearingImpairment: z.boolean(),
+    hasMotorImpairment: z.boolean(),
+    other: z.string().optional(),
+  }).optional(),
+  accessibilityPreferences: z.object({
+    enableTTS: z.boolean(),
+    ttsSpeed: z.enum(['slow', 'normal', 'fast']),
+    preferTextOnly: z.boolean(),
+    detailLevel: z.enum(['basic', 'intermediate', 'complete']),
+    navigationMode: z.enum(['visual', 'audio', 'combined']),
+  }).optional(),
+  referralCode: z.string().optional(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Las contraseñas no coinciden',
+  path: ['confirmPassword'],
+}).refine((data) => {
+  if (data.isFleetManager && (!data.fleetDrivers || data.fleetDrivers.length === 0)) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Los administradores de flotilla deben registrar al menos un conductor',
+  path: ['fleetDrivers'],
+});
+
+export type ClientRegistrationType = z.infer<typeof ClientRegistrationSchema>;
+export type ProviderRegistrationType = z.infer<typeof ProviderRegistrationSchema>;
+export type KommuterRegistrationType = z.infer<typeof KommuterRegistrationSchema>;
+
+export interface ReferralSystemType {
+  referrerId: string;
+  referredId: string;
+  referredType: 'client' | 'provider' | 'kommuter';
+  completedTrips: number;
+  referrerRewardEarned: boolean;
+  referredRewardEarned: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AccessibilitySettingsType {
+  hasVisualImpairment: boolean;
+  hasReadingDifficulty: boolean;
+  hasHearingImpairment: boolean;
+  hasMotorImpairment: boolean;
+  other?: string;
+  enableTTS: boolean;
+  ttsSpeed: 'slow' | 'normal' | 'fast';
+  preferTextOnly: boolean;
+  detailLevel: 'basic' | 'intermediate' | 'complete';
+  navigationMode: 'visual' | 'audio' | 'combined';
+}
 
 export type TTSSpeed = 'slow' | 'normal' | 'fast';
 export type DescriptionLevel = 'basic' | 'intermediate' | 'complete';
-export type NavigationMode = 'visual' | 'audible' | 'combined';
+export type NavigationMode = 'visual' | 'audio' | 'combined';
+export type AccessibilityNeed = 'visual' | 'reading' | 'hearing' | 'motor' | 'other';
 
 export interface AccessibilityPreferences {
   hasAccessibilityNeeds: boolean;
   needs: AccessibilityNeed[];
-  otherNeedDescription?: string;
   
   ttsEnabled: boolean;
   ttsAutoPlay: boolean;
@@ -43,230 +189,4 @@ export interface AccessibilityPreferences {
   highContrast: boolean;
   largeText: boolean;
   hapticFeedback: boolean;
-}
-
-export interface BaseUserProfile {
-  id: string;
-  email: string;
-  phoneNumber: string;
-  fullName: string;
-  role: UserRole;
-  profilePhotoUrl?: string;
-  
-  accessibilityPreferences: AccessibilityPreferences;
-  
-  createdAt: Date;
-  updatedAt: Date;
-  isActive: boolean;
-  isVerified: boolean;
-}
-
-export interface ClientProfile extends BaseUserProfile {
-  role: 'client';
-  dateOfBirth?: Date;
-  address?: string;
-  emergencyContact?: {
-    name: string;
-    phoneNumber: string;
-    relationship: string;
-  };
-  
-  referredBy?: string;
-  referralCode: string;
-}
-
-export interface ProviderProfile extends BaseUserProfile {
-  role: 'provider';
-  businessName: string;
-  niche: ProviderNiche;
-  nicheSpecificData: Record<string, any>;
-  
-  businessAddress: string;
-  businessPhone: string;
-  businessEmail: string;
-  
-  taxId?: string;
-  businessLicense?: string;
-  
-  serviceDescription: string;
-  serviceAreas: string[];
-  
-  rating: number;
-  totalReviews: number;
-  
-  isKommuterEnabled: boolean;
-  
-  referredBy?: string;
-  referralCode: string;
-}
-
-export type VehicleType = 'car' | 'suv' | 'van' | 'motorcycle' | 'bicycle' | 'other';
-
-export interface VehicleDocument {
-  id: string;
-  type: 'registration' | 'insurance' | 'inspection' | 'other';
-  documentUrl: string;
-  expiryDate?: Date;
-  uploadedAt: Date;
-}
-
-export interface Vehicle {
-  id: string;
-  make: string;
-  model: string;
-  year: number;
-  color: string;
-  licensePlate: string;
-  vehicleType: VehicleType;
-  
-  capacity: number;
-  hasAirConditioning: boolean;
-  hasWheelchairAccess: boolean;
-  
-  documents: VehicleDocument[];
-  
-  assignedDriverId?: string;
-  
-  createdAt: Date;
-  updatedAt: Date;
-  isActive: boolean;
-}
-
-export interface DriverDocument {
-  id: string;
-  type: 'license' | 'id' | 'background_check' | 'other';
-  documentUrl: string;
-  expiryDate?: Date;
-  uploadedAt: Date;
-  isVerified: boolean;
-}
-
-export interface KommuterProfile extends BaseUserProfile {
-  role: 'kommuter';
-  providerId: string;
-  
-  licenseNumber: string;
-  licenseExpiryDate: Date;
-  
-  documents: DriverDocument[];
-  
-  isFleetManager: boolean;
-  managedVehicles: string[];
-  assignedDrivers: string[];
-  
-  primaryVehicleId?: string;
-  
-  totalTrips: number;
-  completedTrips: number;
-  cancelledTrips: number;
-  rating: number;
-  totalReviews: number;
-  
-  backgroundCheckRequired: boolean;
-  backgroundCheckCompleted: boolean;
-  backgroundCheckDate?: Date;
-  
-  isAvailable: boolean;
-  currentTripId?: string;
-  
-  referredBy?: string;
-  referralCode: string;
-  
-  earnings: {
-    total: number;
-    pending: number;
-    paid: number;
-  };
-}
-
-export type ReferralStatus = 'pending' | 'active' | 'completed' | 'cancelled';
-
-export interface Referral {
-  id: string;
-  referrerId: string;
-  referredUserId: string;
-  referredUserRole: UserRole;
-  
-  status: ReferralStatus;
-  
-  referredUserTripsCompleted: number;
-  
-  referrerRewardAmount: number;
-  referrerRewardPaid: boolean;
-  referrerRewardPaidAt?: Date;
-  
-  referredRewardAmount: number;
-  referredRewardPaid: boolean;
-  referredRewardPaidAt?: Date;
-  
-  createdAt: Date;
-  updatedAt: Date;
-  
-  fraudCheckPassed: boolean;
-  fraudCheckNotes?: string;
-}
-
-export interface RegistrationFormData {
-  email: string;
-  password: string;
-  confirmPassword: string;
-  phoneNumber: string;
-  fullName: string;
-  
-  role: UserRole;
-  
-  accessibilityPreferences?: Partial<AccessibilityPreferences>;
-  
-  referralCode?: string;
-}
-
-export interface ClientRegistrationData extends RegistrationFormData {
-  role: 'client';
-  dateOfBirth?: Date;
-  address?: string;
-  emergencyContact?: {
-    name: string;
-    phoneNumber: string;
-    relationship: string;
-  };
-}
-
-export interface ProviderRegistrationData extends RegistrationFormData {
-  role: 'provider';
-  businessName: string;
-  niche: ProviderNiche;
-  nicheSpecificData: Record<string, any>;
-  businessAddress: string;
-  businessPhone: string;
-  businessEmail: string;
-  serviceDescription: string;
-  serviceAreas: string[];
-}
-
-export interface KommuterRegistrationData extends RegistrationFormData {
-  role: 'kommuter';
-  providerId: string;
-  licenseNumber: string;
-  licenseExpiryDate: Date;
-  
-  isFleetManager: boolean;
-  
-  vehicle: {
-    make: string;
-    model: string;
-    year: number;
-    color: string;
-    licensePlate: string;
-    vehicleType: VehicleType;
-    capacity: number;
-    hasAirConditioning: boolean;
-    hasWheelchairAccess: boolean;
-  };
-  
-  documents: {
-    licensePhoto: string;
-    idPhoto: string;
-    vehicleRegistration: string;
-    vehicleInsurance: string;
-  };
 }
