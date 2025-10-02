@@ -13,9 +13,16 @@ export function AccessibleInput({
   placeholder,
   secureTextEntry = false,
   keyboardType = 'default',
+  autoCapitalize,
+  required,
+  error,
   ttsEnabled = true,
   style,
-}: AccessibleInputProps) {
+}: AccessibleInputProps & { 
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  required?: boolean;
+  error?: string;
+}) {
   const { speakText, preferences } = useAccessibility();
   const [isFocused, setIsFocused] = useState<boolean>(false);
 
@@ -86,6 +93,7 @@ export function AccessibleInput({
         placeholderTextColor={preferences.highContrast ? '#666' : '#999'}
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
         onFocus={handleFocus}
         onBlur={handleBlur}
         accessible={true}
@@ -93,6 +101,9 @@ export function AccessibleInput({
         accessibilityHint={accessibilityHint || placeholder}
         accessibilityValue={{ text: value }}
       />
+      {error && (
+        <Text style={styles.errorText}>{error}</Text>
+      )}
     </View>
   );
 }
@@ -152,5 +163,10 @@ const styles = StyleSheet.create({
     borderColor: '#000',
     color: '#000',
     fontWeight: '600' as const,
+  },
+  errorText: {
+    color: '#ff3b30',
+    fontSize: 14,
+    marginTop: 4,
   },
 });

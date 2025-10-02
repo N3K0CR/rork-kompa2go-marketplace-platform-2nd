@@ -5,6 +5,7 @@ import { useAccessibility } from '@/contexts/AccessibilityContext';
 import type { AccessibleButtonProps } from '@/src/shared/types/accessibility-types';
 
 export function AccessibleButton({
+  text,
   label,
   accessibilityLabel,
   accessibilityHint,
@@ -13,9 +14,11 @@ export function AccessibleButton({
   disabled = false,
   style,
   children,
-}: AccessibleButtonProps) {
+}: AccessibleButtonProps & { text?: string }) {
   const { speakText, preferences } = useAccessibility();
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  
+  const buttonLabel = text || label;
 
   const handlePress = async () => {
     if (disabled || isProcessing) return;
@@ -25,7 +28,7 @@ export function AccessibleButton({
     }
 
     if (ttsEnabled && preferences.ttsEnabled) {
-      await speakText(label);
+      await speakText(buttonLabel);
     }
 
     setIsProcessing(true);
@@ -57,7 +60,7 @@ export function AccessibleButton({
       onPress={handlePress}
       disabled={disabled || isProcessing}
       accessible={true}
-      accessibilityLabel={accessibilityLabel || label}
+      accessibilityLabel={accessibilityLabel || buttonLabel}
       accessibilityHint={accessibilityHint}
       accessibilityRole="button"
       accessibilityState={{ disabled: disabled || isProcessing }}
@@ -65,7 +68,7 @@ export function AccessibleButton({
       {isProcessing ? (
         <ActivityIndicator color={preferences.highContrast ? '#000' : '#fff'} />
       ) : (
-        children || <Text style={textStyle}>{label}</Text>
+        children || <Text style={textStyle}>{buttonLabel}</Text>
       )}
     </TouchableOpacity>
   );

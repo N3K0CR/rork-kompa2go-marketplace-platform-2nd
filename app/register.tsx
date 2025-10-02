@@ -38,8 +38,17 @@ export default function RegisterScreen() {
     
     announceForScreenReader(`Iniciando registro como ${selectedRole}`);
     
-    console.log('[Register] Selected role:', selectedRole);
-    console.log('[Register] Registration screens will be implemented in app/register/ directory');
+    switch (selectedRole) {
+      case 'client':
+        router.push('/register/client');
+        break;
+      case 'provider':
+        router.push('/register/provider');
+        break;
+      case 'kommuter':
+        router.push('/register/kommuter');
+        break;
+    }
   };
 
   const roles = [
