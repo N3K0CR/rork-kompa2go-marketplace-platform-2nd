@@ -140,7 +140,7 @@ export interface FleetDriverData {
   assignedVehicleId?: string;
 }
 
-export interface ReferralData {
+export interface RegistrationReferralData {
   referrerId: string;
   referredId: string;
   referralCode: string;
