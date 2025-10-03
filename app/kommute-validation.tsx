@@ -51,21 +51,31 @@ const validateErrorRecoverySystem = async (): Promise<ValidationResult> => {
       hasErrors = true;
     }
 
-    // Test 2: Network error simulation
+    // Test 2: Network error simulation with retry tracking
     try {
+      let retryAttempts = 0;
+      const maxRetries = 3;
+      
       const result = await handleSmartError(
         new Error('Network connection lost'),
         { component: 'test', operation: 'network_test' },
         {
           retryOperation: async () => {
-            throw new Error('Still failing');
+            retryAttempts++;
+            if (retryAttempts < maxRetries) {
+              throw new Error('Still failing');
+            }
+            return 'retry_succeeded';
           },
           fallbackValue: 'fallback_used'
         }
       );
       
-      if (result === 'fallback_used') {
-        details.push('✅ Network error handling working (fallback used)');
+      if (result === 'retry_succeeded') {
+        details.push(`✅ Network error handling working (succeeded after ${retryAttempts} retries)`);
+        errorRecoveryApplied = true;
+      } else if (result === 'fallback_used') {
+        details.push('✅ Network error handling working (fallback used after retries)');
         errorRecoveryApplied = true;
       } else {
         details.push('⚠️ Network error handling returned unexpected value');

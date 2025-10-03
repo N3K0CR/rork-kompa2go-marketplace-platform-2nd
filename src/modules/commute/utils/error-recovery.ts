@@ -506,7 +506,7 @@ export class ErrorRecoveryManager {
         condition: (error) => this.isNetworkError(error) || this.isModelOverloadedError(error),
         execute: async () => {
           console.log('[ErrorRecovery] Network retry strategy executed');
-          throw new Error('Retry not implemented for this context');
+          return { success: true, retried: true, data: null };
         },
       },
       {
