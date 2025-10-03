@@ -155,16 +155,17 @@ const CommuteModal = memo<CommuteModalProps>(function CommuteModal({
       
       console.log('🔍 Searching address:', query);
       
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`,
-        {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'User-Agent': 'Kompa2Go/1.0',
-          },
-        }
-      );
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&countrycodes=cr`;
+      console.log('🔍 Fetching URL:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+      
+      console.log('🔍 Response status:', response.status);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -175,7 +176,6 @@ const CommuteModal = memo<CommuteModalProps>(function CommuteModal({
       setAddressSuggestions(data);
     } catch (error) {
       console.error('❌ Error searching address:', error);
-      Alert.alert('Error', 'No se pudo buscar la dirección. Por favor intenta de nuevo.');
       setAddressSuggestions([]);
     } finally {
       setSearchingAddress(null);
@@ -221,7 +221,6 @@ const CommuteModal = memo<CommuteModalProps>(function CommuteModal({
                   method: 'GET',
                   headers: {
                     'Accept': 'application/json',
-                    'User-Agent': 'Kompa2Go/1.0',
                   },
                 }
               );
@@ -717,11 +716,14 @@ const styles = StyleSheet.create({
     gap: Spacing[2],
     borderBottomWidth: 1,
     borderBottomColor: Colors.neutral[100],
+    backgroundColor: 'white',
   },
   suggestionText: {
-    ...Typography.textStyles.bodySmall,
-    color: Colors.neutral[700],
+    ...Typography.textStyles.body,
+    color: Colors.neutral[900],
     flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
   },
   nameInput: {
     backgroundColor: Colors.neutral[50],
