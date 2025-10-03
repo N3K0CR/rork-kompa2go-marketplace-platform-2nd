@@ -160,10 +160,8 @@ export default function CommuteHome() {
         }} 
       />
       
-      <View style={styles.mapPlaceholder}>
-        <View style={styles.mapOverlay}>
-          <Text style={styles.mapText}>Mapa</Text>
-        </View>
+      <View style={styles.mapBackground}>
+        <View style={styles.mapGradient} />
       </View>
 
       <View style={[styles.searchContainer, { paddingTop: insets.top + Spacing[4] }]}>
@@ -234,20 +232,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.neutral[100],
   },
-  mapPlaceholder: {
+  mapBackground: {
     flex: 1,
-    backgroundColor: Colors.neutral[200],
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
   },
-  mapOverlay: {
-    padding: Spacing[6],
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: BorderRadius.lg,
-  },
-  mapText: {
-    ...Typography.textStyles.h4,
-    color: Colors.neutral[500],
+  mapGradient: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   searchContainer: {
     position: 'absolute',
@@ -338,14 +329,14 @@ const styles = StyleSheet.create({
   },
   suggestionMainText: {
     ...Typography.textStyles.body,
-    color: Colors.neutral[900],
+    color: '#000000',
     fontSize: 16,
-    fontWeight: Typography.fontWeight.bold,
+    fontWeight: '700' as const,
   },
   suggestionSecondaryText: {
     ...Typography.textStyles.caption,
-    color: Colors.neutral[600],
-    fontSize: 14,
-    fontWeight: Typography.fontWeight.medium,
+    color: '#666666',
+    fontSize: 13,
+    fontWeight: '500' as const,
   },
 });
