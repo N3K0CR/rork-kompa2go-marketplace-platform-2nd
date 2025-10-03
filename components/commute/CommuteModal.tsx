@@ -1,9 +1,10 @@
 import React, { useState, useCallback, memo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, TextInput } from 'react-native';
-import { X, MapPin, Plus, Minus, Clock, Users, DollarSign, Calendar } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, TextInput, Alert, ActivityIndicator, Platform } from 'react-native';
+import { X, Plus, Minus, Navigation } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius, Shadows, Typography } from '@/context-package/design-system';
 import { Route, TransportMode, RoutePoint } from '@/backend/trpc/routes/commute/types';
 import TransportModeSelector from './TransportModeSelector';
+import * as Location from 'expo-location';
 
 interface CommuteModalProps {
   visible: boolean;
@@ -52,6 +53,7 @@ const CommuteModal = memo<CommuteModalProps>(function CommuteModal({
   );
   const [isRecurring, setIsRecurring] = useState(initialRoute?.isRecurring || false);
   const [recurringType, setRecurringType] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
+  const [loadingLocation, setLoadingLocation] = useState<number | null>(null);
 
   const handleSave = useCallback(() => {
     if (!routeName.trim()) {
@@ -113,6 +115,116 @@ const CommuteModal = memo<CommuteModalProps>(function CommuteModal({
     });
   }, []);
 
+  const handleUseCurrentLocation = useCallback(async (index: number) => {
+    if (Platform.OS === 'web') {
+      try {
+        setLoadingLocation(index);
+        
+        if (!navigator.geolocation) {
+          Alert.alert('Error', 'La geolocalización no está disponible en este navegador');
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords;
+            
+            try {
+              const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+              );
+              const data = await response.json();
+              const address = data.display_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+              
+              setRoutePoints(prev => {
+                const newPoints = [...prev];
+                newPoints[index] = {
+                  ...newPoints[index],
+                  latitude,
+                  longitude,
+                  address,
+                  name: data.name || data.address?.road || undefined
+                };
+                return newPoints;
+              });
+              
+              console.log('✅ Location updated:', { latitude, longitude, address });
+            } catch (error) {
+              console.error('❌ Error getting address:', error);
+              setRoutePoints(prev => {
+                const newPoints = [...prev];
+                newPoints[index] = {
+                  ...newPoints[index],
+                  latitude,
+                  longitude,
+                  address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+                };
+                return newPoints;
+              });
+            } finally {
+              setLoadingLocation(null);
+            }
+          },
+          (error) => {
+            console.error('❌ Error getting location:', error);
+            Alert.alert('Error', 'No se pudo obtener la ubicación actual');
+            setLoadingLocation(null);
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+        );
+      } catch (error) {
+        console.error('❌ Error in web geolocation:', error);
+        Alert.alert('Error', 'No se pudo obtener la ubicación actual');
+        setLoadingLocation(null);
+      }
+    } else {
+      try {
+        setLoadingLocation(index);
+        
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permiso Denegado', 'Se necesita permiso para acceder a la ubicación');
+          setLoadingLocation(null);
+          return;
+        }
+
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+
+        const { latitude, longitude } = location.coords;
+        
+        const [geocode] = await Location.reverseGeocodeAsync({
+          latitude,
+          longitude,
+        });
+
+        const address = geocode
+          ? `${geocode.street || ''} ${geocode.streetNumber || ''}, ${geocode.city || ''}, ${geocode.region || ''}`.trim()
+          : `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+
+        setRoutePoints(prev => {
+          const newPoints = [...prev];
+          newPoints[index] = {
+            ...newPoints[index],
+            latitude,
+            longitude,
+            address,
+            name: geocode?.name || geocode?.street || undefined
+          };
+          return newPoints;
+        });
+        
+        console.log('✅ Location updated:', { latitude, longitude, address });
+      } catch (error) {
+        console.error('❌ Error getting location:', error);
+        Alert.alert('Error', 'No se pudo obtener la ubicación actual');
+      } finally {
+        setLoadingLocation(null);
+      }
+    }
+  }, []);
+
   const renderPointEditor = useCallback((point: Omit<RoutePoint, 'id'>, index: number) => {
     const isOrigin = point.type === 'origin';
     const isDestination = point.type === 'destination';
@@ -162,13 +274,26 @@ const CommuteModal = memo<CommuteModalProps>(function CommuteModal({
           />
         </View>
 
-        <TouchableOpacity style={styles.locationButton}>
-          <MapPin size={16} color={Colors.primary[500]} />
-          <Text style={styles.locationButtonText}>Usar ubicación actual</Text>
+        <TouchableOpacity 
+          style={[
+            styles.locationButton,
+            loadingLocation === index && styles.locationButtonLoading
+          ]}
+          onPress={() => handleUseCurrentLocation(index)}
+          disabled={loadingLocation === index}
+        >
+          {loadingLocation === index ? (
+            <ActivityIndicator size="small" color={Colors.primary[500]} />
+          ) : (
+            <Navigation size={16} color={Colors.primary[500]} />
+          )}
+          <Text style={styles.locationButtonText}>
+            {loadingLocation === index ? 'Obteniendo ubicación...' : 'Usar ubicación actual'}
+          </Text>
         </TouchableOpacity>
       </View>
     );
-  }, [routePoints.length, handleRemovePoint, handlePointChange]);
+  }, [routePoints.length, handleRemovePoint, handlePointChange, handleUseCurrentLocation, loadingLocation]);
 
   return (
     <Modal
@@ -452,6 +577,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.primary[300],
     backgroundColor: 'transparent',
+  },
+  locationButtonLoading: {
+    opacity: 0.6,
   },
   locationButtonText: {
     ...Typography.textStyles.bodySmall,
