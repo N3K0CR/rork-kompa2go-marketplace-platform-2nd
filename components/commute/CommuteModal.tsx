@@ -2,7 +2,7 @@ import React, { useState, useCallback, memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, TextInput, Alert, ActivityIndicator, Platform, FlatList } from 'react-native';
 import { X, Plus, Minus, Navigation, MapPin } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius, Shadows, Typography } from '@/context-package/design-system';
-import { Route, TransportMode, RoutePoint } from '@/backend/trpc/routes/commute/types';
+import type { Route, TransportMode, RoutePoint } from '@/src/modules/commute/types/core-types';
 import TransportModeSelector from './TransportModeSelector';
 import * as Location from 'expo-location';
 
