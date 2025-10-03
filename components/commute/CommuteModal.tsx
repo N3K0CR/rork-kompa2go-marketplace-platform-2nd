@@ -153,19 +153,30 @@ const CommuteModal = memo<CommuteModalProps>(function CommuteModal({
       setSearchingAddress(index);
       setShowSuggestions(index);
       
+      console.log('🔍 Searching address:', query);
+      
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`,
         {
+          method: 'GET',
           headers: {
             'Accept': 'application/json',
-          }
+            'User-Agent': 'Kompa2Go/1.0',
+          },
         }
       );
       
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
+      console.log('✅ Address search results:', data.length, 'results');
       setAddressSuggestions(data);
     } catch (error) {
       console.error('❌ Error searching address:', error);
+      Alert.alert('Error', 'No se pudo buscar la dirección. Por favor intenta de nuevo.');
+      setAddressSuggestions([]);
     } finally {
       setSearchingAddress(null);
     }
@@ -205,8 +216,20 @@ const CommuteModal = memo<CommuteModalProps>(function CommuteModal({
             
             try {
               const response = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+                {
+                  method: 'GET',
+                  headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'Kompa2Go/1.0',
+                  },
+                }
               );
+              
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
+              
               const data = await response.json();
               const address = data.display_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
               
