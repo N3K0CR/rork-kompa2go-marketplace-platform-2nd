@@ -46,14 +46,7 @@ export default function TransportModeSelector({
   };
 
   const getTransportModeIcon = (mode: TransportMode) => {
-    const iconMap: { [key: string]: string } = {
-      'car': '🚗',
-      'carpool': '👥',
-      'auto': '🚗'
-    };
-    
-    const lowerName = mode.name.toLowerCase();
-    return iconMap[mode.id] || iconMap[lowerName] || '🚗';
+    return mode.icon || '🚗';
   };
 
   const renderModeCard = (mode: TransportMode) => {
@@ -252,19 +245,19 @@ const styles = StyleSheet.create({
   modeHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing[3],
+    gap: Spacing[4],
   },
   modeIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: Colors.neutral[100],
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
   },
   modeIcon: {
-    fontSize: 24,
+    fontSize: 28,
   },
   selectedIndicator: {
     position: 'absolute',
@@ -283,24 +276,28 @@ const styles = StyleSheet.create({
   modeName: {
     ...Typography.textStyles.h6,
     color: Colors.neutral[800],
-    marginBottom: Spacing[1],
+    marginBottom: Spacing[2],
+    fontSize: 16,
+    lineHeight: 24,
   },
   disabledText: {
     color: Colors.neutral[400],
   },
   modeDetails: {
     flexDirection: 'row',
-    gap: Spacing[3],
+    gap: Spacing[4],
+    marginTop: Spacing[1],
   },
   detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing[1],
+    gap: Spacing[2],
   },
   detailText: {
     ...Typography.textStyles.caption,
     color: Colors.neutral[600],
-    fontSize: 10,
+    fontSize: 12,
+    lineHeight: 18,
   },
   modeColorIndicator: {
     position: 'absolute',

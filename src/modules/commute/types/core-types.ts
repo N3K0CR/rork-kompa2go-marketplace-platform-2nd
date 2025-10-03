@@ -3,16 +3,20 @@
 // ============================================================================
 // Core type definitions shared across the 2Kommute module
 
-// Transport mode definition
+// Transport mode definition (Kommute vehicle types)
+export type KommuteVehicleType = 'kommute-4' | 'kommute-large';
+
 export interface TransportMode {
-  id: string;
+  id: KommuteVehicleType;
   name: string;
   icon: string;
   color: string;
+  capacity: number; // number of passengers
   carbonFactor: number; // kg CO2 per km
   costFactor: number; // cost per km
   speedFactor: number; // average speed in km/h
   available: boolean;
+  description: string;
 }
 
 // Location and route point types

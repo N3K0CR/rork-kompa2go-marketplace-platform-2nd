@@ -83,14 +83,28 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
 
 const DEFAULT_TRANSPORT_MODES: TransportMode[] = [
   {
-    id: 'car',
-    name: 'Auto',
-    icon: 'car',
-    color: '#EF4444',
-    carbonFactor: 0.21, // kg CO2 per km
-    costFactor: 0.5, // cost per km
+    id: 'kommute-4',
+    name: 'Kommute 4',
+    icon: '🚗',
+    color: '#3B82F6',
+    capacity: 4,
+    carbonFactor: 0.18,
+    costFactor: 1.0,
     speedFactor: 40,
     available: true,
+    description: 'Vehículo estándar para hasta 4 pasajeros',
+  },
+  {
+    id: 'kommute-large',
+    name: 'Kommute Large',
+    icon: '🚙',
+    color: '#8B5CF6',
+    capacity: 7,
+    carbonFactor: 0.25,
+    costFactor: 1.5,
+    speedFactor: 38,
+    available: true,
+    description: 'Vehículo grande para hasta 7 pasajeros',
   },
 ];
 
