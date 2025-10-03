@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Check, Zap, DollarSign, Clock } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius, Shadows, Typography } from '@/context-package/design-system';
-import { TransportMode } from '@/backend/trpc/routes/commute/types';
+import { TransportMode } from '@/src/modules/commute/types/core-types';
 
 interface TransportModeSelectorProps {
   transportModes: TransportMode[];

@@ -61,24 +61,28 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
 
 const DEFAULT_TRANSPORT_MODES: TransportMode[] = [
   {
-    id: 'car',
-    name: 'Auto Personal',
+    id: 'kommute-4',
+    name: 'Kommute 4',
     icon: 'car',
-    color: '#EF4444',
-    carbonFactor: 0.21,
+    color: '#10B981',
+    capacity: 4,
+    carbonFactor: 0.15,
     costFactor: 1.0,
     speedFactor: 1.2,
     available: true,
+    description: 'Vehículo estándar con capacidad para 4 pasajeros',
   },
   {
-    id: 'carpool',
-    name: 'Viaje Compartido',
+    id: 'kommute-large',
+    name: 'Kommute Large',
     icon: 'users',
-    color: '#10B981',
-    carbonFactor: 0.07,
-    costFactor: 0.3,
-    speedFactor: 1.0,
+    color: '#3B82F6',
+    capacity: 7,
+    carbonFactor: 0.18,
+    costFactor: 1.3,
+    speedFactor: 1.1,
     available: true,
+    description: 'Vehículo grande con mayor capacidad de plazas',
   },
 ];
 
@@ -638,10 +642,10 @@ export const useCarbonFootprint = (): CarbonFootprintContextType => {
     relevantTrips.forEach(trip => {
       const distance = trip.actualDistance || 0;
       
-      // For now, assume car transport if no specific mode is set
-      const carMode = transportModes.find(mode => mode.id === 'car');
-      if (carMode && distance > 0) {
-        const emissions = (distance / 1000) * carMode.carbonFactor; // Convert to km
+      // Use first available transport mode for calculation
+      const defaultMode = transportModes[0];
+      if (defaultMode && distance > 0) {
+        const emissions = (distance / 1000) * defaultMode.carbonFactor;
         totalEmissions += emissions;
       }
     });
@@ -729,5 +733,5 @@ export default CommuteContext;
 
 // Debug logging for development
 if (process.env.NODE_ENV === 'development') {
-  console.log('[CommuteContext] Module loaded - 2Kommute context ready (disabled by default)');
+  console.log('[CommuteContext] Module loaded - Kommute context ready (disabled by default)');
 }

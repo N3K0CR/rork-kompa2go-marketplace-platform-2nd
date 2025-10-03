@@ -245,7 +245,7 @@ export default function CommuteHome() {
     <View style={styles.container}>
       <Stack.Screen 
         options={{ 
-          title: '2Kommute',
+          title: 'Kommute',
           headerStyle: { backgroundColor: Colors.primary[500] },
           headerTintColor: 'white',
           headerTitleStyle: { fontWeight: 'bold' }

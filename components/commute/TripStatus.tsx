@@ -13,7 +13,7 @@ import {
   X
 } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius, Shadows, Typography } from '@/context-package/design-system';
-import { Trip } from '@/backend/trpc/routes/commute/types';
+import { Trip } from '@/src/modules/commute/types/core-types';
 
 interface TripStatusProps {
   trip: Trip;

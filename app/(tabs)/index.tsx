@@ -146,7 +146,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
         
-        {/* 2Kommute Access Button */}
+        {/* Kommute Access Button */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🚗 Transporte Inteligente</Text>
           <TouchableOpacity 
@@ -2029,7 +2029,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   
-  // 2Kommute Styles
+  // Kommute Styles
   kommuteCard: {
     backgroundColor: 'white',
     borderRadius: 16,

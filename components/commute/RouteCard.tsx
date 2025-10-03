@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MapPin, Clock, Users, Zap, Calendar, Navigation } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius, Shadows, Typography } from '@/context-package/design-system';
-import { Route, TransportMode } from '@/backend/trpc/routes/commute/types';
+import { Route, TransportMode } from '@/src/modules/commute/types/core-types';
 
 interface RouteCardProps {
   route: Route;
