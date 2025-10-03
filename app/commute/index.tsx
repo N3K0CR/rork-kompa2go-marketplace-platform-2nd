@@ -1,284 +1,269 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Platform, FlatList, Alert } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { Plus, MapPin, Clock, Users, Car, Zap, Settings } from 'lucide-react-native';
+import { MapPin, Navigation, Search } from 'lucide-react-native';
 import { useCommute } from '@/src/modules/commute/context/CommuteContext';
-import { CommuteButton, CommuteModal, RouteCard } from '@/components/commute';
-import { Colors, Spacing, BorderRadius, Shadows, Typography } from '@/context-package/design-system';
-import type { Route } from '@/src/modules/commute/types/core-types';
+import { Colors, Spacing, BorderRadius, Typography, Shadows } from '@/context-package/design-system';
+import * as Location from 'expo-location';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+interface AddressSuggestion {
+  place_id: string;
+  display_name: string;
+  lat: string;
+  lon: string;
+  address?: {
+    road?: string;
+    city?: string;
+  };
+}
 
 export default function CommuteHome() {
-  const {
-    routes,
-    transportModes,
-    trips,
-    createRoute,
-    updateRoute,
-    deleteRoute,
-    startTrip,
-  } = useCommute();
+  const commuteContext = useCommute();
+  const { transportModes, createRoute, startTrip } = commuteContext;
+  const firebaseUser = 'firebaseUser' in commuteContext ? commuteContext.firebaseUser : null;
+  const insets = useSafeAreaInsets();
+  
+  const [destination, setDestination] = useState('');
+  const [currentAddress, setCurrentAddress] = useState('Obteniendo ubicación...');
+  const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [loadingLocation, setLoadingLocation] = useState(true);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editingRoute, setEditingRoute] = useState<Route | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  useEffect(() => {
+    getCurrentLocationAndAddress();
+  }, []);
 
-  const activeTrips = trips.filter(trip => trip.status === 'in_progress' || trip.status === 'planned');
-
-  console.log('🏠 CommuteHome: Rendered with', routes.length, 'routes');
-  console.log('🏠 CommuteHome: Active trips:', activeTrips.length);
-  console.log('🏠 CommuteHome: Transport modes:', transportModes.length);
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
+  const getCurrentLocationAndAddress = async () => {
     try {
-      console.log('🔄 Refreshing data...');
-    } catch (error) {
-      console.error('❌ CommuteHome: Error refreshing data:', error);
-    } finally {
-      setRefreshing(false);
-    }
-  };
+      setLoadingLocation(true);
+      
+      if (Platform.OS === 'web') {
+        if (!navigator.geolocation) {
+          setCurrentAddress('Ubicación no disponible');
+          setLoadingLocation(false);
+          return;
+        }
 
-  const handleCreateRoute = async (routeData: Partial<Route>) => {
-    try {
-      console.log('➕ CommuteHome: Creating new route:', routeData.name);
-      if (routeData.userId && routeData.name && routeData.points && routeData.transportModes) {
-        await createRoute(routeData as Omit<Route, 'id' | 'createdAt' | 'updatedAt'>);
-        setShowCreateModal(false);
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords;
+            setUserLocation({ latitude, longitude });
+            
+            try {
+              const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+              );
+              const data = await response.json();
+              const address = data.address?.road 
+                ? `${data.address.road}, ${data.address.city || ''}` 
+                : data.display_name?.split(',').slice(0, 2).join(',');
+              setCurrentAddress(address || 'Ubicación actual');
+            } catch (error) {
+              console.error('Error getting address:', error);
+              setCurrentAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+            } finally {
+              setLoadingLocation(false);
+            }
+          },
+          (error) => {
+            console.error('Error getting location:', error);
+            setCurrentAddress('No se pudo obtener ubicación');
+            setLoadingLocation(false);
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+        );
+      } else {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          setCurrentAddress('Permiso de ubicación denegado');
+          setLoadingLocation(false);
+          return;
+        }
+
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+
+        const { latitude, longitude } = location.coords;
+        setUserLocation({ latitude, longitude });
+        
+        const [geocode] = await Location.reverseGeocodeAsync({ latitude, longitude });
+        const address = geocode
+          ? `${geocode.street || ''} ${geocode.streetNumber || ''}, ${geocode.city || ''}`.trim()
+          : `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+        
+        setCurrentAddress(address);
+        setLoadingLocation(false);
       }
     } catch (error) {
-      console.error('❌ CommuteHome: Error creating route:', error);
+      console.error('Error in getCurrentLocationAndAddress:', error);
+      setCurrentAddress('Error obteniendo ubicación');
+      setLoadingLocation(false);
     }
   };
 
-  const handleEditRoute = async (routeData: Partial<Route>) => {
-    if (!editingRoute) return;
-    
+  const searchDestination = useCallback(async (query: string) => {
+    if (!query || query.length < 3) {
+      setSuggestions([]);
+      return;
+    }
+
     try {
-      console.log('✏️ CommuteHome: Updating route:', editingRoute.id);
-      await updateRoute(editingRoute.id, routeData);
-      setEditingRoute(null);
+      setSearching(true);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&countrycodes=cr`
+      );
+      const data = await response.json();
+      setSuggestions(data);
     } catch (error) {
-      console.error('❌ CommuteHome: Error updating route:', error);
+      console.error('Error searching destination:', error);
+      setSuggestions([]);
+    } finally {
+      setSearching(false);
     }
+  }, []);
+
+  const handleDestinationChange = (text: string) => {
+    setDestination(text);
+    searchDestination(text);
   };
 
-  const handleStartTrip = async (route: Route) => {
+  const handleSelectDestination = async (suggestion: AddressSuggestion) => {
+    if (!userLocation) {
+      Alert.alert('Error', 'No se pudo obtener tu ubicación actual');
+      return;
+    }
+
+    const userId = firebaseUser && typeof firebaseUser === 'object' && 'uid' in firebaseUser 
+      ? (firebaseUser as { uid: string }).uid 
+      : 'demo_user';
+
+    setDestination(suggestion.display_name);
+    setSuggestions([]);
+
     try {
-      console.log('🚀 CommuteHome: Starting trip for route:', route.id);
-      await startTrip(route.id);
-      console.log('✅ Trip started successfully');
-    } catch (error) {
-      console.error('❌ CommuteHome: Error starting trip:', error);
-    }
-  };
+      const routeData = {
+        userId,
+        name: `Viaje a ${suggestion.address?.road || suggestion.address?.city || 'destino'}`,
+        points: [
+          {
+            id: `origin_${Date.now()}`,
+            latitude: userLocation.latitude,
+            longitude: userLocation.longitude,
+            address: currentAddress,
+            type: 'origin' as const,
+          },
+          {
+            id: `dest_${Date.now()}`,
+            latitude: parseFloat(suggestion.lat),
+            longitude: parseFloat(suggestion.lon),
+            address: suggestion.display_name,
+            type: 'destination' as const,
+          },
+        ],
+        transportModes: transportModes.slice(0, 1),
+        status: 'planned' as const,
+        distance: 0,
+        duration: 0,
+        estimatedCost: 0,
+        carbonFootprint: 0,
+        isRecurring: false,
+      };
 
-  const handleDeleteRoute = async (routeId: string) => {
-    try {
-      console.log('🗑️ CommuteHome: Deleting route:', routeId);
-      await deleteRoute(routeId);
-    } catch (error) {
-      console.error('❌ CommuteHome: Error deleting route:', error);
-    }
-  };
-
-  const renderQuickActions = () => (
-    <View style={styles.quickActions}>
-      <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
-      <View style={styles.actionButtons}>
-        <CommuteButton
-          title="Buscar Viaje"
-          subtitle="Encuentra conductores"
-          icon={<Users size={20} color="white" />}
-          onPress={() => router.push('/commute/search')}
-          variant="primary"
-          size="medium"
-        />
-        
-        <CommuteButton
-          title="Ser Conductor"
-          subtitle="Ofrece tu vehículo"
-          icon={<Car size={20} color={Colors.primary[500]} />}
-          onPress={() => router.push('/commute/driver')}
-          variant="outline"
-          size="medium"
-        />
-      </View>
+      const newRoute = await createRoute(routeData);
+      await startTrip(newRoute.id);
       
-      <View style={styles.validationSection}>
-        <CommuteButton
-          title="Validar Sistema"
-          subtitle="Verificar estado de Kommute"
-          icon={<Settings size={16} color={Colors.neutral[600]} />}
-          onPress={() => router.push('/kommute-validation')}
-          variant="ghost"
-          size="small"
-        />
-      </View>
-    </View>
-  );
-
-  const renderActiveTrips = () => {
-    if (activeTrips.length === 0) return null;
-
-    return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Viajes Activos</Text>
-        {activeTrips.map((trip) => {
-          const route = routes.find(r => r.id === trip.routeId);
-          return (
-            <TouchableOpacity
-              key={trip.id}
-              style={styles.activeTripCard}
-              onPress={() => router.push(`/commute/trip/${trip.id}`)}
-            >
-              <View style={styles.tripHeader}>
-                <View style={styles.tripStatus}>
-                  <View style={[
-                    styles.statusIndicator,
-                    { backgroundColor: trip.status === 'in_progress' ? Colors.success[500] : Colors.warning[500] }
-                  ]} />
-                  <Text style={styles.tripStatusText}>
-                    {trip.status === 'in_progress' ? 'En Progreso' : 'Esperando'}
-                  </Text>
-                </View>
-              </View>
-              
-              <Text style={styles.tripRouteName}>{route?.name || 'Ruta sin nombre'}</Text>
-              
-              <View style={styles.tripDetails}>
-                <View style={styles.tripDetail}>
-                  <Clock size={14} color={Colors.neutral[500]} />
-                  <Text style={styles.tripDetailText}>
-                    {trip.actualDuration ? `${Math.round(trip.actualDuration / 60000)} min` : 'Calculando...'}
-                  </Text>
-                </View>
-                
-                <View style={styles.tripDetail}>
-                  <MapPin size={14} color={Colors.neutral[500]} />
-                  <Text style={styles.tripDetailText}>
-                    {trip.actualDistance ? `${(trip.actualDistance / 1000).toFixed(1)} km` : 'Calculando...'}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    );
-  };
-
-  const renderMyRoutes = () => (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Mis Rutas</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setShowCreateModal(true)}
-        >
-          <Plus size={20} color={Colors.primary[500]} />
-          <Text style={styles.addButtonText}>Nueva</Text>
-        </TouchableOpacity>
-      </View>
-      
-      {routes.length === 0 ? (
-        <View style={styles.emptyState}>
-          <MapPin size={48} color={Colors.neutral[400]} />
-          <Text style={styles.emptyStateTitle}>No tienes rutas guardadas</Text>
-          <Text style={styles.emptyStateText}>
-            Crea tu primera ruta para comenzar a usar Kommute
-          </Text>
-          <TouchableOpacity
-            style={styles.createFirstRouteButton}
-            onPress={() => setShowCreateModal(true)}
-          >
-            <Text style={styles.createFirstRouteButtonText}>Crear Primera Ruta</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        routes.map((route) => (
-          <RouteCard
-            key={route.id}
-            route={route}
-            transportModes={transportModes}
-            onEdit={() => setEditingRoute(route)}
-            onDelete={() => handleDeleteRoute(route.id)}
-            showActions
-          />
-        ))
-      )}
-    </View>
-  );
-
-  const renderStats = () => {
-    const totalRoutes = routes.length;
-    const totalTrips = activeTrips.length;
-    const carbonSaved = routes.reduce((acc, route) => acc + (route.carbonFootprint || 0), 0);
-    
-    return (
-      <View style={styles.statsSection}>
-        <Text style={styles.sectionTitle}>Estadísticas</Text>
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <MapPin size={24} color={Colors.primary[500]} />
-            <Text style={styles.statNumber}>{totalRoutes}</Text>
-            <Text style={styles.statLabel}>Rutas</Text>
-          </View>
-          
-          <View style={styles.statCard}>
-            <Car size={24} color={Colors.success[500]} />
-            <Text style={styles.statNumber}>{totalTrips}</Text>
-            <Text style={styles.statLabel}>Viajes</Text>
-          </View>
-          
-          <View style={styles.statCard}>
-            <Zap size={24} color={Colors.success[600]} />
-            <Text style={styles.statNumber}>{carbonSaved.toFixed(1)}</Text>
-            <Text style={styles.statLabel}>kg CO₂ ahorrado</Text>
-          </View>
-        </View>
-      </View>
-    );
+      Alert.alert(
+        'Viaje Solicitado',
+        'Buscando conductores disponibles cerca de ti...',
+        [
+          {
+            text: 'Ver Viaje',
+            onPress: () => router.push('/commute/search'),
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Error creating trip:', error);
+      Alert.alert('Error', 'No se pudo crear el viaje. Intenta nuevamente.');
+    }
   };
 
   return (
     <View style={styles.container}>
       <Stack.Screen 
         options={{ 
-          title: 'Kommute',
-          headerStyle: { backgroundColor: Colors.primary[500] },
-          headerTintColor: 'white',
-          headerTitleStyle: { fontWeight: 'bold' }
+          headerShown: false,
         }} 
       />
       
-      <ScrollView 
-        style={styles.scrollView}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={Colors.primary[500]}
-          />
-        }
-      >
-        {renderQuickActions()}
-        {renderActiveTrips()}
-        {renderMyRoutes()}
-        {renderStats()}
-      </ScrollView>
+      <View style={styles.mapPlaceholder}>
+        <View style={styles.mapOverlay}>
+          <Text style={styles.mapText}>Mapa</Text>
+        </View>
+      </View>
 
-      <CommuteModal
-        visible={showCreateModal || editingRoute !== null}
-        onClose={() => {
-          setShowCreateModal(false);
-          setEditingRoute(null);
-        }}
-        onSave={editingRoute ? handleEditRoute : handleCreateRoute}
-        transportModes={transportModes}
-        initialRoute={editingRoute}
-        mode={editingRoute ? 'edit' : 'create'}
-      />
+      <View style={[styles.searchContainer, { paddingTop: insets.top + Spacing[4] }]}>
+        <View style={styles.currentLocationCard}>
+          <View style={styles.locationIcon}>
+            <Navigation size={20} color={Colors.primary[500]} />
+          </View>
+          <View style={styles.locationInfo}>
+            <Text style={styles.locationLabel}>Tu ubicación</Text>
+            {loadingLocation ? (
+              <ActivityIndicator size="small" color={Colors.primary[500]} />
+            ) : (
+              <Text style={styles.locationAddress} numberOfLines={1}>{currentAddress}</Text>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.destinationCard}>
+          <View style={styles.searchIcon}>
+            <Search size={20} color={Colors.neutral[400]} />
+          </View>
+          <TextInput
+            style={styles.destinationInput}
+            placeholder="¿A dónde vas?"
+            placeholderTextColor={Colors.neutral[400]}
+            value={destination}
+            onChangeText={handleDestinationChange}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searching && (
+            <ActivityIndicator size="small" color={Colors.primary[500]} style={styles.searchingIndicator} />
+          )}
+        </View>
+
+        {suggestions.length > 0 && (
+          <View style={styles.suggestionsContainer}>
+            <FlatList
+              data={suggestions}
+              keyExtractor={(item) => item.place_id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.suggestionItem}
+                  onPress={() => handleSelectDestination(item)}
+                >
+                  <MapPin size={18} color={Colors.neutral[500]} />
+                  <View style={styles.suggestionTextContainer}>
+                    <Text style={styles.suggestionMainText} numberOfLines={1}>
+                      {item.address?.road || item.address?.city || 'Ubicación'}
+                    </Text>
+                    <Text style={styles.suggestionSecondaryText} numberOfLines={1}>
+                      {item.display_name}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+              scrollEnabled={false}
+            />
+          </View>
+        )}
+      </View>
     </View>
   );
 }
@@ -286,168 +271,119 @@ export default function CommuteHome() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral[50],
+    backgroundColor: Colors.neutral[100],
   },
-  scrollView: {
+  mapPlaceholder: {
     flex: 1,
-  },
-  quickActions: {
-    padding: Spacing[5],
-    backgroundColor: 'white',
-    marginBottom: Spacing[3],
-  },
-  sectionTitle: {
-    ...Typography.textStyles.h6,
-    color: Colors.neutral[800],
-    marginBottom: Spacing[4],
-    fontSize: 18,
-    lineHeight: 26,
-    fontWeight: Typography.fontWeight.bold,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: Spacing[4],
-  },
-  section: {
-    padding: Spacing[5],
-    backgroundColor: 'white',
-    marginBottom: Spacing[3],
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    backgroundColor: Colors.neutral[200],
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Spacing[4],
   },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing[1],
-    paddingHorizontal: Spacing[3],
-    paddingVertical: Spacing[2],
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.primary[300],
+  mapOverlay: {
+    padding: Spacing[6],
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: BorderRadius.lg,
   },
-  addButtonText: {
-    ...Typography.textStyles.bodySmall,
-    color: Colors.primary[600],
-    fontWeight: Typography.fontWeight.medium,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: Spacing[8],
-  },
-  emptyStateTitle: {
-    ...Typography.textStyles.h6,
-    color: Colors.neutral[600],
-    marginTop: Spacing[4],
-    marginBottom: Spacing[2],
-  },
-  emptyStateText: {
-    ...Typography.textStyles.body,
+  mapText: {
+    ...Typography.textStyles.h4,
     color: Colors.neutral[500],
-    textAlign: 'center',
-    marginBottom: Spacing[6],
+  },
+  searchContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: Spacing[4],
+    paddingBottom: Spacing[4],
+    gap: Spacing[3],
   },
-  createFirstRouteButton: {
-    backgroundColor: Colors.primary[500],
-    paddingHorizontal: Spacing[6],
-    paddingVertical: Spacing[3],
-    borderRadius: BorderRadius.md,
-  },
-  createFirstRouteButtonText: {
-    ...Typography.textStyles.button,
-    color: 'white',
-  },
-  activeTripCard: {
-    backgroundColor: Colors.neutral[50],
+  currentLocationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
     borderRadius: BorderRadius.lg,
     padding: Spacing[4],
-    marginBottom: Spacing[3],
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.primary[500],
-    ...Shadows.sm,
+    gap: Spacing[3],
+    ...Shadows.md,
   },
-  tripHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  locationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.primary[50],
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Spacing[3],
   },
-  tripStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing[2],
+  locationInfo: {
+    flex: 1,
+    gap: Spacing[1],
   },
-  statusIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  tripStatusText: {
-    ...Typography.textStyles.bodySmall,
-    color: Colors.neutral[600],
+  locationLabel: {
+    ...Typography.textStyles.caption,
+    color: Colors.neutral[500],
+    fontSize: 12,
     fontWeight: Typography.fontWeight.medium,
   },
-  tripRouteName: {
-    ...Typography.textStyles.h6,
+  locationAddress: {
+    ...Typography.textStyles.body,
     color: Colors.neutral[800],
-    marginBottom: Spacing[3],
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 15,
+    fontWeight: Typography.fontWeight.semibold,
   },
-  tripDetails: {
-    flexDirection: 'row',
-    gap: Spacing[5],
-  },
-  tripDetail: {
+  destinationCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing[2],
+    backgroundColor: 'white',
+    borderRadius: BorderRadius.lg,
+    padding: Spacing[4],
+    gap: Spacing[3],
+    ...Shadows.md,
   },
-  tripDetailText: {
+  searchIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.neutral[50],
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  destinationInput: {
+    flex: 1,
+    ...Typography.textStyles.body,
+    color: Colors.neutral[800],
+    fontSize: 16,
+    padding: 0,
+  },
+  searchingIndicator: {
+    marginLeft: Spacing[2],
+  },
+  suggestionsContainer: {
+    backgroundColor: 'white',
+    borderRadius: BorderRadius.lg,
+    overflow: 'hidden',
+    ...Shadows.lg,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing[4],
+    gap: Spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.neutral[100],
+  },
+  suggestionTextContainer: {
+    flex: 1,
+    gap: Spacing[1],
+  },
+  suggestionMainText: {
+    ...Typography.textStyles.body,
+    color: Colors.neutral[800],
+    fontSize: 15,
+    fontWeight: Typography.fontWeight.semibold,
+  },
+  suggestionSecondaryText: {
     ...Typography.textStyles.caption,
     color: Colors.neutral[500],
     fontSize: 13,
-    lineHeight: 18,
-  },
-  statsSection: {
-    padding: Spacing[5],
-    backgroundColor: 'white',
-    marginBottom: Spacing[3],
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    gap: Spacing[4],
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: Colors.neutral[50],
-    borderRadius: BorderRadius.lg,
-    padding: Spacing[5],
-    alignItems: 'center',
-    gap: Spacing[3],
-  },
-  statNumber: {
-    ...Typography.textStyles.h5,
-    color: Colors.neutral[800],
-    fontWeight: Typography.fontWeight.bold,
-    fontSize: 24,
-    lineHeight: 32,
-  },
-  statLabel: {
-    ...Typography.textStyles.caption,
-    color: Colors.neutral[500],
-    textAlign: 'center',
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  validationSection: {
-    marginTop: Spacing[3],
-    paddingTop: Spacing[3],
-    borderTopWidth: 1,
-    borderTopColor: Colors.neutral[200],
   },
 });
