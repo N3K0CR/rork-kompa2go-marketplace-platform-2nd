@@ -329,14 +329,14 @@ const styles = StyleSheet.create({
   },
   suggestionMainText: {
     ...Typography.textStyles.body,
-    color: '#000000',
+    color: Colors.neutral[900],
     fontSize: 16,
-    fontWeight: '700' as const,
+    fontWeight: Typography.fontWeight.bold,
   },
   suggestionSecondaryText: {
     ...Typography.textStyles.caption,
-    color: '#666666',
+    color: Colors.neutral[600],
     fontSize: 13,
-    fontWeight: '500' as const,
+    fontWeight: Typography.fontWeight.medium,
   },
 });
