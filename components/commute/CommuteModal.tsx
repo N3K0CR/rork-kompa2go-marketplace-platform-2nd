@@ -57,17 +57,27 @@ const CommuteModal = memo<CommuteModalProps>(function CommuteModal({
 
   const handleSave = useCallback(() => {
     if (!routeName.trim()) {
+      Alert.alert('Error', 'Por favor ingresa un nombre para la ruta');
       console.log('❌ CommuteModal: Route name is required');
       return;
     }
 
     if (selectedTransportModes.length === 0) {
+      Alert.alert('Error', 'Por favor selecciona al menos un modo de transporte');
       console.log('❌ CommuteModal: At least one transport mode is required');
       return;
     }
 
     if (routePoints.length < 2) {
+      Alert.alert('Error', 'Se requiere al menos origen y destino');
       console.log('❌ CommuteModal: At least origin and destination are required');
+      return;
+    }
+
+    const invalidPoints = routePoints.filter(p => !p.address || p.latitude === 0 || p.longitude === 0);
+    if (invalidPoints.length > 0) {
+      Alert.alert('Error', 'Por favor completa todas las direcciones usando "Usar ubicación actual" o ingresando la dirección manualmente');
+      console.log('❌ CommuteModal: Invalid points detected:', invalidPoints);
       return;
     }
 

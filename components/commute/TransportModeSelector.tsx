@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Check, Zap, DollarSign, Clock } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius, Shadows, Typography } from '@/context-package/design-system';
@@ -47,19 +47,13 @@ export default function TransportModeSelector({
 
   const getTransportModeIcon = (mode: TransportMode) => {
     const iconMap: { [key: string]: string } = {
-      'walking': '🚶',
-      'cycling': '🚴',
-      'driving': '🚗',
-      'public_transport': '🚌',
-      'rideshare': '🚕',
-      'bus': '🚌',
       'car': '🚗',
-      'bike': '🚴',
-      'walk': '🚶'
+      'carpool': '👥',
+      'auto': '🚗'
     };
     
     const lowerName = mode.name.toLowerCase();
-    return iconMap[lowerName] || mode.icon || '📍';
+    return iconMap[mode.id] || iconMap[lowerName] || '🚗';
   };
 
   const renderModeCard = (mode: TransportMode) => {

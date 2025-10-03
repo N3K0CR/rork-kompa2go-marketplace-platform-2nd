@@ -61,43 +61,23 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
 
 const DEFAULT_TRANSPORT_MODES: TransportMode[] = [
   {
-    id: 'walking',
-    name: 'Caminar',
-    icon: 'footprints',
-    color: '#10B981',
-    carbonFactor: 0,
-    costFactor: 0,
-    speedFactor: 5,
-    available: true,
-  },
-  {
-    id: 'cycling',
-    name: 'Bicicleta',
-    icon: 'bike',
-    color: '#3B82F6',
-    carbonFactor: 0,
-    costFactor: 0,
-    speedFactor: 15,
-    available: true,
-  },
-  {
     id: 'car',
     name: 'Auto',
     icon: 'car',
     color: '#EF4444',
-    carbonFactor: 0.21, // kg CO2 per km
-    costFactor: 0.5, // cost per km
+    carbonFactor: 0.21,
+    costFactor: 0.5,
     speedFactor: 40,
     available: true,
   },
   {
-    id: 'public_transport',
-    name: 'Transporte Público',
-    icon: 'bus',
-    color: '#8B5CF6',
-    carbonFactor: 0.05,
-    costFactor: 0.1,
-    speedFactor: 25,
+    id: 'carpool',
+    name: 'Carpool',
+    icon: 'users',
+    color: '#10B981',
+    carbonFactor: 0.07,
+    costFactor: 0.15,
+    speedFactor: 35,
     available: true,
   },
 ];
