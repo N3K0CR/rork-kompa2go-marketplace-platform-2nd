@@ -176,7 +176,7 @@ export default function HomeScreen() {
             onPress={() => router.push('/provider-registration')}
           >
             <View style={styles.providerRegistrationHeader}>
-              <Text style={styles.providerRegistrationTitle}>Únete a 2Kommute</Text>
+              <Text style={styles.providerRegistrationTitle}>Únete a Kommute</Text>
               <Text style={styles.providerRegistrationBadge}>REGISTRO</Text>
             </View>
             <Text style={styles.providerRegistrationDescription}>

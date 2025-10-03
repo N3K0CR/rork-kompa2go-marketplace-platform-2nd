@@ -348,7 +348,7 @@ export default function ProviderRegistrationScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Únete a 2Kommute</Text>
+          <Text style={styles.title}>Únete a Kommute</Text>
           <Text style={styles.subtitle}>
             Completa el formulario para comenzar a ofrecer tus servicios
           </Text>

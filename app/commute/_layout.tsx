@@ -20,7 +20,7 @@ export default function CommuteLayout() {
       <Stack.Screen 
         name="index" 
         options={{ 
-          title: '2Kommute',
+          title: 'Kommute',
           headerShown: true
         }} 
       />

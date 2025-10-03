@@ -108,7 +108,7 @@ export default function CommuteHome() {
       <View style={styles.validationSection}>
         <CommuteButton
           title="Validar Sistema"
-          subtitle="Verificar estado de 2Kommute"
+          subtitle="Verificar estado de Kommute"
           icon={<Settings size={16} color={Colors.neutral[600]} />}
           onPress={() => router.push('/kommute-validation')}
           variant="ghost"
@@ -186,7 +186,7 @@ export default function CommuteHome() {
           <MapPin size={48} color={Colors.neutral[400]} />
           <Text style={styles.emptyStateTitle}>No tienes rutas guardadas</Text>
           <Text style={styles.emptyStateText}>
-            Crea tu primera ruta para comenzar a usar 2Kommute
+            Crea tu primera ruta para comenzar a usar Kommute
           </Text>
           <TouchableOpacity
             style={styles.createFirstRouteButton}

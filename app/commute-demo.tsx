@@ -143,7 +143,7 @@ export default function CommuteComponentsDemo() {
     <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
-          <Text style={styles.title}>2Kommute Components</Text>
+          <Text style={styles.title}>Kommute Components</Text>
           <Text style={styles.subtitle}>Demostración de componentes UI</Text>
         </View>
 
