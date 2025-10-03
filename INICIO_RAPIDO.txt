@@ -1,0 +1,37 @@
+═══════════════════════════════════════════════════════════
+  🚀 INICIO RÁPIDO DEL BACKEND KOMPA2GO 🚀
+═══════════════════════════════════════════════════════════
+
+OPCIÓN 1 - SUPER SIMPLE (Recomendado):
+────────────────────────────────────────
+bash GO.sh
+
+
+OPCIÓN 2 - CON DETALLES:
+────────────────────────────────────────
+bash START_BACKEND_NOW.sh
+
+
+OPCIÓN 3 - VERIFICAR ESTADO:
+────────────────────────────────────────
+bash VERIFY_STATUS.sh
+
+
+═══════════════════════════════════════════════════════════
+
+📍 URLs del Backend:
+   • http://localhost:8082/api
+   • http://localhost:8082/api/trpc
+
+📝 Ver logs:
+   tail -f /tmp/backend.log
+
+🛑 Detener:
+   pkill -f 'rork start'
+
+═══════════════════════════════════════════════════════════
+
+✅ ESTADO ESPERADO:
+   {"status":"ok","message":"API is running"}
+
+═══════════════════════════════════════════════════════════
