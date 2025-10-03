@@ -62,22 +62,22 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
 const DEFAULT_TRANSPORT_MODES: TransportMode[] = [
   {
     id: 'car',
-    name: 'Auto',
+    name: 'Auto Personal',
     icon: 'car',
     color: '#EF4444',
     carbonFactor: 0.21,
-    costFactor: 0.5,
-    speedFactor: 40,
+    costFactor: 1.0,
+    speedFactor: 1.2,
     available: true,
   },
   {
     id: 'carpool',
-    name: 'Carpool',
+    name: 'Viaje Compartido',
     icon: 'users',
     color: '#10B981',
     carbonFactor: 0.07,
-    costFactor: 0.15,
-    speedFactor: 35,
+    costFactor: 0.3,
+    speedFactor: 1.0,
     available: true,
   },
 ];

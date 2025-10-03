@@ -1,10 +1,24 @@
 import React, { useState, useCallback, memo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, TextInput, Alert, ActivityIndicator, Platform } from 'react-native';
-import { X, Plus, Minus, Navigation } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, TextInput, Alert, ActivityIndicator, Platform, FlatList } from 'react-native';
+import { X, Plus, Minus, Navigation, MapPin } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius, Shadows, Typography } from '@/context-package/design-system';
 import { Route, TransportMode, RoutePoint } from '@/backend/trpc/routes/commute/types';
 import TransportModeSelector from './TransportModeSelector';
 import * as Location from 'expo-location';
+
+interface AddressSuggestion {
+  place_id: string;
+  display_name: string;
+  lat: string;
+  lon: string;
+  address?: {
+    road?: string;
+    house_number?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+  };
+}
 
 interface CommuteModalProps {
   visible: boolean;
@@ -54,6 +68,9 @@ const CommuteModal = memo<CommuteModalProps>(function CommuteModal({
   const [isRecurring, setIsRecurring] = useState(initialRoute?.isRecurring || false);
   const [recurringType, setRecurringType] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const [loadingLocation, setLoadingLocation] = useState<number | null>(null);
+  const [addressSuggestions, setAddressSuggestions] = useState<AddressSuggestion[]>([]);
+  const [searchingAddress, setSearchingAddress] = useState<number | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState<number | null>(null);
 
   const handleSave = useCallback(() => {
     if (!routeName.trim()) {
@@ -123,6 +140,53 @@ const CommuteModal = memo<CommuteModalProps>(function CommuteModal({
       (newPoints[index] as any)[field] = value;
       return newPoints;
     });
+  }, []);
+
+  const searchAddress = useCallback(async (query: string, index: number) => {
+    if (!query || query.length < 3) {
+      setAddressSuggestions([]);
+      setShowSuggestions(null);
+      return;
+    }
+
+    try {
+      setSearchingAddress(index);
+      setShowSuggestions(index);
+      
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`,
+        {
+          headers: {
+            'Accept': 'application/json',
+          }
+        }
+      );
+      
+      const data = await response.json();
+      setAddressSuggestions(data);
+    } catch (error) {
+      console.error('❌ Error searching address:', error);
+    } finally {
+      setSearchingAddress(null);
+    }
+  }, []);
+
+  const selectAddressSuggestion = useCallback((suggestion: AddressSuggestion, index: number) => {
+    setRoutePoints(prev => {
+      const newPoints = [...prev];
+      newPoints[index] = {
+        ...newPoints[index],
+        latitude: parseFloat(suggestion.lat),
+        longitude: parseFloat(suggestion.lon),
+        address: suggestion.display_name,
+        name: suggestion.address?.road || suggestion.address?.city || undefined
+      };
+      return newPoints;
+    });
+    
+    setShowSuggestions(null);
+    setAddressSuggestions([]);
+    console.log('✅ Address selected:', suggestion.display_name);
   }, []);
 
   const handleUseCurrentLocation = useCallback(async (index: number) => {
@@ -268,13 +332,51 @@ const CommuteModal = memo<CommuteModalProps>(function CommuteModal({
         </View>
 
         <View style={styles.pointInputs}>
-          <TextInput
-            style={styles.addressInput}
-            placeholder="Dirección"
-            value={point.address}
-            onChangeText={(text) => handlePointChange(index, 'address', text)}
-            multiline
-          />
+          <View style={styles.addressInputContainer}>
+            <TextInput
+              style={styles.addressInput}
+              placeholder="Escribe la dirección..."
+              value={point.address}
+              onChangeText={(text) => {
+                handlePointChange(index, 'address', text);
+                searchAddress(text, index);
+              }}
+              onFocus={() => {
+                if (point.address && point.address.length >= 3) {
+                  searchAddress(point.address, index);
+                }
+              }}
+            />
+            {searchingAddress === index && (
+              <ActivityIndicator 
+                size="small" 
+                color={Colors.primary[500]} 
+                style={styles.searchIndicator}
+              />
+            )}
+          </View>
+          
+          {showSuggestions === index && addressSuggestions.length > 0 && (
+            <View style={styles.suggestionsContainer}>
+              <FlatList
+                data={addressSuggestions}
+                keyExtractor={(item) => item.place_id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.suggestionItem}
+                    onPress={() => selectAddressSuggestion(item, index)}
+                  >
+                    <MapPin size={16} color={Colors.neutral[500]} />
+                    <Text style={styles.suggestionText} numberOfLines={2}>
+                      {item.display_name}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                style={styles.suggestionsList}
+                scrollEnabled={false}
+              />
+            </View>
+          )}
           
           <TextInput
             style={styles.nameInput}
@@ -303,7 +405,7 @@ const CommuteModal = memo<CommuteModalProps>(function CommuteModal({
         </TouchableOpacity>
       </View>
     );
-  }, [routePoints.length, handleRemovePoint, handlePointChange, handleUseCurrentLocation, loadingLocation]);
+  }, [routePoints.length, handleRemovePoint, handlePointChange, handleUseCurrentLocation, loadingLocation, addressSuggestions, searchAddress, searchingAddress, selectAddressSuggestion, showSuggestions]);
 
   return (
     <Modal
@@ -554,6 +656,9 @@ const styles = StyleSheet.create({
     gap: Spacing[3],
     marginBottom: Spacing[3],
   },
+  addressInputContainer: {
+    position: 'relative',
+  },
   addressInput: {
     backgroundColor: Colors.neutral[50],
     borderRadius: BorderRadius.md,
@@ -561,10 +666,39 @@ const styles = StyleSheet.create({
     borderColor: Colors.neutral[300],
     paddingHorizontal: Spacing[3],
     paddingVertical: Spacing[3],
+    paddingRight: Spacing[10],
     ...Typography.textStyles.body,
     color: Colors.neutral[800],
-    minHeight: 60,
-    textAlignVertical: 'top',
+  },
+  searchIndicator: {
+    position: 'absolute',
+    right: Spacing[3],
+    top: Spacing[3],
+  },
+  suggestionsContainer: {
+    backgroundColor: 'white',
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.neutral[300],
+    marginTop: Spacing[1],
+    maxHeight: 200,
+    ...Shadows.md,
+  },
+  suggestionsList: {
+    maxHeight: 200,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing[3],
+    gap: Spacing[2],
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.neutral[100],
+  },
+  suggestionText: {
+    ...Typography.textStyles.bodySmall,
+    color: Colors.neutral[700],
+    flex: 1,
   },
   nameInput: {
     backgroundColor: Colors.neutral[50],
