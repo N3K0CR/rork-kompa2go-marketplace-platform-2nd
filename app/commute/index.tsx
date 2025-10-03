@@ -130,65 +130,26 @@ export default function CommuteHome() {
     searchDestination(text);
   };
 
-  const handleSelectDestination = async (suggestion: AddressSuggestion) => {
+  const handleSelectDestination = (suggestion: AddressSuggestion) => {
     if (!userLocation) {
       Alert.alert('Error', 'No se pudo obtener tu ubicación actual');
       return;
     }
 
-    const userId = firebaseUser && typeof firebaseUser === 'object' && 'uid' in firebaseUser 
-      ? (firebaseUser as { uid: string }).uid 
-      : 'demo_user';
-
     setDestination(suggestion.display_name);
     setSuggestions([]);
 
-    try {
-      const routeData = {
-        userId,
-        name: `Viaje a ${suggestion.address?.road || suggestion.address?.city || 'destino'}`,
-        points: [
-          {
-            id: `origin_${Date.now()}`,
-            latitude: userLocation.latitude,
-            longitude: userLocation.longitude,
-            address: currentAddress,
-            type: 'origin' as const,
-          },
-          {
-            id: `dest_${Date.now()}`,
-            latitude: parseFloat(suggestion.lat),
-            longitude: parseFloat(suggestion.lon),
-            address: suggestion.display_name,
-            type: 'destination' as const,
-          },
-        ],
-        transportModes: transportModes.slice(0, 1),
-        status: 'planned' as const,
-        distance: 0,
-        duration: 0,
-        estimatedCost: 0,
-        carbonFootprint: 0,
-        isRecurring: false,
-      };
-
-      const newRoute = await createRoute(routeData);
-      await startTrip(newRoute.id);
-      
-      Alert.alert(
-        'Viaje Solicitado',
-        'Buscando conductores disponibles cerca de ti...',
-        [
-          {
-            text: 'Ver Viaje',
-            onPress: () => router.push('/commute/search'),
-          },
-        ]
-      );
-    } catch (error) {
-      console.error('Error creating trip:', error);
-      Alert.alert('Error', 'No se pudo crear el viaje. Intenta nuevamente.');
-    }
+    router.push({
+      pathname: '/commute/vehicle-selection',
+      params: {
+        originLat: userLocation.latitude.toString(),
+        originLon: userLocation.longitude.toString(),
+        originAddress: currentAddress,
+        destLat: suggestion.lat,
+        destLon: suggestion.lon,
+        destAddress: suggestion.display_name,
+      },
+    });
   };
 
   return (
@@ -377,13 +338,14 @@ const styles = StyleSheet.create({
   },
   suggestionMainText: {
     ...Typography.textStyles.body,
-    color: Colors.neutral[800],
-    fontSize: 15,
-    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.neutral[900],
+    fontSize: 16,
+    fontWeight: Typography.fontWeight.bold,
   },
   suggestionSecondaryText: {
     ...Typography.textStyles.caption,
-    color: Colors.neutral[500],
-    fontSize: 13,
+    color: Colors.neutral[600],
+    fontSize: 14,
+    fontWeight: Typography.fontWeight.medium,
   },
 });
