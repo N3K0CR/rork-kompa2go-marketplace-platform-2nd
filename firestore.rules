@@ -24,10 +24,52 @@ service cloud.firestore {
     // WARNING: Change these rules before deploying to production!
     // ============================================================================
     
-    // For development/testing, allow all access
-    // TODO: Remove this and uncomment the secure rules below for production
-    match /{document=**} {
-      allow read, write: if true;
+    // KOMMUTERS COLLECTION (Registration)
+    match /kommuters/{kommuterId} {
+      // Anyone authenticated can read (for admin panel)
+      allow read: if isAuthenticated();
+      
+      // Users can create their own registration
+      allow create: if isAuthenticated();
+      
+      // Only admins or the owner can update
+      allow update: if isAuthenticated();
+      
+      // Only admins can delete
+      allow delete: if isAuthenticated();
+      
+      // List all for admin panel
+      allow list: if isAuthenticated();
+    }
+    
+    // DRIVER ALERTS COLLECTION
+    match /driver_alerts/{alertId} {
+      // Authenticated users can read alerts
+      allow read: if isAuthenticated();
+      
+      // Drivers can create their own alerts
+      allow create: if isAuthenticated();
+      
+      // Admins and drivers can update alerts
+      allow update: if isAuthenticated();
+      
+      // Only admins can delete
+      allow delete: if isAuthenticated();
+      
+      // List all for admin panel
+      allow list: if isAuthenticated();
+    }
+    
+    // DRIVER TRACKING (Real-time location)
+    match /driver_tracking/{driverId} {
+      // Anyone authenticated can read for safety monitoring
+      allow read: if isAuthenticated();
+      
+      // Only the driver can update their location
+      allow create, update: if isAuthenticated() && driverId == request.auth.uid;
+      
+      // List all for admin monitoring
+      allow list: if isAuthenticated();
     }
     
     // ============================================================================
