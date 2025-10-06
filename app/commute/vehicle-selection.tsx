@@ -21,8 +21,8 @@ const VEHICLE_OPTIONS: VehicleOption[] = [
     name: 'Kommute 4',
     capacity: 4,
     icon: Car,
-    basePrice: 2.5,
-    pricePerKm: 0.8,
+    basePrice: 1300,
+    pricePerKm: 416,
     estimatedTime: 12,
   },
   {
@@ -30,8 +30,8 @@ const VEHICLE_OPTIONS: VehicleOption[] = [
     name: 'Kommute Large',
     capacity: 7,
     icon: Users,
-    basePrice: 3.5,
-    pricePerKm: 1.1,
+    basePrice: 1820,
+    pricePerKm: 572,
     estimatedTime: 15,
   },
 ];
@@ -210,7 +210,7 @@ export default function VehicleSelection() {
 
               <View style={styles.vehiclePricing}>
                 <Text style={styles.vehiclePrice}>
-                  ${vehicle.totalPrice.toFixed(2)}
+                  ₡{Math.round(vehicle.totalPrice).toLocaleString('es-CR')}
                 </Text>
                 <Text style={styles.vehicleTime}>
                   {vehicle.estimatedTime} min
@@ -253,7 +253,7 @@ export default function VehicleSelection() {
               </View>
               <Text style={styles.tripSummaryLabel}>Costo total</Text>
               <Text style={styles.tripSummaryValueHighlight}>
-                ${selectedVehicleData.totalPrice.toFixed(2)}
+                ₡{Math.round(selectedVehicleData.totalPrice).toLocaleString('es-CR')}
               </Text>
             </View>
 
