@@ -34,8 +34,8 @@ const VEHICLE_OPTIONS: VehicleOption[] = [
     name: 'Kommute 4',
     capacity: 4,
     icon: Car,
-    basePrice: 2.5,
-    pricePerKm: 0.8,
+    basePrice: 1500,
+    pricePerKm: 500,
     estimatedTime: 12,
   },
   {
@@ -43,11 +43,29 @@ const VEHICLE_OPTIONS: VehicleOption[] = [
     name: 'Kommute Large',
     capacity: 7,
     icon: Users,
-    basePrice: 3.5,
-    pricePerKm: 1.1,
+    basePrice: 2000,
+    pricePerKm: 600,
     estimatedTime: 15,
   },
 ];
+
+function roundToCostaRicanCurrency(amount: number): number {
+  if (amount < 100) {
+    return Math.round(amount / 5) * 5;
+  } else if (amount < 500) {
+    return Math.round(amount / 10) * 10;
+  } else if (amount < 1000) {
+    return Math.round(amount / 25) * 25;
+  } else if (amount < 5000) {
+    return Math.round(amount / 50) * 50;
+  } else if (amount < 10000) {
+    return Math.round(amount / 100) * 100;
+  } else if (amount < 20000) {
+    return Math.round(amount / 500) * 500;
+  } else {
+    return Math.round(amount / 1000) * 1000;
+  }
+}
 
 export default function CommuteHome() {
   const commuteContext = useCommute();
@@ -248,7 +266,7 @@ export default function CommuteHome() {
     setIsRequestingTrip(true);
 
     try {
-      const selectedVehicleData = VEHICLE_OPTIONS.find(v => v.id === selectedVehicle);
+      const selectedVehicleDetails = vehicleDetails.find(v => v.id === selectedVehicle);
       
       router.push({
         pathname: '/commute/trip/searching',
@@ -260,8 +278,8 @@ export default function CommuteHome() {
           destLon: selectedDestination.lon,
           destAddress: selectedDestination.display_name,
           vehicleType: selectedVehicle,
-          vehicleName: selectedVehicleData?.name,
-          estimatedPrice: selectedVehicleData ? (selectedVehicleData.basePrice + (distance * selectedVehicleData.pricePerKm)).toFixed(2) : '0',
+          vehicleName: selectedVehicleDetails?.name,
+          estimatedPrice: selectedVehicleDetails ? selectedVehicleDetails.totalPrice.toString() : '0',
           estimatedTime: duration.toString(),
           distance: distance.toFixed(2),
         },
@@ -274,11 +292,14 @@ export default function CommuteHome() {
     }
   };
 
-  const vehicleDetails = VEHICLE_OPTIONS.map(vehicle => ({
-    ...vehicle,
-    totalPrice: vehicle.basePrice + (distance * vehicle.pricePerKm),
-    estimatedTime: duration || vehicle.estimatedTime,
-  }));
+  const vehicleDetails = VEHICLE_OPTIONS.map(vehicle => {
+    const rawPrice = vehicle.basePrice + (distance * vehicle.pricePerKm);
+    return {
+      ...vehicle,
+      totalPrice: roundToCostaRicanCurrency(rawPrice),
+      estimatedTime: duration || vehicle.estimatedTime,
+    };
+  });
 
   const selectedVehicleData = vehicleDetails.find(v => v.id === selectedVehicle);
 
@@ -400,7 +421,7 @@ export default function CommuteHome() {
 
                   <View style={styles.vehiclePricing}>
                     <Text style={styles.vehiclePrice}>
-                      ${vehicle.totalPrice.toFixed(2)}
+                      ₡{vehicle.totalPrice.toLocaleString('es-CR')}
                     </Text>
                     <Text style={styles.vehicleTime}>
                       {vehicle.estimatedTime} min
@@ -443,7 +464,7 @@ export default function CommuteHome() {
                   </View>
                   <Text style={styles.tripSummaryLabel}>Costo total</Text>
                   <Text style={styles.tripSummaryValueHighlight}>
-                    ${selectedVehicleData.totalPrice.toFixed(2)}
+                    ₡{selectedVehicleData.totalPrice.toLocaleString('es-CR')}
                   </Text>
                 </View>
 
