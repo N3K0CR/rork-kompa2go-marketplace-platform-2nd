@@ -34,8 +34,8 @@ const VEHICLE_OPTIONS: VehicleOption[] = [
     name: 'Kommute 4',
     capacity: 4,
     icon: Car,
-    basePrice: 1500,
-    pricePerKm: 500,
+    basePrice: 600,
+    pricePerKm: 150,
     estimatedTime: 12,
   },
   {
@@ -43,8 +43,8 @@ const VEHICLE_OPTIONS: VehicleOption[] = [
     name: 'Kommute Large',
     capacity: 7,
     icon: Users,
-    basePrice: 2000,
-    pricePerKm: 600,
+    basePrice: 800,
+    pricePerKm: 200,
     estimatedTime: 15,
   },
 ];
