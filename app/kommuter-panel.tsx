@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, Switch } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, Switch, ActivityIndicator } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { 
   TrendingUp, 
@@ -18,10 +18,21 @@ import {
   Trash2,
   Eye,
   CheckCircle,
-  XCircle
+  XCircle,
+  Clock,
+  FileText,
+  Car,
+  Phone,
+  Mail,
+  MapPin,
+  UserCheck,
+  UserX
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { calculateRevenueEstimates, formatCRC, PRICING_CONSTANTS } from '@/src/modules/commute/utils/pricing';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy } from 'firebase/firestore';
+import type { KommuterRegistrationData, VehicleData } from '@/src/shared/types/registration-types';
 
 type AlertType = 'danger' | 'rating' | 'complaint';
 type AlertStatus = 'active' | 'resolved' | 'investigating';
@@ -57,6 +68,32 @@ interface BrandCollaboration {
   active: boolean;
 }
 
+interface PendingKommuter {
+  id: string;
+  personalInfo: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    cedula: string;
+    dateOfBirth: string;
+    address: string;
+  };
+  driverLicense: {
+    number: string;
+    expirationDate: string;
+    category: string;
+  };
+  vehicleInfo: {
+    isFleet: boolean;
+    vehicles: VehicleData[];
+    fleetDrivers?: any[];
+  };
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: any;
+  documents?: Record<string, any>;
+}
+
 export default function KommuterPanel() {
   const insets = useSafeAreaInsets();
   const [averageTripsPerDay, setAverageTripsPerDay] = useState('100');
@@ -65,6 +102,11 @@ export default function KommuterPanel() {
   const [showCollaborationModal, setShowCollaborationModal] = useState(false);
   const [showAlertDetailModal, setShowAlertDetailModal] = useState(false);
   const [selectedAlert, setSelectedAlert] = useState<DriverAlert | null>(null);
+  const [showKommuterDetailModal, setShowKommuterDetailModal] = useState(false);
+  const [selectedKommuter, setSelectedKommuter] = useState<PendingKommuter | null>(null);
+  const [pendingKommuters, setPendingKommuters] = useState<PendingKommuter[]>([]);
+  const [loadingKommuters, setLoadingKommuters] = useState(true);
+  const [processingApproval, setProcessingApproval] = useState(false);
 
   const [promotions, setPromotions] = useState<Promotion[]>([
     {
@@ -196,6 +238,101 @@ export default function KommuterPanel() {
 
   const activeAlerts = driverAlerts.filter(a => a.status === 'active');
   const investigatingAlerts = driverAlerts.filter(a => a.status === 'investigating');
+
+  useEffect(() => {
+    loadPendingKommuters();
+  }, []);
+
+  const loadPendingKommuters = async () => {
+    try {
+      setLoadingKommuters(true);
+      const q = query(
+        collection(db, 'kommuters'),
+        where('status', '==', 'pending'),
+        orderBy('createdAt', 'desc')
+      );
+      const snapshot = await getDocs(q);
+      const kommuters = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as PendingKommuter[];
+      setPendingKommuters(kommuters);
+      console.log('✅ Loaded pending kommuters:', kommuters.length);
+    } catch (error) {
+      console.error('❌ Error loading pending kommuters:', error);
+      Alert.alert('Error', 'No se pudieron cargar las aprobaciones pendientes');
+    } finally {
+      setLoadingKommuters(false);
+    }
+  };
+
+  const handleApproveKommuter = async (kommuterId: string) => {
+    Alert.alert(
+      '✅ Aprobar Conductor',
+      '¿Está seguro que desea aprobar este conductor?\n\nEl conductor podrá comenzar a recibir viajes.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Aprobar',
+          style: 'default',
+          onPress: async () => {
+            try {
+              setProcessingApproval(true);
+              const kommuterRef = doc(db, 'kommuters', kommuterId);
+              await updateDoc(kommuterRef, {
+                status: 'approved',
+                approvedAt: new Date(),
+                updatedAt: new Date()
+              });
+              
+              Alert.alert('✅ Aprobado', 'El conductor ha sido aprobado exitosamente');
+              await loadPendingKommuters();
+              setShowKommuterDetailModal(false);
+            } catch (error) {
+              console.error('❌ Error approving kommuter:', error);
+              Alert.alert('Error', 'No se pudo aprobar el conductor');
+            } finally {
+              setProcessingApproval(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleRejectKommuter = async (kommuterId: string) => {
+    Alert.alert(
+      '❌ Rechazar Conductor',
+      '¿Está seguro que desea rechazar este conductor?\n\nEsta acción puede ser revertida más tarde.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Rechazar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setProcessingApproval(true);
+              const kommuterRef = doc(db, 'kommuters', kommuterId);
+              await updateDoc(kommuterRef, {
+                status: 'rejected',
+                rejectedAt: new Date(),
+                updatedAt: new Date()
+              });
+              
+              Alert.alert('❌ Rechazado', 'El conductor ha sido rechazado');
+              await loadPendingKommuters();
+              setShowKommuterDetailModal(false);
+            } catch (error) {
+              console.error('❌ Error rejecting kommuter:', error);
+              Alert.alert('Error', 'No se pudo rechazar el conductor');
+            } finally {
+              setProcessingApproval(false);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -431,10 +568,94 @@ export default function KommuterPanel() {
               <Text style={styles.statNumber}>4.8</Text>
               <Text style={styles.statLabel}>Calificación Promedio</Text>
             </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>12</Text>
+            <TouchableOpacity 
+              style={[styles.statCard, pendingKommuters.length > 0 && styles.statCardHighlight]}
+              onPress={() => {}}
+            >
+              <Text style={[styles.statNumber, pendingKommuters.length > 0 && styles.statNumberHighlight]}>
+                {pendingKommuters.length}
+              </Text>
               <Text style={styles.statLabel}>Pendientes Aprobación</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.pendingApprovalsSection}>
+            <View style={styles.sectionSubHeader}>
+              <Clock size={20} color="#FF9500" />
+              <Text style={styles.sectionSubTitle}>Aprobaciones Pendientes</Text>
             </View>
+
+            {loadingKommuters ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#65ea06" />
+                <Text style={styles.loadingText}>Cargando conductores...</Text>
+              </View>
+            ) : pendingKommuters.length === 0 ? (
+              <View style={styles.emptyState}>
+                <CheckCircle size={48} color="#34C759" />
+                <Text style={styles.emptyStateText}>No hay aprobaciones pendientes</Text>
+              </View>
+            ) : (
+              pendingKommuters.map(kommuter => (
+                <TouchableOpacity
+                  key={kommuter.id}
+                  style={styles.kommuterCard}
+                  onPress={() => {
+                    setSelectedKommuter(kommuter);
+                    setShowKommuterDetailModal(true);
+                  }}
+                >
+                  <View style={styles.kommuterHeader}>
+                    <View style={styles.kommuterAvatar}>
+                      <Users size={24} color="#65ea06" />
+                    </View>
+                    <View style={styles.kommuterInfo}>
+                      <Text style={styles.kommuterName}>
+                        {kommuter.personalInfo.firstName} {kommuter.personalInfo.lastName}
+                      </Text>
+                      <Text style={styles.kommuterEmail}>{kommuter.personalInfo.email}</Text>
+                    </View>
+                    <View style={styles.pendingBadge}>
+                      <Clock size={16} color="#FF9500" />
+                    </View>
+                  </View>
+                  <View style={styles.kommuterDetails}>
+                    <View style={styles.kommuterDetailRow}>
+                      <Phone size={14} color="#6b9e47" />
+                      <Text style={styles.kommuterDetailText}>{kommuter.personalInfo.phone}</Text>
+                    </View>
+                    <View style={styles.kommuterDetailRow}>
+                      <FileText size={14} color="#6b9e47" />
+                      <Text style={styles.kommuterDetailText}>Cédula: {kommuter.personalInfo.cedula}</Text>
+                    </View>
+                    <View style={styles.kommuterDetailRow}>
+                      <Car size={14} color="#6b9e47" />
+                      <Text style={styles.kommuterDetailText}>
+                        {kommuter.vehicleInfo.vehicles.length} vehículo(s)
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.kommuterFooter}>
+                    <Text style={styles.kommuterDate}>
+                      Registrado: {kommuter.createdAt?.toDate ? 
+                        kommuter.createdAt.toDate().toLocaleDateString('es-CR') : 
+                        'Fecha no disponible'
+                      }
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.reviewButton}
+                      onPress={() => {
+                        setSelectedKommuter(kommuter);
+                        setShowKommuterDetailModal(true);
+                      }}
+                    >
+                      <Text style={styles.reviewButtonText}>Revisar</Text>
+                      <Eye size={16} color="#65ea06" />
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
           </View>
         </View>
       </ScrollView>
@@ -534,6 +755,155 @@ export default function KommuterPanel() {
               </>
             )}
           </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showKommuterDetailModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowKommuterDetailModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <ScrollView 
+            style={styles.modalScrollView}
+            contentContainerStyle={styles.modalScrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Detalle del Conductor</Text>
+                <TouchableOpacity onPress={() => setShowKommuterDetailModal(false)}>
+                  <X size={24} color="#666" />
+                </TouchableOpacity>
+              </View>
+
+              {selectedKommuter && (
+                <>
+                  <View style={styles.kommuterAvatarLarge}>
+                    <Users size={48} color="#65ea06" />
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={styles.detailSectionTitle}>Información Personal</Text>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Nombre Completo:</Text>
+                      <Text style={styles.detailValue}>
+                        {selectedKommuter.personalInfo.firstName} {selectedKommuter.personalInfo.lastName}
+                      </Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Cédula:</Text>
+                      <Text style={styles.detailValue}>{selectedKommuter.personalInfo.cedula}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Fecha de Nacimiento:</Text>
+                      <Text style={styles.detailValue}>{selectedKommuter.personalInfo.dateOfBirth}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Email:</Text>
+                      <Text style={styles.detailValue}>{selectedKommuter.personalInfo.email}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Teléfono:</Text>
+                      <Text style={styles.detailValue}>{selectedKommuter.personalInfo.phone}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Dirección:</Text>
+                      <Text style={styles.detailValue}>{selectedKommuter.personalInfo.address}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={styles.detailSectionTitle}>Licencia de Conducir</Text>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Número:</Text>
+                      <Text style={styles.detailValue}>{selectedKommuter.driverLicense.number}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Categoría:</Text>
+                      <Text style={styles.detailValue}>{selectedKommuter.driverLicense.category}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Vencimiento:</Text>
+                      <Text style={styles.detailValue}>{selectedKommuter.driverLicense.expirationDate}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={styles.detailSectionTitle}>Vehículos Registrados</Text>
+                    {selectedKommuter.vehicleInfo.vehicles.map((vehicle, index) => (
+                      <View key={index} style={styles.vehicleCard}>
+                        <View style={styles.vehicleHeader}>
+                          <Car size={20} color="#65ea06" />
+                          <Text style={styles.vehicleTitle}>
+                            {vehicle.brand} {vehicle.model} ({vehicle.year})
+                          </Text>
+                        </View>
+                        <View style={styles.vehicleDetails}>
+                          <View style={styles.vehicleDetailRow}>
+                            <Text style={styles.vehicleDetailLabel}>Placa:</Text>
+                            <Text style={styles.vehicleDetailValue}>{vehicle.plate}</Text>
+                          </View>
+                          <View style={styles.vehicleDetailRow}>
+                            <Text style={styles.vehicleDetailLabel}>Color:</Text>
+                            <Text style={styles.vehicleDetailValue}>{vehicle.color}</Text>
+                          </View>
+                          <View style={styles.vehicleDetailRow}>
+                            <Text style={styles.vehicleDetailLabel}>Capacidad:</Text>
+                            <Text style={styles.vehicleDetailValue}>{vehicle.capacity} pasajeros</Text>
+                          </View>
+                          <View style={styles.vehicleDetailRow}>
+                            <Text style={styles.vehicleDetailLabel}>Tipo:</Text>
+                            <Text style={styles.vehicleDetailValue}>{vehicle.vehicleType}</Text>
+                          </View>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+
+                  {selectedKommuter.vehicleInfo.isFleet && selectedKommuter.vehicleInfo.fleetDrivers && (
+                    <View style={styles.detailSection}>
+                      <Text style={styles.detailSectionTitle}>Conductores de Flotilla</Text>
+                      {selectedKommuter.vehicleInfo.fleetDrivers.map((driver: any, index: number) => (
+                        <View key={index} style={styles.fleetDriverCard}>
+                          <Text style={styles.fleetDriverName}>{driver.firstName} {driver.lastName}</Text>
+                          <Text style={styles.fleetDriverDetail}>Cédula: {driver.cedula}</Text>
+                          <Text style={styles.fleetDriverDetail}>Licencia: {driver.licenseNumber}</Text>
+                          <Text style={styles.fleetDriverDetail}>Teléfono: {driver.phone}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {processingApproval ? (
+                    <View style={styles.processingContainer}>
+                      <ActivityIndicator size="large" color="#65ea06" />
+                      <Text style={styles.processingText}>Procesando...</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.approvalActions}>
+                      <TouchableOpacity
+                        style={styles.rejectButton}
+                        onPress={() => handleRejectKommuter(selectedKommuter.id)}
+                      >
+                        <UserX size={20} color="#fff" />
+                        <Text style={styles.approvalButtonText}>Rechazar</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.approveButton}
+                        onPress={() => handleApproveKommuter(selectedKommuter.id)}
+                      >
+                        <UserCheck size={20} color="#fff" />
+                        <Text style={styles.approvalButtonText}>Aprobar</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </>
+              )}
+            </View>
+          </ScrollView>
         </View>
       </Modal>
     </View>
@@ -987,5 +1357,254 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600' as const,
+  },
+  statCardHighlight: {
+    borderWidth: 2,
+    borderColor: '#FF9500',
+  },
+  statNumberHighlight: {
+    color: '#FF9500',
+  },
+  pendingApprovalsSection: {
+    marginTop: 20,
+    gap: 12,
+  },
+  sectionSubHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  sectionSubTitle: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: '#131c0d',
+  },
+  loadingContainer: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 40,
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#6b9e47',
+  },
+  kommuterCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF9500',
+  },
+  kommuterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  kommuterAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#f8fff4',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  kommuterAvatarLarge: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#f8fff4',
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
+    marginBottom: 24,
+  },
+  kommuterInfo: {
+    flex: 1,
+  },
+  kommuterName: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: '#131c0d',
+    marginBottom: 4,
+  },
+  kommuterEmail: {
+    fontSize: 14,
+    color: '#6b9e47',
+  },
+  pendingBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFF3E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  kommuterDetails: {
+    gap: 8,
+    marginBottom: 12,
+  },
+  kommuterDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  kommuterDetailText: {
+    fontSize: 13,
+    color: '#131c0d',
+  },
+  kommuterFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#ecf4e6',
+  },
+  kommuterDate: {
+    fontSize: 12,
+    color: '#999',
+  },
+  reviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#f8fff4',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  reviewButtonText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: '#65ea06',
+  },
+  modalScrollView: {
+    flex: 1,
+  },
+  modalScrollContent: {
+    padding: 20,
+  },
+  detailSection: {
+    marginBottom: 24,
+  },
+  detailSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: '#131c0d',
+    marginBottom: 12,
+  },
+  detailRow: {
+    marginBottom: 12,
+  },
+  detailLabel: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: '#6b9e47',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  detailValue: {
+    fontSize: 15,
+    color: '#131c0d',
+  },
+  vehicleCard: {
+    backgroundColor: '#f8fff4',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#d4e8cc',
+  },
+  vehicleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  vehicleTitle: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: '#131c0d',
+  },
+  vehicleDetails: {
+    gap: 8,
+  },
+  vehicleDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  vehicleDetailLabel: {
+    fontSize: 13,
+    color: '#6b9e47',
+    fontWeight: '600' as const,
+  },
+  vehicleDetailValue: {
+    fontSize: 13,
+    color: '#131c0d',
+  },
+  fleetDriverCard: {
+    backgroundColor: '#f8fff4',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+  },
+  fleetDriverName: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: '#131c0d',
+    marginBottom: 6,
+  },
+  fleetDriverDetail: {
+    fontSize: 12,
+    color: '#6b9e47',
+    marginBottom: 2,
+  },
+  processingContainer: {
+    padding: 24,
+    alignItems: 'center',
+    gap: 12,
+  },
+  processingText: {
+    fontSize: 14,
+    color: '#6b9e47',
+  },
+  approvalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  rejectButton: {
+    flex: 1,
+    backgroundColor: '#FF3B30',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 16,
+    borderRadius: 12,
+  },
+  approveButton: {
+    flex: 1,
+    backgroundColor: '#34C759',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 16,
+    borderRadius: 12,
+  },
+  approvalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700' as const,
   },
 });
