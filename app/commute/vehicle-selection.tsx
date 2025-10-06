@@ -4,15 +4,14 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Car, Users, MapPin, Clock, DollarSign } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCommute } from '@/src/modules/commute/context/CommuteContext';
+import { calculateTripPrice } from '@/src/modules/commute/utils/pricing';
 
 interface VehicleOption {
   id: 'kommute-4' | 'kommute-large';
   name: string;
   capacity: number;
   icon: typeof Car;
-  basePrice: number;
-  pricePerKm: number;
-  estimatedTime: number;
+  costFactor: number;
 }
 
 const VEHICLE_OPTIONS: VehicleOption[] = [
@@ -21,38 +20,18 @@ const VEHICLE_OPTIONS: VehicleOption[] = [
     name: 'Kommute 4',
     capacity: 4,
     icon: Car,
-    basePrice: 1500,
-    pricePerKm: 500,
-    estimatedTime: 12,
+    costFactor: 0.95,
   },
   {
     id: 'kommute-large',
     name: 'Kommute Large',
     capacity: 7,
     icon: Users,
-    basePrice: 2000,
-    pricePerKm: 600,
-    estimatedTime: 15,
+    costFactor: 1.35,
   },
 ];
 
-function roundToCostaRicanCurrency(amount: number): number {
-  if (amount < 100) {
-    return Math.round(amount / 5) * 5;
-  } else if (amount < 500) {
-    return Math.round(amount / 10) * 10;
-  } else if (amount < 1000) {
-    return Math.round(amount / 25) * 25;
-  } else if (amount < 5000) {
-    return Math.round(amount / 50) * 50;
-  } else if (amount < 10000) {
-    return Math.round(amount / 100) * 100;
-  } else if (amount < 20000) {
-    return Math.round(amount / 500) * 500;
-  } else {
-    return Math.round(amount / 1000) * 1000;
-  }
-}
+
 
 export default function VehicleSelection() {
   const params = useLocalSearchParams<{
@@ -96,11 +75,14 @@ export default function VehicleSelection() {
 
   const vehicleDetails = useMemo(() => {
     return VEHICLE_OPTIONS.map(vehicle => {
-      const rawPrice = vehicle.basePrice + (distance * vehicle.pricePerKm);
+      const distanceMeters = distance * 1000;
+      const durationSeconds = duration * 60;
+      const price = calculateTripPrice(distanceMeters, durationSeconds, vehicle.costFactor);
+      
       return {
         ...vehicle,
-        totalPrice: roundToCostaRicanCurrency(rawPrice),
-        estimatedTime: duration || vehicle.estimatedTime,
+        totalPrice: price,
+        estimatedTime: duration,
       };
     });
   }, [distance, duration]);
@@ -132,7 +114,7 @@ export default function VehicleSelection() {
           destAddress: params.destAddress,
           vehicleType: selectedVehicle,
           vehicleName: selectedVehicleData?.name,
-          estimatedPrice: selectedVehicleData?.totalPrice.toFixed(2),
+          estimatedPrice: selectedVehicleData?.totalPrice.toString(),
           estimatedTime: selectedVehicleData?.estimatedTime.toString(),
           distance: distance.toFixed(2),
         },
@@ -257,7 +239,7 @@ export default function VehicleSelection() {
                 <MapPin size={18} color="#6b9e47" />
               </View>
               <Text style={styles.tripSummaryLabel}>Distancia</Text>
-              <Text style={styles.tripSummaryValue}>{distance.toFixed(2)} km</Text>
+              <Text style={styles.tripSummaryValue}>{distance.toFixed(1)} km</Text>
             </View>
 
             <View style={styles.tripSummaryRow}>

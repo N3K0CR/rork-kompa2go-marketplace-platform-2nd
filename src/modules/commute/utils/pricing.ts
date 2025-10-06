@@ -5,17 +5,17 @@
 
 // Constantes de precios
 export const PRICING_CONSTANTS = {
-  // Tarifa base por kilómetro en CRC
-  BASE_RATE_PER_KM: 650, // ₡650 por km
+  // Tarifa base por kilómetro en CRC (ajustada para competir con Uber/Didi)
+  BASE_RATE_PER_KM: 280, // ₡280 por km (competitivo con mercado)
   
   // Tarifa mínima del viaje en CRC
-  MINIMUM_FARE: 2000, // ₡2,000 mínimo
+  MINIMUM_FARE: 1500, // ₡1,500 mínimo
   
   // Tarifa de inicio (banderazo) en CRC
-  BASE_FARE: 1500, // ₡1,500 al iniciar el viaje
+  BASE_FARE: 800, // ₡800 al iniciar el viaje
   
   // Tarifa por minuto de espera en CRC
-  WAIT_TIME_PER_MINUTE: 100, // ₡100 por minuto
+  WAIT_TIME_PER_MINUTE: 50, // ₡50 por minuto
   
   // Redondeo a los billetes/monedas más cercanos
   ROUNDING_VALUES: [5, 10, 25, 50, 100, 500, 1000, 2000, 5000, 10000, 20000],
@@ -158,9 +158,9 @@ export function generateVehiclePrices(
   estimatedTime: string;
 }[] {
   const vehicles = [
-    { type: 'kommute-4' as const, costFactor: 1.0, name: 'Kommute 4' },
-    { type: 'kommute-large' as const, costFactor: 1.5, name: 'Kommute Large' },
-    { type: 'kommute-premium' as const, costFactor: 2.0, name: 'Kommute Premium' },
+    { type: 'kommute-4' as const, costFactor: 0.95, name: 'Kommute 4' },
+    { type: 'kommute-large' as const, costFactor: 1.35, name: 'Kommute Large' },
+    { type: 'kommute-premium' as const, costFactor: 1.65, name: 'Kommute Premium' },
   ];
 
   return vehicles.map((vehicle) => {
