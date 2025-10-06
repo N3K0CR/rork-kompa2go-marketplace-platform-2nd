@@ -525,6 +525,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#131c0d',
     padding: 0,
+    fontWeight: '500' as const,
   },
   searchingIndicator: {
     marginLeft: 8,
@@ -552,14 +553,16 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   suggestionMainText: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#131c0d',
-    fontWeight: '700' as const,
+    fontWeight: '600' as const,
+    lineHeight: 20,
   },
   suggestionSecondaryText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#6b9e47',
-    fontWeight: '500' as const,
+    fontWeight: '400' as const,
+    lineHeight: 16,
   },
   clearButton: {
     padding: 4,
