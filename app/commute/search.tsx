@@ -4,6 +4,7 @@ import { Stack, router } from 'expo-router';
 import { Search, MapPin, Navigation, X } from 'lucide-react-native';
 import { useCommute } from '@/hooks/useCommute';
 import { CommuteButton } from '@/components/commute';
+import { MultiStopSelector, LocationPoint as LocationSelectorPoint } from '@/components/commute/LocationSelector';
 import { Colors, Spacing, BorderRadius, Shadows, Typography } from '@/context-package/design-system';
 import * as Location from 'expo-location';
 
@@ -28,11 +29,17 @@ interface LocationPoint {
   name?: string;
 }
 
+interface StopPoint extends LocationPoint {
+  id: string;
+}
+
 export default function CommuteSearch() {
   const { transportModes, createRoute, startTrip } = useCommute();
 
   const [origin, setOrigin] = useState<LocationPoint | null>(null);
   const [destination, setDestination] = useState<LocationPoint | null>(null);
+  const [stops, setStops] = useState<StopPoint[]>([]);
+  const [useMultiStop, setUseMultiStop] = useState(false);
   const [originInput, setOriginInput] = useState('');
   const [destinationInput, setDestinationInput] = useState('');
   const [selectedVehicleType, setSelectedVehicleType] = useState<string>('kommute-4');
@@ -535,26 +542,56 @@ export default function CommuteSearch() {
       
       <ScrollView style={styles.scrollView}>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>¿A dónde vas?</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>¿A dónde vas?</Text>
+            <TouchableOpacity
+              style={styles.multiStopToggle}
+              onPress={() => setUseMultiStop(!useMultiStop)}
+            >
+              <Text style={styles.multiStopToggleText}>
+                {useMultiStop ? 'Modo simple' : 'Agregar paradas'}
+              </Text>
+            </TouchableOpacity>
+          </View>
           
-          {renderLocationInput(
-            'origin',
-            originInput,
-            setOriginInput,
-            originSuggestions,
-            showOriginSuggestions,
-            'Escribe tu punto de partida...'
-          )}
-          
-          <View style={styles.separator} />
-          
-          {renderLocationInput(
-            'destination',
-            destinationInput,
-            setDestinationInput,
-            destinationSuggestions,
-            showDestinationSuggestions,
-            'Escribe tu destino...'
+          {useMultiStop ? (
+            <MultiStopSelector
+              origin={origin}
+              destination={destination}
+              stops={stops}
+              onOriginChange={(location) => {
+                setOrigin(location);
+                setOriginInput(location.address);
+              }}
+              onDestinationChange={(location) => {
+                setDestination(location);
+                setDestinationInput(location.address);
+              }}
+              onStopsChange={setStops}
+              maxStops={3}
+            />
+          ) : (
+            <>
+              {renderLocationInput(
+                'origin',
+                originInput,
+                setOriginInput,
+                originSuggestions,
+                showOriginSuggestions,
+                'Escribe tu punto de partida...'
+              )}
+              
+              <View style={styles.separator} />
+              
+              {renderLocationInput(
+                'destination',
+                destinationInput,
+                setDestinationInput,
+                destinationSuggestions,
+                showDestinationSuggestions,
+                'Escribe tu destino...'
+              )}
+            </>
           )}
         </View>
 
@@ -640,11 +677,30 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     marginBottom: Spacing[3],
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing[5],
+  },
   sectionTitle: {
     ...Typography.textStyles.h5,
     color: Colors.neutral[800],
-    marginBottom: Spacing[5],
     fontWeight: Typography.fontWeight.bold,
+  },
+  multiStopToggle: {
+    paddingHorizontal: Spacing[3],
+    paddingVertical: Spacing[2],
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.primary[50],
+    borderWidth: 1,
+    borderColor: Colors.primary[300],
+  },
+  multiStopToggleText: {
+    ...Typography.textStyles.bodySmall,
+    color: Colors.primary[600],
+    fontWeight: Typography.fontWeight.semibold,
+    fontSize: 13,
   },
   locationInputContainer: {
     marginBottom: Spacing[4],
