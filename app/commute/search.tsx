@@ -137,6 +137,63 @@ export default function CommuteSearch() {
     console.log('✅ Address selected:', suggestion.display_name);
   };
 
+  const reverseGeocodeWithRetry = async (latitude: number, longitude: number, retries = 3): Promise<string> => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+          {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'User-Agent': 'Kompa2Go/1.0',
+            },
+            signal: controller.signal,
+          }
+        );
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.display_name) {
+          return data.display_name;
+        }
+        
+        if (data.address) {
+          const parts = [];
+          if (data.address.road) parts.push(data.address.road);
+          if (data.address.house_number) parts.push(data.address.house_number);
+          if (data.address.suburb) parts.push(data.address.suburb);
+          if (data.address.city) parts.push(data.address.city);
+          if (data.address.state) parts.push(data.address.state);
+          if (parts.length > 0) {
+            return parts.join(', ');
+          }
+        }
+        
+        throw new Error('No address data');
+      } catch (error: any) {
+        console.log(`⚠️ Geocoding attempt ${i + 1}/${retries} failed:`, error.message);
+        
+        if (i === retries - 1) {
+          throw error;
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+      }
+    }
+    
+    throw new Error('All geocoding attempts failed');
+  };
+
   const handleUseCurrentLocation = async (type: 'origin' | 'destination') => {
     if (Platform.OS === 'web') {
       try {
@@ -152,29 +209,12 @@ export default function CommuteSearch() {
             const { latitude, longitude } = position.coords;
             
             try {
-              const response = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
-                {
-                  method: 'GET',
-                  headers: {
-                    'Accept': 'application/json',
-                    'User-Agent': 'Kompa2Go/1.0',
-                  },
-                }
-              );
-              
-              if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-              }
-              
-              const data = await response.json();
-              const address = data.display_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+              const address = await reverseGeocodeWithRetry(latitude, longitude);
               
               const location: LocationPoint = {
                 latitude,
                 longitude,
                 address,
-                name: data.name || data.address?.road || undefined
               };
               
               if (type === 'origin') {
@@ -188,23 +228,24 @@ export default function CommuteSearch() {
               console.log('✅ Location updated:', { latitude, longitude, address });
             } catch (error) {
               console.error('❌ Error getting address:', error);
-              Alert.alert(
-                'Error',
-                'No se pudo obtener la dirección. Se usarán las coordenadas.'
-              );
+              
+              const fallbackAddress = `Ubicación: ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`;
+              
               const location: LocationPoint = {
                 latitude,
                 longitude,
-                address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+                address: fallbackAddress,
               };
               
               if (type === 'origin') {
                 setOrigin(location);
-                setOriginInput(location.address);
+                setOriginInput(fallbackAddress);
               } else {
                 setDestination(location);
-                setDestinationInput(location.address);
+                setDestinationInput(fallbackAddress);
               }
+              
+              console.log('⚠️ Using fallback address:', fallbackAddress);
             } finally {
               setLoadingLocation(null);
             }
@@ -238,31 +279,45 @@ export default function CommuteSearch() {
 
         const { latitude, longitude } = location.coords;
         
-        const [geocode] = await Location.reverseGeocodeAsync({
-          latitude,
-          longitude,
-        });
-
-        const address = geocode
-          ? `${geocode.street || ''} ${geocode.streetNumber || ''}, ${geocode.city || ''}, ${geocode.region || ''}`.trim()
-          : `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-
-        const locationPoint: LocationPoint = {
-          latitude,
-          longitude,
-          address,
-          name: geocode?.name || geocode?.street || undefined
-        };
-        
-        if (type === 'origin') {
-          setOrigin(locationPoint);
-          setOriginInput(address);
-        } else {
-          setDestination(locationPoint);
-          setDestinationInput(address);
+        try {
+          const address = await reverseGeocodeWithRetry(latitude, longitude);
+          
+          const locationPoint: LocationPoint = {
+            latitude,
+            longitude,
+            address,
+          };
+          
+          if (type === 'origin') {
+            setOrigin(locationPoint);
+            setOriginInput(address);
+          } else {
+            setDestination(locationPoint);
+            setDestinationInput(address);
+          }
+          
+          console.log('✅ Location updated:', { latitude, longitude, address });
+        } catch (error) {
+          console.error('❌ Error getting address:', error);
+          
+          const fallbackAddress = `Ubicación: ${latitude.toFixed(4)}°, ${longitude.toFixed(4)}°`;
+          
+          const locationPoint: LocationPoint = {
+            latitude,
+            longitude,
+            address: fallbackAddress,
+          };
+          
+          if (type === 'origin') {
+            setOrigin(locationPoint);
+            setOriginInput(fallbackAddress);
+          } else {
+            setDestination(locationPoint);
+            setDestinationInput(fallbackAddress);
+          }
+          
+          console.log('⚠️ Using fallback address:', fallbackAddress);
         }
-        
-        console.log('✅ Location updated:', { latitude, longitude, address });
       } catch (error) {
         console.error('❌ Error getting location:', error);
         Alert.alert('Error', 'No se pudo obtener la ubicación actual');
