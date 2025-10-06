@@ -21,8 +21,8 @@ const VEHICLE_OPTIONS: VehicleOption[] = [
     name: 'Kommute 4',
     capacity: 4,
     icon: Car,
-    basePrice: 1300,
-    pricePerKm: 416,
+    basePrice: 1500,
+    pricePerKm: 500,
     estimatedTime: 12,
   },
   {
@@ -30,11 +30,29 @@ const VEHICLE_OPTIONS: VehicleOption[] = [
     name: 'Kommute Large',
     capacity: 7,
     icon: Users,
-    basePrice: 1820,
-    pricePerKm: 572,
+    basePrice: 2000,
+    pricePerKm: 600,
     estimatedTime: 15,
   },
 ];
+
+function roundToCostaRicanCurrency(amount: number): number {
+  if (amount < 100) {
+    return Math.round(amount / 5) * 5;
+  } else if (amount < 500) {
+    return Math.round(amount / 10) * 10;
+  } else if (amount < 1000) {
+    return Math.round(amount / 25) * 25;
+  } else if (amount < 5000) {
+    return Math.round(amount / 50) * 50;
+  } else if (amount < 10000) {
+    return Math.round(amount / 100) * 100;
+  } else if (amount < 20000) {
+    return Math.round(amount / 500) * 500;
+  } else {
+    return Math.round(amount / 1000) * 1000;
+  }
+}
 
 export default function VehicleSelection() {
   const params = useLocalSearchParams<{
@@ -77,11 +95,14 @@ export default function VehicleSelection() {
   };
 
   const vehicleDetails = useMemo(() => {
-    return VEHICLE_OPTIONS.map(vehicle => ({
-      ...vehicle,
-      totalPrice: vehicle.basePrice + (distance * vehicle.pricePerKm),
-      estimatedTime: duration || vehicle.estimatedTime,
-    }));
+    return VEHICLE_OPTIONS.map(vehicle => {
+      const rawPrice = vehicle.basePrice + (distance * vehicle.pricePerKm);
+      return {
+        ...vehicle,
+        totalPrice: roundToCostaRicanCurrency(rawPrice),
+        estimatedTime: duration || vehicle.estimatedTime,
+      };
+    });
   }, [distance, duration]);
 
   const handleConfirmRide = async () => {
@@ -210,7 +231,7 @@ export default function VehicleSelection() {
 
               <View style={styles.vehiclePricing}>
                 <Text style={styles.vehiclePrice}>
-                  ₡{Math.round(vehicle.totalPrice).toLocaleString('es-CR')}
+                  ₡{vehicle.totalPrice.toLocaleString('es-CR')}
                 </Text>
                 <Text style={styles.vehicleTime}>
                   {vehicle.estimatedTime} min
@@ -253,7 +274,7 @@ export default function VehicleSelection() {
               </View>
               <Text style={styles.tripSummaryLabel}>Costo total</Text>
               <Text style={styles.tripSummaryValueHighlight}>
-                ₡{Math.round(selectedVehicleData.totalPrice).toLocaleString('es-CR')}
+                ₡{selectedVehicleData.totalPrice.toLocaleString('es-CR')}
               </Text>
             </View>
 
