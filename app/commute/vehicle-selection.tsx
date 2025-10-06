@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { Car, Users, DollarSign, MessageCircle, Check } from 'lucide-react-native';
+import { ArrowLeft, Car, MapPin, User } from 'lucide-react-native';
 import { useCommute } from '@/src/modules/commute/context/CommuteContext';
-import { Colors, Spacing, BorderRadius, Typography, Shadows } from '@/context-package/design-system';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+interface VehicleOption {
+  id: string;
+  name: string;
+  price: number;
+  estimatedTime: number;
+  selected: boolean;
+}
 
 export default function VehicleSelection() {
   const params = useLocalSearchParams<{
@@ -21,10 +28,7 @@ export default function VehicleSelection() {
   const firebaseUser = 'firebaseUser' in commuteContext ? commuteContext.firebaseUser : null;
   const insets = useSafeAreaInsets();
   
-  const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
-  const [estimatedPrice, setEstimatedPrice] = useState<number>(0);
-  const [proposedPrice, setProposedPrice] = useState<string>('');
-  const [showNegotiation, setShowNegotiation] = useState(false);
+  const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [distance, setDistance] = useState<number>(0);
 
@@ -37,21 +41,23 @@ export default function VehicleSelection() {
         parseFloat(params.destLon)
       );
       setDistance(dist);
+      
+      const basePrice = 2000;
+      const pricePerKm = 500;
+      const baseTime = 5;
+      const timePerKm = 2;
+      
+      const vehicleOptions: VehicleOption[] = transportModes.map((mode, index) => ({
+        id: mode.id,
+        name: mode.name,
+        price: Math.round(basePrice + (dist * pricePerKm * mode.costFactor)),
+        estimatedTime: Math.round(baseTime + (dist * timePerKm)),
+        selected: index === 0,
+      }));
+      
+      setVehicles(vehicleOptions);
     }
-  }, [params]);
-
-  useEffect(() => {
-    if (selectedVehicle && distance > 0) {
-      const vehicle = transportModes.find(m => m.id === selectedVehicle);
-      if (vehicle) {
-        const basePrice = 2000;
-        const pricePerKm = 500;
-        const estimated = basePrice + (distance * pricePerKm * vehicle.costFactor);
-        setEstimatedPrice(Math.round(estimated));
-        setProposedPrice(Math.round(estimated).toString());
-      }
-    }
-  }, [selectedVehicle, distance, transportModes]);
+  }, [params, transportModes]);
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371;
@@ -65,9 +71,17 @@ export default function VehicleSelection() {
     return R * c;
   };
 
-  const handleConfirmTrip = async () => {
+  const toggleVehicle = (vehicleId: string) => {
+    setVehicles(prev => prev.map(v => ({
+      ...v,
+      selected: v.id === vehicleId ? !v.selected : v.selected
+    })));
+  };
+
+  const handleConfirmRide = async () => {
+    const selectedVehicle = vehicles.find(v => v.selected);
     if (!selectedVehicle) {
-      Alert.alert('Error', 'Por favor selecciona un tipo de vehículo');
+      Alert.alert('Error', 'Por favor selecciona un vehículo');
       return;
     }
 
@@ -77,12 +91,10 @@ export default function VehicleSelection() {
 
     setIsCreating(true);
     try {
-      const selectedMode = transportModes.find(m => m.id === selectedVehicle);
+      const selectedMode = transportModes.find(m => m.id === selectedVehicle.id);
       if (!selectedMode) {
         throw new Error('Vehículo no encontrado');
       }
-
-      const finalPrice = proposedPrice ? parseInt(proposedPrice) : estimatedPrice;
 
       const routeData = {
         userId,
@@ -107,7 +119,7 @@ export default function VehicleSelection() {
         status: 'planned' as const,
         distance: distance * 1000,
         duration: 0,
-        estimatedCost: finalPrice,
+        estimatedCost: selectedVehicle.price,
         carbonFootprint: 0,
         isRecurring: false,
       };
@@ -127,133 +139,93 @@ export default function VehicleSelection() {
     }
   };
 
-  const selectedVehicleData = transportModes.find(m => m.id === selectedVehicle);
-
   return (
-    <View style={styles.container}>
-      <Stack.Screen 
-        options={{ 
-          title: 'Seleccionar Vehículo',
-          headerStyle: { backgroundColor: Colors.primary[500] },
-          headerTintColor: 'white',
-          headerTitleStyle: { fontWeight: 'bold' as const }
-        }} 
-      />
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <Stack.Screen options={{ headerShown: false }} />
       
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.routeCard}>
-          <Text style={styles.routeTitle}>Tu viaje</Text>
-          <View style={styles.routeInfo}>
-            <View style={styles.routePoint}>
-              <View style={[styles.routeDot, { backgroundColor: Colors.success[500] }]} />
-              <Text style={styles.routeAddress} numberOfLines={2}>{params.originAddress}</Text>
-            </View>
-            <View style={styles.routeLine} />
-            <View style={styles.routePoint}>
-              <View style={[styles.routeDot, { backgroundColor: Colors.error[500] }]} />
-              <Text style={styles.routeAddress} numberOfLines={2}>{params.destAddress}</Text>
-            </View>
-          </View>
-          <Text style={styles.distanceText}>Distancia: {distance.toFixed(1)} km</Text>
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <ArrowLeft size={24} color="#131c0d" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Rutas</Text>
+        <View style={styles.backButton} />
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.mapContainer}>
+          <View style={styles.mapPlaceholder} />
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Selecciona tu vehículo</Text>
-          <View style={styles.vehicleGrid}>
-            {transportModes.map((mode) => (
-              <TouchableOpacity
-                key={mode.id}
-                style={[
-                  styles.vehicleCard,
-                  selectedVehicle === mode.id && styles.vehicleCardSelected
-                ]}
-                onPress={() => setSelectedVehicle(mode.id)}
-              >
-                {selectedVehicle === mode.id && (
-                  <View style={styles.selectedBadge}>
-                    <Check size={16} color="white" />
-                  </View>
-                )}
-                {mode.id === 'kommute-4' ? (
-                  <Car size={32} color={selectedVehicle === mode.id ? Colors.primary[600] : Colors.neutral[600]} />
-                ) : (
-                  <Users size={32} color={selectedVehicle === mode.id ? Colors.primary[600] : Colors.neutral[600]} />
-                )}
-                <Text style={[
-                  styles.vehicleName,
-                  selectedVehicle === mode.id && styles.vehicleNameSelected
-                ]}>
-                  {mode.name}
-                </Text>
-                <Text style={styles.vehicleCapacity}>
-                  {mode.capacity} pasajeros
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+        <Text style={styles.sectionTitle}>Elige un viaje</Text>
 
-        {selectedVehicle && (
-          <>
-            <View style={styles.priceCard}>
-              <View style={styles.priceHeader}>
-                <DollarSign size={24} color={Colors.primary[500]} />
-                <Text style={styles.priceTitle}>Precio estimado</Text>
+        {vehicles.map((vehicle) => (
+          <View key={vehicle.id} style={styles.vehicleRow}>
+            <View style={styles.vehicleInfo}>
+              <View style={styles.vehicleIcon}>
+                <Car size={24} color="#131c0d" />
               </View>
-              <Text style={styles.priceAmount}>₡{estimatedPrice.toLocaleString()}</Text>
-              <Text style={styles.priceSubtext}>
-                Basado en {distance.toFixed(1)} km con {selectedVehicleData?.name}
-              </Text>
-              
-              <TouchableOpacity
-                style={styles.negotiateButton}
-                onPress={() => setShowNegotiation(!showNegotiation)}
-              >
-                <MessageCircle size={18} color={Colors.primary[600]} />
-                <Text style={styles.negotiateButtonText}>
-                  {showNegotiation ? 'Ocultar negociación' : 'Proponer otro precio'}
-                </Text>
-              </TouchableOpacity>
-
-              {showNegotiation && (
-                <View style={styles.negotiationBox}>
-                  <Text style={styles.negotiationLabel}>Tu propuesta (₡)</Text>
-                  <TextInput
-                    style={styles.priceInput}
-                    value={proposedPrice}
-                    onChangeText={setProposedPrice}
-                    keyboardType="numeric"
-                    placeholder={estimatedPrice.toString()}
-                    placeholderTextColor={Colors.neutral[400]}
-                  />
-                  <Text style={styles.negotiationHint}>
-                    El conductor podrá aceptar o rechazar tu propuesta
-                  </Text>
-                </View>
-              )}
+              <View style={styles.vehicleDetails}>
+                <Text style={styles.vehiclePrice}>₡{vehicle.price.toLocaleString()}</Text>
+                <Text style={styles.vehicleTime}>{vehicle.estimatedTime} min</Text>
+              </View>
             </View>
-
-            <View style={[styles.confirmSection, { paddingBottom: insets.bottom + Spacing[4] }]}>
-              <TouchableOpacity
-                style={[styles.confirmButton, isCreating && styles.confirmButtonDisabled]}
-                onPress={handleConfirmTrip}
-                disabled={isCreating}
-              >
-                {isCreating ? (
-                  <ActivityIndicator size="small" color="white" />
-                ) : (
-                  <>
-                    <Check size={20} color="white" />
-                    <Text style={styles.confirmButtonText}>
-                      Confirmar viaje por ₡{(proposedPrice ? parseInt(proposedPrice) : estimatedPrice).toLocaleString()}
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
+            
+            <TouchableOpacity 
+              style={styles.toggleContainer}
+              onPress={() => toggleVehicle(vehicle.id)}
+              activeOpacity={0.7}
+            >
+              <View style={[
+                styles.toggle,
+                vehicle.selected && styles.toggleActive
+              ]}>
+                <View style={[
+                  styles.toggleThumb,
+                  vehicle.selected && styles.toggleThumbActive
+                ]} />
+              </View>
+            </TouchableOpacity>
+          </View>
+        ))}
       </ScrollView>
+
+      <View style={[styles.footer, { paddingBottom: insets.bottom || 20 }]}>
+        <TouchableOpacity 
+          style={[styles.confirmButton, isCreating && styles.confirmButtonDisabled]}
+          onPress={handleConfirmRide}
+          disabled={isCreating}
+          activeOpacity={0.8}
+        >
+          {isCreating ? (
+            <ActivityIndicator size="small" color="#131c0d" />
+          ) : (
+            <Text style={styles.confirmButtonText}>Confirmar viaje</Text>
+          )}
+        </TouchableOpacity>
+
+        <View style={styles.tabBar}>
+          <TouchableOpacity 
+            style={styles.tab}
+            onPress={() => router.back()}
+          >
+            <MapPin size={24} color="#131c0d" />
+            <Text style={styles.tabLabel}>Mapa</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={[styles.tab, styles.tabActive]}>
+            <Car size={24} color="#6b9e47" />
+            <Text style={[styles.tabLabel, styles.tabLabelActive]}>Viajes</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.tab}>
+            <User size={24} color="#6b9e47" />
+            <Text style={styles.tabLabel}>Perfil</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 }
@@ -261,217 +233,162 @@ export default function VehicleSelection() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral[50],
+    backgroundColor: '#fafcf8',
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: Spacing[6],
-  },
-  routeCard: {
-    backgroundColor: 'white',
-    padding: Spacing[5],
-    marginBottom: Spacing[3],
-    ...Shadows.sm,
-  },
-  routeTitle: {
-    ...Typography.textStyles.h6,
-    color: Colors.neutral[800],
-    fontWeight: Typography.fontWeight.bold,
-    marginBottom: Spacing[4],
-  },
-  routeInfo: {
-    marginBottom: Spacing[3],
-  },
-  routePoint: {
+  header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing[3],
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#fafcf8',
   },
-  routeDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginTop: 4,
+  backButton: {
+    width: 48,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  routeLine: {
-    width: 2,
-    height: 24,
-    backgroundColor: Colors.neutral[300],
-    marginLeft: 5,
-    marginVertical: Spacing[2],
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: '#131c0d',
+    letterSpacing: -0.27,
   },
-  routeAddress: {
-    ...Typography.textStyles.body,
-    color: Colors.neutral[700],
+  content: {
     flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
   },
-  distanceText: {
-    ...Typography.textStyles.bodySmall,
-    color: Colors.neutral[600],
-    fontWeight: Typography.fontWeight.medium,
-    fontSize: 13,
+  mapContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-  section: {
-    backgroundColor: 'white',
-    padding: Spacing[5],
-    marginBottom: Spacing[3],
+  mapPlaceholder: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    backgroundColor: '#e8f5e9',
+    borderRadius: 12,
   },
   sectionTitle: {
-    ...Typography.textStyles.h6,
-    color: Colors.neutral[800],
-    fontWeight: Typography.fontWeight.bold,
-    marginBottom: Spacing[4],
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: '#131c0d',
+    letterSpacing: -0.27,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    paddingTop: 16,
   },
-  vehicleGrid: {
+  vehicleRow: {
     flexDirection: 'row',
-    gap: Spacing[3],
-  },
-  vehicleCard: {
-    flex: 1,
-    backgroundColor: Colors.neutral[50],
-    borderRadius: BorderRadius.lg,
-    padding: Spacing[4],
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.neutral[200],
-    position: 'relative',
+    justifyContent: 'space-between',
+    backgroundColor: '#fafcf8',
+    paddingHorizontal: 16,
+    minHeight: 72,
+    paddingVertical: 8,
   },
-  vehicleCardSelected: {
-    borderColor: Colors.primary[500],
-    backgroundColor: Colors.primary[50],
+  vehicleInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
   },
-  selectedBadge: {
-    position: 'absolute',
-    top: Spacing[2],
-    right: Spacing[2],
-    backgroundColor: Colors.primary[500],
+  vehicleIcon: {
+    width: 48,
+    height: 48,
     borderRadius: 12,
-    width: 24,
-    height: 24,
+    backgroundColor: '#ecf4e6',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  vehicleName: {
-    ...Typography.textStyles.body,
-    color: Colors.neutral[800],
-    fontWeight: Typography.fontWeight.bold,
-    marginTop: Spacing[3],
-    fontSize: 15,
-    textAlign: 'center',
+  vehicleDetails: {
+    gap: 4,
   },
-  vehicleNameSelected: {
-    color: Colors.primary[700],
+  vehiclePrice: {
+    fontSize: 16,
+    fontWeight: '500' as const,
+    color: '#131c0d',
+    lineHeight: 24,
   },
-  vehicleCapacity: {
-    ...Typography.textStyles.caption,
-    color: Colors.neutral[600],
-    marginTop: Spacing[1],
-    fontSize: 12,
-  },
-  priceCard: {
-    backgroundColor: 'white',
-    padding: Spacing[5],
-    marginBottom: Spacing[3],
-    ...Shadows.sm,
-  },
-  priceHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing[2],
-    marginBottom: Spacing[3],
-  },
-  priceTitle: {
-    ...Typography.textStyles.h6,
-    color: Colors.neutral[800],
-    fontWeight: Typography.fontWeight.bold,
-  },
-  priceAmount: {
-    ...Typography.textStyles.h3,
-    color: Colors.primary[600],
-    fontWeight: Typography.fontWeight.bold,
-    marginBottom: Spacing[2],
-  },
-  priceSubtext: {
-    ...Typography.textStyles.bodySmall,
-    color: Colors.neutral[600],
-    marginBottom: Spacing[4],
-    fontSize: 13,
-  },
-  negotiateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing[2],
-    paddingVertical: Spacing[3],
-    paddingHorizontal: Spacing[4],
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.primary[300],
-    backgroundColor: 'transparent',
-  },
-  negotiateButtonText: {
-    ...Typography.textStyles.body,
-    color: Colors.primary[600],
-    fontWeight: Typography.fontWeight.semibold,
+  vehicleTime: {
     fontSize: 14,
+    fontWeight: '400' as const,
+    color: '#6b9e47',
+    lineHeight: 20,
   },
-  negotiationBox: {
-    marginTop: Spacing[4],
-    padding: Spacing[4],
-    backgroundColor: Colors.neutral[50],
-    borderRadius: BorderRadius.md,
+  toggleContainer: {
+    padding: 8,
   },
-  negotiationLabel: {
-    ...Typography.textStyles.bodySmall,
-    color: Colors.neutral[700],
-    fontWeight: Typography.fontWeight.semibold,
-    marginBottom: Spacing[2],
-    fontSize: 13,
+  toggle: {
+    width: 51,
+    height: 31,
+    borderRadius: 15.5,
+    backgroundColor: '#ecf4e6',
+    padding: 2,
+    justifyContent: 'center',
   },
-  priceInput: {
+  toggleActive: {
+    backgroundColor: '#65ea06',
+    justifyContent: 'flex-end',
+  },
+  toggleThumb: {
+    width: 27,
+    height: 27,
+    borderRadius: 13.5,
     backgroundColor: 'white',
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.neutral[300],
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[3],
-    ...Typography.textStyles.h5,
-    color: Colors.neutral[800],
-    marginBottom: Spacing[2],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  negotiationHint: {
-    ...Typography.textStyles.caption,
-    color: Colors.neutral[500],
-    fontSize: 12,
-    lineHeight: 16,
+  toggleThumbActive: {
+    alignSelf: 'flex-end',
   },
-  confirmSection: {
-    backgroundColor: 'white',
-    padding: Spacing[5],
-    ...Shadows.lg,
+  footer: {
+    backgroundColor: '#fafcf8',
   },
   confirmButton: {
-    backgroundColor: Colors.primary[500],
-    borderRadius: BorderRadius.lg,
-    paddingVertical: Spacing[4],
-    paddingHorizontal: Spacing[5],
-    flexDirection: 'row',
-    alignItems: 'center',
+    backgroundColor: '#65ea06',
+    marginHorizontal: 16,
+    marginVertical: 12,
+    height: 48,
+    borderRadius: 12,
     justifyContent: 'center',
-    gap: Spacing[2],
-    ...Shadows.md,
+    alignItems: 'center',
   },
   confirmButtonDisabled: {
     opacity: 0.6,
   },
   confirmButtonText: {
-    ...Typography.textStyles.body,
-    color: 'white',
-    fontWeight: Typography.fontWeight.bold,
     fontSize: 16,
+    fontWeight: '700' as const,
+    color: '#131c0d',
+    letterSpacing: 0.24,
+  },
+  tabBar: {
+    flexDirection: 'row',
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#ecf4e6',
+    backgroundColor: '#fafcf8',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 4,
+    paddingVertical: 8,
+  },
+  tabActive: {
+  },
+  tabLabel: {
+    fontSize: 12,
+    fontWeight: '500' as const,
+    color: '#131c0d',
+    letterSpacing: 0.18,
+  },
+  tabLabelActive: {
+    color: '#6b9e47',
   },
 });
