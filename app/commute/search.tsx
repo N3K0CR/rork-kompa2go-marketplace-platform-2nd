@@ -69,12 +69,15 @@ export default function CommuteSearch() {
       
       console.log('🔍 Searching address:', query);
       
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&countrycodes=cr`;
+      // Agregar Costa Rica al query para mejorar resultados
+      const searchQuery = query.includes('Costa Rica') ? query : `${query}, Costa Rica`;
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5&addressdetails=1&countrycodes=cr`;
       
       const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
+          'User-Agent': 'Kompa2Go/1.0', // Nominatim requiere User-Agent
         },
       });
       
@@ -92,6 +95,10 @@ export default function CommuteSearch() {
       }
     } catch (error) {
       console.error('❌ Error searching address:', error);
+      Alert.alert(
+        'Error de búsqueda',
+        'No se pudo buscar la dirección. Por favor verifica tu conexión a internet e intenta de nuevo.'
+      );
       if (type === 'origin') {
         setOriginSuggestions([]);
       } else {
@@ -146,6 +153,7 @@ export default function CommuteSearch() {
                   method: 'GET',
                   headers: {
                     'Accept': 'application/json',
+                    'User-Agent': 'Kompa2Go/1.0',
                   },
                 }
               );
@@ -175,6 +183,10 @@ export default function CommuteSearch() {
               console.log('✅ Location updated:', { latitude, longitude, address });
             } catch (error) {
               console.error('❌ Error getting address:', error);
+              Alert.alert(
+                'Error',
+                'No se pudo obtener la dirección. Se usarán las coordenadas.'
+              );
               const location: LocationPoint = {
                 latitude,
                 longitude,

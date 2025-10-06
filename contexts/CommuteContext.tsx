@@ -59,6 +59,12 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   KOMMUTE_EXTERNAL_APIS: false,
 };
 
+// Tasa de cambio USD a CRC (Colones Costarricenses)
+const USD_TO_CRC = 520;
+
+// Tarifa base en CRC por kilómetro
+const BASE_RATE_PER_KM_CRC = 650; // ₡650 por km
+
 const DEFAULT_TRANSPORT_MODES: TransportMode[] = [
   {
     id: 'kommute-4',
@@ -67,7 +73,7 @@ const DEFAULT_TRANSPORT_MODES: TransportMode[] = [
     color: '#10B981',
     capacity: 4,
     carbonFactor: 0.15,
-    costFactor: 1.0,
+    costFactor: 1.0, // Multiplicador sobre tarifa base
     speedFactor: 1.2,
     available: true,
     description: 'Vehículo estándar con capacidad para 4 pasajeros',
@@ -79,10 +85,22 @@ const DEFAULT_TRANSPORT_MODES: TransportMode[] = [
     color: '#3B82F6',
     capacity: 7,
     carbonFactor: 0.18,
-    costFactor: 1.3,
+    costFactor: 1.5, // 50% más caro que el estándar
     speedFactor: 1.1,
     available: true,
     description: 'Vehículo grande con mayor capacidad de plazas',
+  },
+  {
+    id: 'kommute-premium',
+    name: 'Kommute Premium',
+    icon: 'star',
+    color: '#F59E0B',
+    capacity: 4,
+    carbonFactor: 0.18,
+    costFactor: 2.0, // El doble de la tarifa base
+    speedFactor: 1.3,
+    available: true,
+    description: 'Vehículo premium con mayor comodidad',
   },
 ];
 

@@ -4,7 +4,7 @@
 // Core type definitions shared across the 2Kommute module
 
 // Transport mode definition (Kommute vehicle types)
-export type KommuteVehicleType = 'kommute-4' | 'kommute-large';
+export type KommuteVehicleType = 'kommute-4' | 'kommute-large' | 'kommute-premium';
 
 export interface TransportMode {
   id: KommuteVehicleType;
