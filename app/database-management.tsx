@@ -8,10 +8,31 @@ import {
   Alert,
   ActivityIndicator 
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDatabaseContext } from '@/contexts/DatabaseContext';
 
 export default function DatabaseManagementScreen() {
+  const insets = useSafeAreaInsets();
+  const [services, setServices] = useState<any[]>([]);
+  const [providers, setProviders] = useState<any[]>([]);
+  const [loadingServices, setLoadingServices] = useState(false);
+  const [loadingProviders, setLoadingProviders] = useState(false);
+  
+  const context = useDatabaseContext();
+  
+  if (!context) {
+    return (
+      <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>Base de Datos No Disponible</Text>
+          <Text style={styles.errorText}>
+            El proveedor de base de datos está deshabilitado. Por favor, habilita DatabaseProvider en app/_layout.tsx
+          </Text>
+        </View>
+      </View>
+    );
+  }
+  
   const { 
     isInitialized, 
     isLoading, 
@@ -19,12 +40,7 @@ export default function DatabaseManagementScreen() {
     seedData,
     getAllServices,
     getTopRatedProviders
-  } = useDatabaseContext();
-  
-  const [services, setServices] = useState<any[]>([]);
-  const [providers, setProviders] = useState<any[]>([]);
-  const [loadingServices, setLoadingServices] = useState(false);
-  const [loadingProviders, setLoadingProviders] = useState(false);
+  } = context;
 
   const handleSeedDatabase = async () => {
     try {
@@ -66,28 +82,28 @@ export default function DatabaseManagementScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={[styles.container, { paddingBottom: insets.bottom }]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
           <Text style={styles.loadingText}>Inicializando base de datos...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={[styles.container, { paddingBottom: insets.bottom }]}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorTitle}>Error de Base de Datos</Text>
           <Text style={styles.errorText}>{error}</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
           <Text style={styles.title}>Gestión de Base de Datos</Text>
@@ -157,7 +173,7 @@ export default function DatabaseManagementScreen() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
