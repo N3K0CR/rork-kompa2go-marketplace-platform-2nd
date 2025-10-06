@@ -6,13 +6,13 @@
 // Constantes de precios
 export const PRICING_CONSTANTS = {
   // Tarifa base por kilómetro en CRC (competitiva con Uber X y Didi)
-  BASE_RATE_PER_KM: 185, // ₡185 por km (ajustado para competir con Uber X)
+  BASE_RATE_PER_KM: 220, // ₡220 por km (ajustado para competir con Uber X)
   
   // Tarifa mínima del viaje en CRC
-  MINIMUM_FARE: 1200, // ₡1,200 mínimo
+  MINIMUM_FARE: 1400, // ₡1,400 mínimo
   
   // Tarifa de inicio (banderazo) en CRC
-  BASE_FARE: 600, // ₡600 al iniciar el viaje
+  BASE_FARE: 750, // ₡750 al iniciar el viaje
   
   // Tarifa por minuto de espera en CRC
   WAIT_TIME_PER_MINUTE: 35, // ₡35 por minuto
@@ -28,45 +28,45 @@ export const PRICING_CONSTANTS = {
 export const DYNAMIC_PRICING_FACTORS = {
   // Factores por hora del día
   TIME_OF_DAY: {
-    PEAK_MORNING: { start: 6, end: 9, multiplier: 1.3 },      // 6am-9am: +30%
-    PEAK_EVENING: { start: 17, end: 20, multiplier: 1.35 },   // 5pm-8pm: +35%
-    LATE_NIGHT: { start: 22, end: 4, multiplier: 1.25 },      // 10pm-4am: +25%
+    PEAK_MORNING: { start: 6, end: 9, multiplier: 1.25 },      // 6am-9am: +25%
+    PEAK_EVENING: { start: 17, end: 20, multiplier: 1.28 },   // 5pm-8pm: +28%
+    LATE_NIGHT: { start: 22, end: 4, multiplier: 1.2 },      // 10pm-4am: +20%
     NORMAL: { multiplier: 1.0 },                               // Resto del día: normal
   },
   
   // Factores por día de la semana
   DAY_OF_WEEK: {
-    WEEKEND: { multiplier: 1.15 },      // Fin de semana: +15%
-    FRIDAY: { multiplier: 1.2 },        // Viernes: +20%
+    WEEKEND: { multiplier: 1.12 },      // Fin de semana: +12%
+    FRIDAY: { multiplier: 1.15 },        // Viernes: +15%
     WEEKDAY: { multiplier: 1.0 },       // Días normales: normal
   },
   
   // Factores por tráfico
   TRAFFIC: {
-    HEAVY: { multiplier: 1.4 },         // Tráfico pesado: +40%
-    MODERATE: { multiplier: 1.2 },      // Tráfico moderado: +20%
+    HEAVY: { multiplier: 1.35 },         // Tráfico pesado: +35%
+    MODERATE: { multiplier: 1.18 },      // Tráfico moderado: +18%
     LIGHT: { multiplier: 1.0 },         // Tráfico ligero: normal
   },
   
   // Factores por demanda
   DEMAND: {
-    VERY_HIGH: { multiplier: 1.5 },     // Demanda muy alta: +50%
-    HIGH: { multiplier: 1.3 },          // Demanda alta: +30%
-    MODERATE: { multiplier: 1.15 },     // Demanda moderada: +15%
+    VERY_HIGH: { multiplier: 1.45 },     // Demanda muy alta: +45%
+    HIGH: { multiplier: 1.25 },          // Demanda alta: +25%
+    MODERATE: { multiplier: 1.12 },     // Demanda moderada: +12%
     NORMAL: { multiplier: 1.0 },        // Demanda normal: normal
   },
   
   // Factores por eventos especiales
   EVENTS: {
-    MAJOR_EVENT: { multiplier: 1.6 },   // Evento mayor: +60%
-    HOLIDAY: { multiplier: 1.4 },       // Día festivo: +40%
-    SPECIAL: { multiplier: 1.25 },      // Evento especial: +25%
+    MAJOR_EVENT: { multiplier: 1.5 },   // Evento mayor: +50%
+    HOLIDAY: { multiplier: 1.35 },       // Día festivo: +35%
+    SPECIAL: { multiplier: 1.2 },      // Evento especial: +20%
   },
   
   // Factores por clima
   WEATHER: {
-    SEVERE: { multiplier: 1.3 },        // Clima severo: +30%
-    RAIN: { multiplier: 1.15 },         // Lluvia: +15%
+    SEVERE: { multiplier: 1.25 },        // Clima severo: +25%
+    RAIN: { multiplier: 1.12 },         // Lluvia: +12%
     NORMAL: { multiplier: 1.0 },        // Clima normal: normal
   },
 } as const;
@@ -599,8 +599,8 @@ export function generateVehiclePrices(
   surgeMultiplier: number;
 }[] {
   const vehicles = [
-    { type: 'kommute-4' as const, costFactor: 0.85, name: 'Kommute 4' },
-    { type: 'kommute-large' as const, costFactor: 1.15, name: 'Kommute Large' },
+    { type: 'kommute-4' as const, costFactor: 0.88, name: 'Kommute 4' },
+    { type: 'kommute-large' as const, costFactor: 1.18, name: 'Kommute Large' },
   ];
 
   return vehicles.map((vehicle) => {
