@@ -88,9 +88,25 @@ export default function CommuteHome() {
             setUserLocation({ latitude, longitude });
             
             try {
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 5000);
+              
               const response = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+                {
+                  signal: controller.signal,
+                  headers: {
+                    'User-Agent': 'Kompa2Go/1.0',
+                  },
+                }
               );
+              
+              clearTimeout(timeoutId);
+              
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
+              
               const data = await response.json();
               const address = data.address?.road 
                 ? `${data.address.road}, ${data.address.city || ''}` 
@@ -98,7 +114,7 @@ export default function CommuteHome() {
               setCurrentAddress(address || 'Ubicación actual');
             } catch (error) {
               console.error('Error getting address:', error);
-              setCurrentAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+              setCurrentAddress(`Lat: ${latitude.toFixed(4)}, Lon: ${longitude.toFixed(4)}`);
             } finally {
               setLoadingLocation(false);
             }
@@ -148,13 +164,35 @@ export default function CommuteHome() {
 
     try {
       setSearching(true);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&countrycodes=cr`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&countrycodes=cr`,
+        {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Kompa2Go/1.0',
+          },
+        }
       );
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
       setSuggestions(data);
     } catch (error) {
       console.error('Error searching destination:', error);
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          console.log('Search request timed out');
+        }
+      }
       setSuggestions([]);
     } finally {
       setSearching(false);
