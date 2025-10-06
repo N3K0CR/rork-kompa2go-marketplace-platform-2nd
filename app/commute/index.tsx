@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Platform, FlatList, Alert, ScrollView } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { MapPin, Navigation, Search, Car, Users, Clock, DollarSign, X } from 'lucide-react-native';
+import { MapPin, Navigation, Search, Car, Users, Clock, DollarSign, X, TrendingUp, Info } from 'lucide-react-native';
 import { useCommute } from '@/src/modules/commute/context/CommuteContext';
-
+import { generateVehiclePrices, calculateDemandLevel, calculateTrafficLevel } from '@/src/modules/commute/utils/pricing';	
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+	
 interface AddressSuggestion {
   place_id: string;
   display_name: string;
@@ -17,15 +17,12 @@ interface AddressSuggestion {
     city?: string;
   };
 }
-
+	
 interface VehicleOption {
   id: 'kommute-4' | 'kommute-large';
   name: string;
   capacity: number;
   icon: typeof Car | typeof Users;
-  basePrice: number;
-  pricePerKm: number;
-  estimatedTime: number;
 }
 
 const VEHICLE_OPTIONS: VehicleOption[] = [
@@ -34,42 +31,17 @@ const VEHICLE_OPTIONS: VehicleOption[] = [
     name: 'Kommute 4',
     capacity: 4,
     icon: Car,
-    basePrice: 1400,
-    pricePerKm: 320,
-    estimatedTime: 12,
   },
   {
     id: 'kommute-large',
     name: 'Kommute Large',
     capacity: 7,
     icon: Users,
-    basePrice: 1700,
-    pricePerKm: 400,
-    estimatedTime: 15,
   },
 ];
-
-function roundToCostaRicanCurrency(amount: number): number {
-  if (amount < 100) {
-    return Math.round(amount / 5) * 5;
-  } else if (amount < 500) {
-    return Math.round(amount / 10) * 10;
-  } else if (amount < 1000) {
-    return Math.round(amount / 25) * 25;
-  } else if (amount < 5000) {
-    return Math.round(amount / 50) * 50;
-  } else if (amount < 10000) {
-    return Math.round(amount / 100) * 100;
-  } else if (amount < 20000) {
-    return Math.round(amount / 500) * 500;
-  } else {
-    return Math.round(amount / 1000) * 1000;
-  }
-}
-
+	
 export default function CommuteHome() {
   const commuteContext = useCommute();
-  const { transportModes, createRoute, startTrip } = commuteContext;
   const firebaseUser = 'firebaseUser' in commuteContext ? commuteContext.firebaseUser : null;
   const insets = useSafeAreaInsets();
   
@@ -84,6 +56,7 @@ export default function CommuteHome() {
   const [distance, setDistance] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
   const [isRequestingTrip, setIsRequestingTrip] = useState(false);
+  const [showPricingDetails, setShowPricingDetails] = useState(false);
 
   useEffect(() => {
     getCurrentLocationAndAddress();
@@ -274,7 +247,7 @@ export default function CommuteHome() {
     const distanceKm = R * c;
 
     setDistance(distanceKm);
-    setDuration(Math.ceil((distanceKm / 40) * 60));
+    setDuration(Math.ceil((distanceKm / 30) * 60));
   };
 
   const handleClearDestination = () => {
@@ -311,7 +284,7 @@ export default function CommuteHome() {
           destAddress: selectedDestination.display_name,
           vehicleType: selectedVehicle,
           vehicleName: selectedVehicleDetails?.name,
-          estimatedPrice: selectedVehicleDetails ? selectedVehicleDetails.totalPrice.toString() : '0',
+          estimatedPrice: selectedVehicleDetails?.totalPrice.toString() || '0',
           estimatedTime: duration.toString(),
           distance: distance.toFixed(2),
         },
@@ -324,12 +297,31 @@ export default function CommuteHome() {
     }
   };
 
+  const currentTime = new Date();
+  const demandLevel = calculateDemandLevel(currentTime);
+  const trafficLevel = calculateTrafficLevel(currentTime);
+  
+  const vehiclePrices = distance > 0 ? generateVehiclePrices(
+    distance * 1000,
+    duration * 60,
+    {
+      timestamp: currentTime,
+      demandLevel,
+      trafficLevel,
+      weatherCondition: 'normal',
+      isSpecialEvent: false,
+    }
+  ) : [];
+  
   const vehicleDetails = VEHICLE_OPTIONS.map(vehicle => {
-    const rawPrice = vehicle.basePrice + (distance * vehicle.pricePerKm);
+    const priceData = vehiclePrices.find(p => p.vehicleType === vehicle.id);
     return {
       ...vehicle,
-      totalPrice: roundToCostaRicanCurrency(rawPrice),
-      estimatedTime: duration || vehicle.estimatedTime,
+      totalPrice: priceData?.price || 0,
+      basePrice: priceData?.basePrice || 0,
+      estimatedTime: duration || 0,
+      appliedFactors: priceData?.appliedFactors || [],
+      surgeMultiplier: priceData?.surgeMultiplier || 1.0,
     };
   });
 
@@ -437,6 +429,7 @@ export default function CommuteHome() {
             {vehicleDetails.map((vehicle) => {
               const Icon = vehicle.icon;
               const isSelected = selectedVehicle === vehicle.id;
+              const hasSurge = vehicle.surgeMultiplier > 1.0;
 
               return (
                 <TouchableOpacity
@@ -460,6 +453,14 @@ export default function CommuteHome() {
                       <Text style={styles.vehicleCapacity}>
                         {vehicle.capacity} pasajeros
                       </Text>
+                      {hasSurge && (
+                        <View style={styles.surgeIndicator}>
+                          <TrendingUp size={12} color="#ff9800" />
+                          <Text style={styles.surgeText}>
+                            {vehicle.surgeMultiplier.toFixed(1)}x demanda
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   </View>
 
@@ -467,6 +468,11 @@ export default function CommuteHome() {
                     <Text style={styles.vehiclePrice}>
                       ₡{vehicle.totalPrice.toLocaleString('es-CR')}
                     </Text>
+                    {hasSurge && vehicle.basePrice > 0 && (
+                      <Text style={styles.basePriceStrikethrough}>
+                        ₡{vehicle.basePrice.toLocaleString('es-CR')}
+                      </Text>
+                    )}
                     <Text style={styles.vehicleTime}>
                       {vehicle.estimatedTime} min
                     </Text>
@@ -484,7 +490,17 @@ export default function CommuteHome() {
 
             {selectedVehicleData && (
               <View style={styles.tripSummary}>
-                <Text style={styles.tripSummaryTitle}>Resumen del viaje</Text>
+                <View style={styles.tripSummaryHeader}>
+                  <Text style={styles.tripSummaryTitle}>Resumen del viaje</Text>
+                  {selectedVehicleData.appliedFactors.length > 0 && (
+                    <TouchableOpacity 
+                      onPress={() => setShowPricingDetails(!showPricingDetails)}
+                      style={styles.infoButton}
+                    >
+                      <Info size={18} color="#6b9e47" />
+                    </TouchableOpacity>
+                  )}
+                </View>
                 
                 <View style={styles.tripSummaryRow}>
                   <View style={styles.tripSummaryIcon}>
@@ -502,6 +518,18 @@ export default function CommuteHome() {
                   <Text style={styles.tripSummaryValue}>{selectedVehicleData.estimatedTime} min</Text>
                 </View>
 
+                {selectedVehicleData.surgeMultiplier > 1.0 && selectedVehicleData.basePrice > 0 && (
+                  <View style={styles.tripSummaryRow}>
+                    <View style={styles.tripSummaryIcon}>
+                      <DollarSign size={18} color="#9ca3af" />
+                    </View>
+                    <Text style={styles.tripSummaryLabel}>Precio base</Text>
+                    <Text style={styles.tripSummaryValueStrikethrough}>
+                      ₡{selectedVehicleData.basePrice.toLocaleString('es-CR')}
+                    </Text>
+                  </View>
+                )}
+
                 <View style={styles.tripSummaryRow}>
                   <View style={styles.tripSummaryIcon}>
                     <DollarSign size={18} color="#6b9e47" />
@@ -511,6 +539,24 @@ export default function CommuteHome() {
                     ₡{selectedVehicleData.totalPrice.toLocaleString('es-CR')}
                   </Text>
                 </View>
+
+                {showPricingDetails && selectedVehicleData.appliedFactors.length > 0 && (
+                  <View style={styles.pricingFactorsContainer}>
+                    <Text style={styles.pricingFactorsTitle}>Factores aplicados:</Text>
+                    {selectedVehicleData.appliedFactors.map((factor, index) => (
+                      <View key={index} style={styles.pricingFactorRow}>
+                        <View style={styles.pricingFactorDot} />
+                        <View style={styles.pricingFactorContent}>
+                          <Text style={styles.pricingFactorName}>{factor.name}</Text>
+                          <Text style={styles.pricingFactorDescription}>{factor.description}</Text>
+                        </View>
+                        <Text style={styles.pricingFactorMultiplier}>
+                          +{((factor.multiplier - 1) * 100).toFixed(0)}%
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
 
                 <Text style={styles.negotiableNote}>
                   * El precio es negociable con el conductor
@@ -758,6 +804,17 @@ const styles = StyleSheet.create({
     fontWeight: '500' as const,
     color: '#6b9e47',
   },
+  surgeIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  surgeText: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+    color: '#ff9800',
+  },
   vehiclePricing: {
     alignItems: 'flex-end',
     gap: 2,
@@ -766,6 +823,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700' as const,
     color: '#131c0d',
+  },
+  basePriceStrikethrough: {
+    fontSize: 13,
+    fontWeight: '500' as const,
+    color: '#9ca3af',
+    textDecorationLine: 'line-through' as const,
   },
   vehicleTime: {
     fontSize: 13,
@@ -803,11 +866,19 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 3,
   },
+  tripSummaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
   tripSummaryTitle: {
     fontSize: 16,
     fontWeight: '700' as const,
     color: '#131c0d',
-    marginBottom: 4,
+  },
+  infoButton: {
+    padding: 4,
   },
   tripSummaryRow: {
     flexDirection: 'row',
@@ -838,12 +909,63 @@ const styles = StyleSheet.create({
     fontWeight: '700' as const,
     color: '#65ea06',
   },
+  tripSummaryValueStrikethrough: {
+    fontSize: 14,
+    fontWeight: '500' as const,
+    color: '#9ca3af',
+    textDecorationLine: 'line-through' as const,
+  },
+  pricingFactorsContainer: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#ecf4e6',
+    gap: 12,
+  },
+  pricingFactorsTitle: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: '#6b9e47',
+    marginBottom: 4,
+  },
+  pricingFactorRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  pricingFactorDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#ff9800',
+    marginTop: 6,
+  },
+  pricingFactorContent: {
+    flex: 1,
+    gap: 2,
+  },
+  pricingFactorName: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: '#131c0d',
+  },
+  pricingFactorDescription: {
+    fontSize: 11,
+    fontWeight: '400' as const,
+    color: '#6b9e47',
+    lineHeight: 14,
+  },
+  pricingFactorMultiplier: {
+    fontSize: 13,
+    fontWeight: '700' as const,
+    color: '#ff9800',
+  },
   negotiableNote: {
     fontSize: 12,
     fontWeight: '500' as const,
     color: '#9ca3af',
     fontStyle: 'italic' as const,
-    marginTop: 4,
+    marginTop: 12,
   },
   confirmButton: {
     height: 56,
