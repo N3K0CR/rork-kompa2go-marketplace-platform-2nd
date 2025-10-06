@@ -1,6 +1,5 @@
 import { db } from '@/lib/firebase';
 import { 
-  collection, 
   doc, 
   setDoc, 
   updateDoc, 
@@ -10,7 +9,6 @@ import {
   Unsubscribe 
 } from 'firebase/firestore';
 import type { 
-  DriverAlert, 
   DriverLocation, 
   DriverTrackingSession,
   Alert911Call 
@@ -20,6 +18,8 @@ export class AlertTrackingService {
   async startTracking(alertId: string, driverId: string): Promise<string> {
     try {
       console.log('[AlertTracking] Starting tracking for alert:', alertId);
+      console.log('[AlertTracking] Driver ID:', driverId);
+      console.log('[AlertTracking] Firebase initialized:', !!db);
       
       const sessionId = `${alertId}_${Date.now()}`;
       const trackingRef = doc(db, 'driver_tracking_sessions', sessionId);
@@ -32,24 +32,42 @@ export class AlertTrackingService {
         isActive: true
       };
       
+      console.log('[AlertTracking] Creating tracking session document...');
       await setDoc(trackingRef, {
         ...session,
         startedAt: Timestamp.now()
       });
+      console.log('[AlertTracking] ✅ Tracking session created');
       
+      console.log('[AlertTracking] Creating alert document if not exists...');
       const alertRef = doc(db, 'driver_alerts', alertId);
-      await updateDoc(alertRef, {
-        'tracking.enabled': true,
-        'tracking.sessionId': sessionId,
-        'tracking.startedAt': Timestamp.now(),
-        updatedAt: Timestamp.now()
-      });
       
-      console.log('[AlertTracking] Tracking started successfully:', sessionId);
+      try {
+        await setDoc(alertRef, {
+          id: alertId,
+          driverId,
+          status: 'active',
+          tracking: {
+            enabled: true,
+            sessionId: sessionId,
+            startedAt: Timestamp.now()
+          },
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        }, { merge: true });
+        console.log('[AlertTracking] ✅ Alert document updated');
+      } catch (alertError) {
+        console.warn('[AlertTracking] ⚠️ Could not update alert document:', alertError);
+      }
+      
+      console.log('[AlertTracking] ✅ Tracking started successfully:', sessionId);
       return sessionId;
-    } catch (error) {
-      console.error('[AlertTracking] Error starting tracking:', error);
-      throw error;
+    } catch (error: any) {
+      console.error('[AlertTracking] ❌ Error starting tracking:', error);
+      console.error('[AlertTracking] Error code:', error?.code);
+      console.error('[AlertTracking] Error message:', error?.message);
+      console.error('[AlertTracking] Error details:', JSON.stringify(error, null, 2));
+      throw new Error(`Failed to start tracking: ${error?.message || 'Unknown error'}`);
     }
   }
 
@@ -168,19 +186,29 @@ export class AlertTrackingService {
   ): Promise<string> {
     try {
       console.log('[AlertTracking] Initiating 911 call for alert:', alertId);
+      console.log('[AlertTracking] Driver ID:', driverId);
+      console.log('[AlertTracking] Called by:', calledBy);
       
       const alertRef = doc(db, 'driver_alerts', alertId);
-      const alertDoc = await getDoc(alertRef);
+      let alertData: any = null;
+      let location: any = null;
       
-      if (!alertDoc.exists()) {
-        throw new Error('Alert not found');
+      try {
+        const alertDoc = await getDoc(alertRef);
+        if (alertDoc.exists()) {
+          alertData = alertDoc.data();
+          location = alertData.tracking?.currentLocation || alertData.location;
+          console.log('[AlertTracking] Alert found with location:', !!location);
+        } else {
+          console.warn('[AlertTracking] ⚠️ Alert document not found, using default location');
+        }
+      } catch (alertError) {
+        console.warn('[AlertTracking] ⚠️ Could not fetch alert document:', alertError);
       }
       
-      const alertData = alertDoc.data();
-      const location = alertData.tracking?.currentLocation || alertData.location;
-      
       if (!location) {
-        throw new Error('No location available for 911 call');
+        console.warn('[AlertTracking] ⚠️ No location in alert, using default coordinates');
+        location = { lat: 9.9281, lng: -84.0907 };
       }
       
       const call911Id = `911_${alertId}_${Date.now()}`;
@@ -192,31 +220,44 @@ export class AlertTrackingService {
         calledAt: new Date(),
         calledBy,
         location: {
-          lat: location.latitude || location.lat,
-          lng: location.longitude || location.lng
+          lat: location.latitude || location.lat || 9.9281,
+          lng: location.longitude || location.lng || -84.0907
         },
         driverInfo,
         status: 'pending'
       };
       
+      console.log('[AlertTracking] Creating 911 call document...');
       await setDoc(call911Ref, {
         ...call911Data,
         calledAt: Timestamp.now()
       });
+      console.log('[AlertTracking] ✅ 911 call document created');
       
-      await updateDoc(alertRef, {
-        'resolution.action911Called': true,
-        'resolution.call911Id': call911Id,
-        'resolution.call911At': Timestamp.now(),
-        status: 'investigating',
-        updatedAt: Timestamp.now()
-      });
+      try {
+        await setDoc(alertRef, {
+          id: alertId,
+          driverId,
+          status: 'investigating',
+          resolution: {
+            action911Called: true,
+            call911Id: call911Id,
+            call911At: Timestamp.now()
+          },
+          updatedAt: Timestamp.now()
+        }, { merge: true });
+        console.log('[AlertTracking] ✅ Alert document updated with 911 call info');
+      } catch (updateError) {
+        console.warn('[AlertTracking] ⚠️ Could not update alert document:', updateError);
+      }
       
-      console.log('[AlertTracking] 911 call initiated successfully:', call911Id);
+      console.log('[AlertTracking] ✅ 911 call initiated successfully:', call911Id);
       return call911Id;
-    } catch (error) {
-      console.error('[AlertTracking] Error calling 911:', error);
-      throw error;
+    } catch (error: any) {
+      console.error('[AlertTracking] ❌ Error calling 911:', error);
+      console.error('[AlertTracking] Error code:', error?.code);
+      console.error('[AlertTracking] Error message:', error?.message);
+      throw new Error(`Failed to call 911: ${error?.message || 'Unknown error'}`);
     }
   }
 

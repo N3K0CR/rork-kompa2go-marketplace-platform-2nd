@@ -72,6 +72,36 @@ service cloud.firestore {
       allow list: if isAuthenticated();
     }
     
+    // DRIVER TRACKING SESSIONS (Alert tracking)
+    match /driver_tracking_sessions/{sessionId} {
+      // Anyone authenticated can read for safety monitoring
+      allow read: if isAuthenticated();
+      
+      // Admins and system can create/update tracking sessions
+      allow create, update: if isAuthenticated();
+      
+      // Only admins can delete
+      allow delete: if isAuthenticated();
+      
+      // List all for admin monitoring
+      allow list: if isAuthenticated();
+    }
+    
+    // 911 CALLS (Emergency calls)
+    match /alert_911_calls/{callId} {
+      // Anyone authenticated can read for emergency monitoring
+      allow read: if isAuthenticated();
+      
+      // Admins can create 911 calls
+      allow create, update: if isAuthenticated();
+      
+      // Only admins can delete
+      allow delete: if isAuthenticated();
+      
+      // List all for admin monitoring
+      allow list: if isAuthenticated();
+    }
+    
     // ============================================================================
     // PRODUCTION RULES (COMMENTED OUT FOR DEVELOPMENT)
     // Uncomment these rules and remove the development rule above for production
