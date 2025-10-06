@@ -1,8 +1,8 @@
 export * from './registration-types';
 export * from './referral-types';
 export * from './accessibility-types';
+export * from './kommute-wallet-types';
 
-// Logo Service Types
 export interface LogoServiceRequest {
   id?: string;
   clientInfo: {
