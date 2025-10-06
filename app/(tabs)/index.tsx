@@ -853,6 +853,15 @@ export default function HomeScreen() {
                 <Text style={styles.adminActionText}>Productos K2G</Text>
               </View>
             </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.adminActionCard}
+              onPress={() => router.push('/revenue-estimates')}
+            >
+              <View style={styles.adminActionContent}>
+                <TrendingUp size={20} color="#65ea06" />
+                <Text style={styles.adminActionText}>Estimación de Ingresos</Text>
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
 
