@@ -54,7 +54,7 @@ export default function CommuteSearch() {
 
   console.log('🔍 CommuteSearch: Rendered');
 
-  const searchAddress = async (query: string, type: 'origin' | 'destination') => {
+  const searchAddress = async (query: string, type: 'origin' | 'destination', retries = 2) => {
     if (!query || query.length < 3) {
       if (type === 'origin') {
         setOriginSuggestions([]);
@@ -66,62 +66,77 @@ export default function CommuteSearch() {
       return;
     }
 
-    try {
-      setSearchingAddress(type);
-      if (type === 'origin') {
-        setShowOriginSuggestions(true);
-      } else {
-        setShowDestinationSuggestions(true);
-      }
-      
-      console.log('🔍 Searching address:', query);
-      
-      const searchQuery = query.includes('Costa Rica') ? query : `${query}, Costa Rica`;
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=10&addressdetails=1&countrycodes=cr`;
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'Kompa2Go/1.0',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('✅ Address search results:', data.length, 'results');
-      
-      if (type === 'origin') {
-        setOriginSuggestions(data);
-        if (data.length > 0) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        setSearchingAddress(type);
+        if (type === 'origin') {
           setShowOriginSuggestions(true);
-        }
-      } else {
-        setDestinationSuggestions(data);
-        if (data.length > 0) {
+        } else {
           setShowDestinationSuggestions(true);
         }
+        
+        console.log(`🔍 Searching address (attempt ${attempt + 1}/${retries + 1}):`, query);
+        
+        const searchQuery = query.includes('Costa Rica') ? query : `${query}, Costa Rica`;
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=10&addressdetails=1&countrycodes=cr`;
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'Kompa2Go/1.0',
+          },
+          signal: controller.signal,
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('✅ Address search results:', data.length, 'results');
+        
+        if (type === 'origin') {
+          setOriginSuggestions(data);
+          if (data.length > 0) {
+            setShowOriginSuggestions(true);
+          }
+        } else {
+          setDestinationSuggestions(data);
+          if (data.length > 0) {
+            setShowDestinationSuggestions(true);
+          }
+        }
+        
+        setSearchingAddress(null);
+        return;
+      } catch (error: any) {
+        console.error(`❌ Error searching address (attempt ${attempt + 1}/${retries + 1}):`, error.message);
+        
+        if (attempt === retries) {
+          console.error('❌ All search attempts failed');
+          if (type === 'origin') {
+            setOriginSuggestions([]);
+          } else {
+            setDestinationSuggestions([]);
+          }
+        } else {
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+        }
       }
-    } catch (error) {
-      console.error('❌ Error searching address:', error);
-      Alert.alert(
-        'Error de búsqueda',
-        'No se pudo buscar la dirección. Por favor verifica tu conexión a internet e intenta de nuevo.'
-      );
-      if (type === 'origin') {
-        setOriginSuggestions([]);
-      } else {
-        setDestinationSuggestions([]);
-      }
-    } finally {
-      setSearchingAddress(null);
     }
+    
+    setSearchingAddress(null);
   };
 
   const selectAddressSuggestion = (suggestion: AddressSuggestion, type: 'origin' | 'destination') => {
+    console.log('🎯 Selecting address suggestion:', { type, address: suggestion.display_name });
+    
     const location: LocationPoint = {
       latitude: parseFloat(suggestion.lat),
       longitude: parseFloat(suggestion.lon),
@@ -134,14 +149,14 @@ export default function CommuteSearch() {
       setOriginInput(suggestion.display_name);
       setShowOriginSuggestions(false);
       setOriginSuggestions([]);
+      console.log('✅ Origin set:', location);
     } else {
       setDestination(location);
       setDestinationInput(suggestion.display_name);
       setShowDestinationSuggestions(false);
       setDestinationSuggestions([]);
+      console.log('✅ Destination set:', location);
     }
-    
-    console.log('✅ Address selected:', suggestion.display_name);
   };
 
   const reverseGeocodeWithRetry = async (latitude: number, longitude: number, retries = 3): Promise<string> => {
