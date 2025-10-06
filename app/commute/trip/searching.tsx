@@ -133,7 +133,7 @@ export default function SearchingKommuter() {
               <View style={styles.tripInfoRow}>
                 <DollarSign size={16} color="#6b9e47" />
                 <Text style={styles.tripInfoText}>
-                  ${params.estimatedPrice}
+                  ₡{params.estimatedPrice}
                 </Text>
               </View>
             </View>
@@ -230,7 +230,7 @@ export default function SearchingKommuter() {
 
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Costo estimado</Text>
-                <Text style={styles.summaryValueHighlight}>${params.estimatedPrice}</Text>
+                <Text style={styles.summaryValueHighlight}>₡{params.estimatedPrice}</Text>
               </View>
 
               <Text style={styles.negotiableNote}>
