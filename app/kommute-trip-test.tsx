@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Play, CheckCircle, XCircle, AlertCircle, MapPin } from 'lucide-react-native';
+import { Play, CheckCircle, XCircle, AlertCircle, MapPin, Navigation } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius, Typography, Shadows } from '@/context-package/design-system';
 import { useCommute } from '@/hooks/useCommute';
 import {
@@ -22,6 +22,8 @@ import {
   calculateDemandLevel,
   calculateTrafficLevel,
 } from '@/src/modules/commute/utils/pricing';
+import { MultiStopSelector, LocationPoint as LocationSelectorPoint } from '@/components/commute/LocationSelector';
+import * as Location from 'expo-location';
 
 interface TestResult {
   step: string;
@@ -39,26 +41,82 @@ interface LocationPoint {
   name?: string;
 }
 
+interface StopPoint extends LocationPoint {
+  id: string;
+}
+
 export default function KommuteTripTest() {
   const { transportModes, createRoute, startTrip, routes } = useCommute();
   const insets = useSafeAreaInsets();
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [, setCurrentStep] = useState(0);
+  const [origin, setOrigin] = useState<LocationPoint | null>(null);
+  const [destination, setDestination] = useState<LocationPoint | null>(null);
+  const [stops, setStops] = useState<StopPoint[]>([]);
+  const [loadingLocation, setLoadingLocation] = useState(false);
 
-  const testLocations = {
-    origin: {
-      latitude: 9.9281,
-      longitude: -84.0907,
-      address: 'San José Centro, Costa Rica',
-      name: 'San José Centro',
-    } as LocationPoint,
-    destination: {
-      latitude: 9.9355,
-      longitude: -84.0838,
-      address: 'Barrio Escalante, San José, Costa Rica',
-      name: 'Barrio Escalante',
-    } as LocationPoint,
+  const getCurrentLocation = async () => {
+    setLoadingLocation(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permiso denegado', 'Se necesita permiso de ubicación');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      const address = await getAddressFromCoords(
+        location.coords.latitude,
+        location.coords.longitude
+      );
+
+      setOrigin({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        address: address || 'Ubicación actual',
+        name: 'Mi ubicación',
+      });
+    } catch (error: any) {
+      console.error('Error getting location:', error);
+      Alert.alert('Error', 'No se pudo obtener la ubicación actual');
+    } finally {
+      setLoadingLocation(false);
+    }
+  };
+
+  const getAddressFromCoords = async (lat: number, lon: number): Promise<string> => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`,
+        {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+            'User-Agent': 'Kompa2Go/1.0',
+          },
+          signal: controller.signal,
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.display_name || `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+    } catch (error) {
+      console.error('Error getting address:', error);
+      return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+    }
   };
 
   const updateTestResult = (step: string, status: TestResult['status'], message?: string, error?: string, data?: any) => {
@@ -80,6 +138,11 @@ export default function KommuteTripTest() {
   };
 
   const runFullTest = async () => {
+    if (!origin || !destination) {
+      Alert.alert('Error', 'Por favor selecciona origen y destino');
+      return;
+    }
+
     setIsRunning(true);
     setTestResults([]);
     setCurrentStep(0);
@@ -164,7 +227,8 @@ export default function KommuteTripTest() {
     updateTestResult(step, 'running', 'Probando geocodificación inversa...');
 
     try {
-      const { latitude, longitude } = testLocations.origin;
+      if (!origin) throw new Error('No hay origen seleccionado');
+      const { latitude, longitude } = origin;
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -219,7 +283,7 @@ export default function KommuteTripTest() {
     try {
       await new Promise((resolve) => setTimeout(resolve, 300));
 
-      const { origin, destination } = testLocations;
+      if (!origin || !destination) throw new Error('Faltan ubicaciones');
       
       const distanceMeters = calculateDistance(
         origin.latitude,
@@ -258,7 +322,7 @@ export default function KommuteTripTest() {
     try {
       await new Promise((resolve) => setTimeout(resolve, 300));
 
-      const { origin, destination } = testLocations;
+      if (!origin || !destination) throw new Error('Faltan ubicaciones');
       
       const distanceMeters = calculateDistance(
         origin.latitude,
@@ -325,7 +389,7 @@ export default function KommuteTripTest() {
     try {
       const mockUserId = 'test_user_' + Date.now();
 
-      const { origin, destination } = testLocations;
+      if (!origin || !destination) throw new Error('Faltan ubicaciones');
       
       const distanceMeters = calculateDistance(
         origin.latitude,
@@ -357,27 +421,37 @@ export default function KommuteTripTest() {
         }
       );
 
+      const allPoints = [
+        {
+          id: `point_origin_${Date.now()}`,
+          latitude: origin.latitude,
+          longitude: origin.longitude,
+          address: origin.address,
+          name: origin.name,
+          type: 'origin' as const,
+        },
+        ...stops.map((stop, index) => ({
+          id: stop.id,
+          latitude: stop.latitude,
+          longitude: stop.longitude,
+          address: stop.address,
+          name: stop.name || `Parada ${index + 1}`,
+          type: 'waypoint' as const,
+        })),
+        {
+          id: `point_dest_${Date.now()}`,
+          latitude: destination.latitude,
+          longitude: destination.longitude,
+          address: destination.address,
+          name: destination.name,
+          type: 'destination' as const,
+        },
+      ];
+
       const route = await createRoute({
         userId: mockUserId,
-        name: `Test: ${origin.name} → ${destination.name}`,
-        points: [
-          {
-            id: `point_origin_${Date.now()}`,
-            latitude: origin.latitude,
-            longitude: origin.longitude,
-            address: origin.address,
-            name: origin.name,
-            type: 'origin',
-          },
-          {
-            id: `point_dest_${Date.now()}`,
-            latitude: destination.latitude,
-            longitude: destination.longitude,
-            address: destination.address,
-            name: destination.name,
-            type: 'destination',
-          },
-        ],
+        name: `Test: ${origin.name} → ${destination.name}${stops.length > 0 ? ` (+${stops.length} paradas)` : ''}`,
+        points: allPoints,
         transportModes: [kommute4Mode],
         distance: distanceMeters,
         duration: durationSeconds,
@@ -506,21 +580,34 @@ export default function KommuteTripTest() {
           </Text>
         </View>
 
-        <View style={styles.locationInfo}>
-          <View style={styles.locationItem}>
-            <MapPin size={16} color={Colors.success[500]} />
-            <View style={styles.locationDetails}>
-              <Text style={styles.locationLabel}>Origen</Text>
-              <Text style={styles.locationAddress}>{testLocations.origin.name}</Text>
-            </View>
+        <View style={styles.locationSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>📍 Configurar Viaje</Text>
+            <TouchableOpacity
+              style={styles.currentLocationButton}
+              onPress={getCurrentLocation}
+              disabled={loadingLocation}
+            >
+              {loadingLocation ? (
+                <ActivityIndicator size="small" color={Colors.primary[600]} />
+              ) : (
+                <>
+                  <Navigation size={16} color={Colors.primary[600]} />
+                  <Text style={styles.currentLocationText}>Usar mi ubicación</Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
-          <View style={styles.locationItem}>
-            <MapPin size={16} color={Colors.error[500]} />
-            <View style={styles.locationDetails}>
-              <Text style={styles.locationLabel}>Destino</Text>
-              <Text style={styles.locationAddress}>{testLocations.destination.name}</Text>
-            </View>
-          </View>
+
+          <MultiStopSelector
+            origin={origin}
+            destination={destination}
+            stops={stops}
+            onOriginChange={setOrigin}
+            onDestinationChange={setDestination}
+            onStopsChange={setStops}
+            maxStops={3}
+          />
         </View>
 
         <TouchableOpacity
@@ -601,31 +688,37 @@ const styles = StyleSheet.create({
     color: Colors.neutral[600],
     lineHeight: 22,
   },
-  locationInfo: {
+  locationSection: {
     backgroundColor: 'white',
     borderRadius: BorderRadius.lg,
     padding: Spacing[4],
     marginBottom: Spacing[4],
-    gap: Spacing[3],
     ...Shadows.sm,
   },
-  locationItem: {
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing[4],
+  },
+  sectionTitle: {
+    ...Typography.textStyles.h6,
+    color: Colors.neutral[800],
+    fontWeight: Typography.fontWeight.bold,
+  },
+  currentLocationButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing[3],
+    gap: Spacing[2],
+    paddingHorizontal: Spacing[3],
+    paddingVertical: Spacing[2],
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.primary[50],
   },
-  locationDetails: {
-    flex: 1,
-  },
-  locationLabel: {
+  currentLocationText: {
     ...Typography.textStyles.caption,
-    color: Colors.neutral[500],
-    marginBottom: Spacing[1],
-  },
-  locationAddress: {
-    ...Typography.textStyles.body,
-    color: Colors.neutral[800],
-    fontWeight: Typography.fontWeight.medium,
+    color: Colors.primary[600],
+    fontWeight: Typography.fontWeight.semibold,
   },
   runButton: {
     flexDirection: 'row',

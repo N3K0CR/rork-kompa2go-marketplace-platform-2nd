@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,10 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
+  FlatList,
+  Keyboard,
 } from 'react-native';
-import { MapPin, Edit3, Map, Plus, X, Navigation } from 'lucide-react-native';
+import { MapPin, Edit3, Map, Plus, X, Navigation, Search } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius, Typography, Shadows } from '@/context-package/design-system';
 
 export interface LocationPoint {
@@ -45,18 +47,85 @@ export function LocationSelector({
   const [editedAddress, setEditedAddress] = useState('');
   const [editedLat, setEditedLat] = useState('');
   const [editedLon, setEditedLon] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleOpenEdit = () => {
     if (value) {
       setEditedAddress(value.address);
       setEditedLat(value.latitude.toString());
       setEditedLon(value.longitude.toString());
+      setSearchQuery(value.address);
     } else {
       setEditedAddress('');
       setEditedLat('');
       setEditedLon('');
+      setSearchQuery('');
     }
+    setSearchResults([]);
     setShowEditModal(true);
+  };
+
+  const searchLocation = async (query: string) => {
+    if (!query || query.length < 3) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=cr`,
+        {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+            'User-Agent': 'Kompa2Go/1.0',
+          },
+          signal: controller.signal,
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      setSearchResults(data);
+    } catch (error) {
+      console.error('Error searching location:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearchQueryChange = (text: string) => {
+    setSearchQuery(text);
+    
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      searchLocation(text);
+    }, 500);
+  };
+
+  const handleSelectSearchResult = (result: any) => {
+    setEditedAddress(result.display_name);
+    setEditedLat(result.lat);
+    setEditedLon(result.lon);
+    setSearchQuery(result.display_name);
+    setSearchResults([]);
+    Keyboard.dismiss();
   };
 
   const handleSaveEdit = () => {
@@ -167,7 +236,51 @@ export function LocationSelector({
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody}>
+            <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
+              <Text style={styles.inputLabel}>Buscar Dirección</Text>
+              <View style={styles.searchContainer}>
+                <Search size={20} color={Colors.neutral[400]} style={styles.searchIcon} />
+                <TextInput
+                  style={styles.searchInput}
+                  value={searchQuery}
+                  onChangeText={handleSearchQueryChange}
+                  placeholder="Busca una dirección en Costa Rica"
+                  placeholderTextColor={Colors.neutral[400]}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                {isSearching && (
+                  <ActivityIndicator size="small" color={Colors.primary[500]} style={styles.searchLoader} />
+                )}
+              </View>
+
+              {searchResults.length > 0 && (
+                <View style={styles.searchResultsContainer}>
+                  <FlatList
+                    data={searchResults}
+                    keyExtractor={(item) => item.place_id}
+                    scrollEnabled={false}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={styles.searchResultItem}
+                        onPress={() => handleSelectSearchResult(item)}
+                      >
+                        <MapPin size={16} color={Colors.primary[500]} />
+                        <Text style={styles.searchResultText} numberOfLines={2}>
+                          {item.display_name}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  />
+                </View>
+              )}
+
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>o ingresa manualmente</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
               <Text style={styles.inputLabel}>Dirección</Text>
               <TextInput
                 style={styles.input}
@@ -252,6 +365,70 @@ export function MultiStopSelector({
   const [newStopAddress, setNewStopAddress] = useState('');
   const [newStopLat, setNewStopLat] = useState('');
   const [newStopLon, setNewStopLon] = useState('');
+  const [stopSearchQuery, setStopSearchQuery] = useState('');
+  const [stopSearchResults, setStopSearchResults] = useState<any[]>([]);
+  const [isStopSearching, setIsStopSearching] = useState(false);
+  const stopSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const searchStopLocation = async (query: string) => {
+    if (!query || query.length < 3) {
+      setStopSearchResults([]);
+      return;
+    }
+
+    setIsStopSearching(true);
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=cr`,
+        {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+            'User-Agent': 'Kompa2Go/1.0',
+          },
+          signal: controller.signal,
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      setStopSearchResults(data);
+    } catch (error) {
+      console.error('Error searching location:', error);
+      setStopSearchResults([]);
+    } finally {
+      setIsStopSearching(false);
+    }
+  };
+
+  const handleStopSearchQueryChange = (text: string) => {
+    setStopSearchQuery(text);
+    
+    if (stopSearchTimeoutRef.current) {
+      clearTimeout(stopSearchTimeoutRef.current);
+    }
+
+    stopSearchTimeoutRef.current = setTimeout(() => {
+      searchStopLocation(text);
+    }, 500);
+  };
+
+  const handleSelectStopSearchResult = (result: any) => {
+    setNewStopAddress(result.display_name);
+    setNewStopLat(result.lat);
+    setNewStopLon(result.lon);
+    setStopSearchQuery(result.display_name);
+    setStopSearchResults([]);
+    Keyboard.dismiss();
+  };
 
   const handleAddStop = () => {
     const lat = parseFloat(newStopLat);
@@ -278,6 +455,8 @@ export function MultiStopSelector({
     setNewStopAddress('');
     setNewStopLat('');
     setNewStopLon('');
+    setStopSearchQuery('');
+    setStopSearchResults([]);
     setShowAddStopModal(false);
   };
 
@@ -355,7 +534,51 @@ export function MultiStopSelector({
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody}>
+            <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
+              <Text style={styles.inputLabel}>Buscar Dirección</Text>
+              <View style={styles.searchContainer}>
+                <Search size={20} color={Colors.neutral[400]} style={styles.searchIcon} />
+                <TextInput
+                  style={styles.searchInput}
+                  value={stopSearchQuery}
+                  onChangeText={handleStopSearchQueryChange}
+                  placeholder="Busca una dirección en Costa Rica"
+                  placeholderTextColor={Colors.neutral[400]}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                {isStopSearching && (
+                  <ActivityIndicator size="small" color={Colors.primary[500]} style={styles.searchLoader} />
+                )}
+              </View>
+
+              {stopSearchResults.length > 0 && (
+                <View style={styles.searchResultsContainer}>
+                  <FlatList
+                    data={stopSearchResults}
+                    keyExtractor={(item) => item.place_id}
+                    scrollEnabled={false}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={styles.searchResultItem}
+                        onPress={() => handleSelectStopSearchResult(item)}
+                      >
+                        <MapPin size={16} color={Colors.primary[500]} />
+                        <Text style={styles.searchResultText} numberOfLines={2}>
+                          {item.display_name}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  />
+                </View>
+              )}
+
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>o ingresa manualmente</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
               <Text style={styles.inputLabel}>Dirección</Text>
               <TextInput
                 style={styles.input}
@@ -506,6 +729,65 @@ const styles = StyleSheet.create({
     color: Colors.neutral[500],
     marginTop: Spacing[3],
     fontStyle: 'italic' as const,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.neutral[50],
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.neutral[300],
+    paddingHorizontal: Spacing[3],
+    marginBottom: Spacing[3],
+  },
+  searchIcon: {
+    marginRight: Spacing[2],
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: Spacing[3],
+    ...Typography.textStyles.body,
+    color: Colors.neutral[800],
+    fontSize: 15,
+  },
+  searchLoader: {
+    marginLeft: Spacing[2],
+  },
+  searchResultsContainer: {
+    backgroundColor: Colors.neutral[50],
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.neutral[300],
+    marginBottom: Spacing[4],
+    maxHeight: 200,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[3],
+    padding: Spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.neutral[200],
+  },
+  searchResultText: {
+    flex: 1,
+    ...Typography.textStyles.bodySmall,
+    color: Colors.neutral[700],
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: Spacing[4],
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.neutral[300],
+  },
+  dividerText: {
+    ...Typography.textStyles.caption,
+    color: Colors.neutral[500],
+    marginHorizontal: Spacing[3],
   },
   modalFooter: {
     flexDirection: 'row',
