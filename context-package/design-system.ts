@@ -3,18 +3,29 @@ import { Platform } from 'react-native';
 
 // Color palette
 export const Colors = {
-  // Primary colors
+  // Primary colors - Kommute Elegante (neutros)
   primary: {
-    50: '#EBF8FF',
-    100: '#BEE3F8',
-    200: '#90CDF4',
-    300: '#63B3ED',
-    400: '#4299E1',
-    500: '#3182CE', // Main primary
-    600: '#2B77CB',
-    700: '#2C5282',
-    800: '#2A4365',
-    900: '#1A365D',
+    50: '#FCE4EC',
+    100: '#F8BBD0',
+    200: '#F48FB1',
+    300: '#F06292',
+    400: '#EC407A',
+    500: '#C2185B', // Main primary - Kommute
+    600: '#AD1457',
+    700: '#880E4F',
+    800: '#6D0B3F',
+    900: '#4A0829',
+  },
+
+  // Kommute specific colors
+  kommute: {
+    primary: '#C2185B',
+    dark: '#212121',
+    darkGray: '#424242',
+    mediumGray: '#9E9E9E',
+    lightGray: '#E0E0E0',
+    background: '#F5F5F5',
+    white: '#FFFFFF',
   },
 
   // Secondary colors
@@ -73,18 +84,18 @@ export const Colors = {
     900: '#7F1D1D',
   },
 
-  // Neutral colors
+  // Neutral colors - Kommute Elegante (neutros)
   neutral: {
     50: '#FAFAFA',
     100: '#F5F5F5',
-    200: '#E5E5E5',
+    200: '#E0E0E0',
     300: '#D4D4D4',
-    400: '#A3A3A3',
-    500: '#737373',
-    600: '#525252',
-    700: '#404040',
-    800: '#262626',
-    900: '#171717',
+    400: '#BDBDBD',
+    500: '#9E9E9E',
+    600: '#757575',
+    700: '#424242',
+    800: '#212121',
+    900: '#000000',
   },
 
   // Platform-specific colors
