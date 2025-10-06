@@ -6,7 +6,7 @@
 // Constantes de precios
 export const PRICING_CONSTANTS = {
   // Tarifa base por kilómetro en CRC (competitiva con Uber X y Didi)
-  BASE_RATE_PER_KM: 120, // ₡120 por km (ajustado para competir)
+  BASE_RATE_PER_KM: 155, // ₡155 por km (ajustado para precio objetivo de 1850)
   
   // Tarifa mínima del viaje en CRC
   MINIMUM_FARE: 1000, // ₡1,000 mínimo
