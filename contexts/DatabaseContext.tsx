@@ -258,6 +258,10 @@ export const [DatabaseProvider, useDatabaseContext] = createContextHook(() => {
       
       console.log('🔄 Initializing Firebase Firestore database...');
       
+      if (!db) {
+        throw new Error('Firebase Firestore is not initialized. Check Firebase configuration.');
+      }
+      
       const modules = createFirestoreQueries();
       setDbModules(modules);
       
@@ -267,7 +271,8 @@ export const [DatabaseProvider, useDatabaseContext] = createContextHook(() => {
       console.log('✅ Firebase Firestore database initialized successfully');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Database initialization failed';
-      console.error('Database initialization error:', errorMessage);
+      console.error('❌ Database initialization error:', errorMessage);
+      console.error('Full error:', err);
       setError(errorMessage);
       setIsInitialized(false);
     } finally {

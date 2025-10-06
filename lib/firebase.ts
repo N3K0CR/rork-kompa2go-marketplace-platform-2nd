@@ -5,6 +5,21 @@ import { getStorage } from 'firebase/storage';
 import { getAnalytics } from 'firebase/analytics';
 import { Platform } from 'react-native';
 
+if (Platform.OS === 'web' && typeof window !== 'undefined') {
+  if (!(window as any).Buffer) {
+    (window as any).Buffer = {
+      isBuffer: () => false,
+    };
+  }
+  if (!(window as any).process) {
+    (window as any).process = {
+      env: {},
+      version: '',
+      nextTick: (fn: Function) => setTimeout(fn, 0),
+    };
+  }
+}
+
 const firebaseConfig = {
   apiKey: "AIzaSyCyErsu4Trv2MgfQfglWl-VpFezC9uCtSU",
   authDomain: "kompa2go.firebaseapp.com",
