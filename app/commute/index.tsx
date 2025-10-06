@@ -175,7 +175,7 @@ export default function CommuteHome() {
   };
 
   const searchDestination = useCallback(async (query: string) => {
-    if (!query || query.length < 3) {
+    if (!query || query.length < 2) {
       setSuggestions([]);
       return;
     }
@@ -184,14 +184,15 @@ export default function CommuteHome() {
       setSearching(true);
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&countrycodes=cr`,
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=8&addressdetails=1&countrycodes=cr`,
         {
           signal: controller.signal,
           headers: {
             'User-Agent': 'Kompa2Go/1.0',
+            'Accept': 'application/json',
           },
         }
       );
@@ -199,19 +200,28 @@ export default function CommuteHome() {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
+        console.error('Search API error:', response.status, response.statusText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
-      setSuggestions(data);
+      console.log('Search results:', data.length, 'items found for:', query);
+      
+      if (data && Array.isArray(data)) {
+        setSuggestions(data);
+      } else {
+        console.warn('Invalid search response format');
+        setSuggestions([]);
+      }
     } catch (error) {
       console.error('Error searching destination:', error);
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          console.log('Search request timed out');
+          console.log('Search request timed out - keeping previous suggestions');
+        } else {
+          console.error('Search error details:', error.message);
         }
       }
-      setSuggestions([]);
     } finally {
       setSearching(false);
     }
@@ -219,7 +229,11 @@ export default function CommuteHome() {
 
   const handleDestinationChange = (text: string) => {
     setDestination(text);
-    searchDestination(text);
+    if (text.length >= 2) {
+      searchDestination(text);
+    } else {
+      setSuggestions([]);
+    }
   };
 
   const handleSelectDestination = (suggestion: AddressSuggestion) => {
@@ -359,29 +373,41 @@ export default function CommuteHome() {
             )}
           </View>
 
-          {suggestions.length > 0 && !selectedDestination && (
+          {destination.length >= 2 && !selectedDestination && (
             <View style={styles.suggestionsContainer}>
-              <FlatList
-                data={suggestions}
-                keyExtractor={(item) => item.place_id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.suggestionItem}
-                    onPress={() => handleSelectDestination(item)}
-                  >
-                    <MapPin size={18} color="#6b9e47" />
-                    <View style={styles.suggestionTextContainer}>
-                      <Text style={styles.suggestionMainText} numberOfLines={1}>
-                        {item.address?.road || item.address?.city || 'Ubicación'}
-                      </Text>
-                      <Text style={styles.suggestionSecondaryText} numberOfLines={1}>
-                        {item.display_name}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                )}
-                scrollEnabled={false}
-              />
+              {searching && suggestions.length === 0 ? (
+                <View style={styles.searchingContainer}>
+                  <ActivityIndicator size="small" color="#6b9e47" />
+                  <Text style={styles.searchingText}>Buscando direcciones...</Text>
+                </View>
+              ) : suggestions.length > 0 ? (
+                <FlatList
+                  data={suggestions}
+                  keyExtractor={(item) => item.place_id}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.suggestionItem}
+                      onPress={() => handleSelectDestination(item)}
+                    >
+                      <MapPin size={18} color="#6b9e47" />
+                      <View style={styles.suggestionTextContainer}>
+                        <Text style={styles.suggestionMainText} numberOfLines={1}>
+                          {item.address?.road || item.address?.city || 'Ubicación'}
+                        </Text>
+                        <Text style={styles.suggestionSecondaryText} numberOfLines={2}>
+                          {item.display_name}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                  scrollEnabled={false}
+                />
+              ) : !searching ? (
+                <View style={styles.noResultsContainer}>
+                  <Text style={styles.noResultsText}>No se encontraron resultados</Text>
+                  <Text style={styles.noResultsSubtext}>Intenta con otra búsqueda</Text>
+                </View>
+              ) : null}
             </View>
           )}
         </View>
@@ -622,6 +648,34 @@ const styles = StyleSheet.create({
     color: '#6b9e47',
     fontWeight: '400' as const,
     lineHeight: 16,
+    flexWrap: 'wrap',
+  },
+  searchingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    gap: 12,
+  },
+  searchingText: {
+    fontSize: 14,
+    color: '#6b9e47',
+    fontWeight: '500' as const,
+  },
+  noResultsContainer: {
+    alignItems: 'center',
+    padding: 24,
+    gap: 8,
+  },
+  noResultsText: {
+    fontSize: 15,
+    color: '#131c0d',
+    fontWeight: '600' as const,
+  },
+  noResultsSubtext: {
+    fontSize: 13,
+    color: '#6b9e47',
+    fontWeight: '400' as const,
   },
   clearButton: {
     padding: 4,
