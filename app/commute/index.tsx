@@ -34,8 +34,8 @@ const VEHICLE_OPTIONS: VehicleOption[] = [
     name: 'Kommute 4',
     capacity: 4,
     icon: Car,
-    basePrice: 1200,
-    pricePerKm: 280,
+    basePrice: 1400,
+    pricePerKm: 320,
     estimatedTime: 12,
   },
   {
@@ -43,8 +43,8 @@ const VEHICLE_OPTIONS: VehicleOption[] = [
     name: 'Kommute Large',
     capacity: 7,
     icon: Users,
-    basePrice: 1500,
-    pricePerKm: 350,
+    basePrice: 1700,
+    pricePerKm: 400,
     estimatedTime: 15,
   },
 ];
@@ -181,21 +181,24 @@ export default function CommuteHome() {
     }
 
     const controller = new AbortController();
-    let timeoutId: NodeJS.Timeout | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     try {
       setSearching(true);
       
       timeoutId = setTimeout(() => {
         controller.abort();
-      }, 8000);
+      }, 10000);
       
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      const searchQuery = query.includes('Costa Rica') ? query : `${query}, Costa Rica`;
       
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=8&addressdetails=1&countrycodes=cr`,
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=8&addressdetails=1&countrycodes=cr`,
         {
           signal: controller.signal,
+          method: 'GET',
           headers: {
             'User-Agent': 'Kompa2Go/1.0',
             'Accept': 'application/json',
@@ -210,6 +213,7 @@ export default function CommuteHome() {
       
       if (!response.ok) {
         console.error('Search API error:', response.status, response.statusText);
+        setSuggestions([]);
         return;
       }
       
@@ -226,11 +230,16 @@ export default function CommuteHome() {
         clearTimeout(timeoutId);
       }
       
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.log('Search request cancelled');
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          console.log('Search request cancelled');
+        } else {
+          console.error('Error searching destination:', error.message);
+        }
       } else {
         console.error('Error searching destination:', error);
       }
+      setSuggestions([]);
     } finally {
       setSearching(false);
     }

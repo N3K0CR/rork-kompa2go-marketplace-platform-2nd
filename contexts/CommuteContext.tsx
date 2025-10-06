@@ -63,7 +63,7 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
 const USD_TO_CRC = 520;
 
 // Tarifa base en CRC por kilómetro
-const BASE_RATE_PER_KM_CRC = 650; // ₡650 por km
+const BASE_RATE_PER_KM_CRC = 750; // ₡750 por km
 
 const DEFAULT_TRANSPORT_MODES: TransportMode[] = [
   {
