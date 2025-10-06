@@ -24,7 +24,7 @@ import { KompiBrainProvider } from "@/contexts/KompiBrainContext";
 import { CommuteContext } from "@/src/modules/commute/context/CommuteContext";
 import { AccessibilityProvider } from "@/contexts/AccessibilityContext";
 import { FirebaseAuthProvider } from "@/contexts/FirebaseAuthContext";
-// import { DatabaseProvider } from "@/contexts/DatabaseContext";
+import { DatabaseProvider } from "@/contexts/DatabaseContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ReservationAlertModal } from "@/components/ReservationAlertModal";
 import { trpc, trpcClient } from "@/lib/trpc";
@@ -87,8 +87,7 @@ export default function RootLayout() {
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
-        {/* Temporarily disable DatabaseProvider to fix SharedArrayBuffer error */}
-        {/* <DatabaseProvider> */}
+        <DatabaseProvider>
           <AccessibilityProvider>
             <FirebaseAuthProvider>
               <LanguageProvider>
@@ -133,7 +132,7 @@ export default function RootLayout() {
               </LanguageProvider>
             </FirebaseAuthProvider>
           </AccessibilityProvider>
-        {/* </DatabaseProvider> */}
+        </DatabaseProvider>
       </QueryClientProvider>
     </trpc.Provider>
   );
