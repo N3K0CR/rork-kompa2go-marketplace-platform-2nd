@@ -30,8 +30,9 @@ import {
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { calculateRevenueEstimates, formatCRC, PRICING_CONSTANTS } from '@/src/modules/commute/utils/pricing';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, updateDoc, getDoc, orderBy } from 'firebase/firestore';
+import { signInAnonymously } from 'firebase/auth';
 import type { KommuterRegistrationData, VehicleData } from '@/src/shared/types/registration-types';
 
 type AlertType = 'danger' | 'rating' | 'complaint';
@@ -107,6 +108,7 @@ export default function KommuterPanel() {
   const [pendingKommuters, setPendingKommuters] = useState<PendingKommuter[]>([]);
   const [loadingKommuters, setLoadingKommuters] = useState(true);
   const [processingApproval, setProcessingApproval] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const [promotions, setPromotions] = useState<Promotion[]>([
     {
@@ -240,8 +242,23 @@ export default function KommuterPanel() {
   const investigatingAlerts = driverAlerts.filter(a => a.status === 'investigating');
 
   useEffect(() => {
-    loadPendingKommuters();
+    initializeAuth();
   }, []);
+
+  const initializeAuth = async () => {
+    try {
+      if (!auth.currentUser) {
+        console.log('[KommuterPanel] No user authenticated, signing in anonymously...');
+        await signInAnonymously(auth);
+        console.log('[KommuterPanel] Anonymous sign in successful');
+      }
+      await loadPendingKommuters();
+    } catch (error) {
+      console.error('[KommuterPanel] Auth initialization error:', error);
+      setAuthError('Error de autenticación. Por favor recarga la página.');
+      setLoadingKommuters(false);
+    }
+  };
 
   const loadPendingKommuters = async () => {
     try {
@@ -585,7 +602,22 @@ export default function KommuterPanel() {
               <Text style={styles.sectionSubTitle}>Aprobaciones Pendientes</Text>
             </View>
 
-            {loadingKommuters ? (
+            {authError ? (
+              <View style={styles.errorContainer}>
+                <XCircle size={48} color="#FF3B30" />
+                <Text style={styles.errorText}>{authError}</Text>
+                <TouchableOpacity 
+                  style={styles.retryButton}
+                  onPress={() => {
+                    setAuthError(null);
+                    setLoadingKommuters(true);
+                    initializeAuth();
+                  }}
+                >
+                  <Text style={styles.retryButtonText}>Reintentar</Text>
+                </TouchableOpacity>
+              </View>
+            ) : loadingKommuters ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#65ea06" />
                 <Text style={styles.loadingText}>Cargando conductores...</Text>
@@ -1605,6 +1637,31 @@ const styles = StyleSheet.create({
   approvalButtonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '700' as const,
+  },
+  errorContainer: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 40,
+    alignItems: 'center',
+    gap: 12,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#FF3B30',
+    textAlign: 'center',
+    fontWeight: '500' as const,
+  },
+  retryButton: {
+    backgroundColor: '#65ea06',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  retryButtonText: {
+    color: '#131c0d',
+    fontSize: 14,
     fontWeight: '700' as const,
   },
 });
