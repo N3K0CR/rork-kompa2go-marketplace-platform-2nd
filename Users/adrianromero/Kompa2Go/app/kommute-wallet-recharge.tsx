@@ -146,14 +146,51 @@ export default function KommuteWalletRechargeScreen() {
           </Text>
         </View>
 
-        {stats && stats.freeTripsRemaining > 0 && (
-          <View style={styles.freeTripsCard}>
-            <CheckCircle size={24} color="#10b981" />
-            <View style={styles.freeTripsText}>
-              <Text style={styles.freeTripsTitle}>Viajes gratis disponibles</Text>
-              <Text style={styles.freeTripsCount}>
-                {stats.freeTripsRemaining} de 2 viajes restantes
+        {stats && (
+          <View style={styles.statsContainer}>
+            {stats.noValidationTripsRemaining > 0 && (
+              <View style={styles.infoCard}>
+                <CheckCircle size={24} color="#3b82f6" />
+                <View style={styles.infoText}>
+                  <Text style={styles.infoTitle}>Viajes sin validación previa</Text>
+                  <Text style={styles.infoCount}>
+                    {stats.noValidationTripsRemaining} de 2 viajes restantes
+                  </Text>
+                  <Text style={styles.infoDescription}>
+                    No requieren validación previa pero se cobran normalmente
+                  </Text>
+                </View>
+              </View>
+            )}
+            
+            {stats.bonusTripsAvailable > 0 && (
+              <View style={styles.bonusCard}>
+                <CheckCircle size={24} color="#10b981" />
+                <View style={styles.bonusText}>
+                  <Text style={styles.bonusTitle}>Viajes bonificados disponibles</Text>
+                  <Text style={styles.bonusCount}>
+                    {stats.bonusTripsAvailable} viaje{stats.bonusTripsAvailable > 1 ? 's' : ''} gratis
+                  </Text>
+                  <Text style={styles.bonusDescription}>
+                    Ganados por completar {stats.totalTripsCompleted} viajes
+                  </Text>
+                </View>
+              </View>
+            )}
+            
+            <View style={styles.progressCard}>
+              <Text style={styles.progressTitle}>Progreso hacia próximo viaje bonificado</Text>
+              <Text style={styles.progressCount}>
+                {stats.totalTripsCompleted % 20} / 20 viajes
               </Text>
+              <View style={styles.progressBar}>
+                <View 
+                  style={[
+                    styles.progressFill, 
+                    { width: `${((stats.totalTripsCompleted % 20) / 20) * 100}%` }
+                  ]} 
+                />
+              </View>
             </View>
           </View>
         )}
@@ -243,9 +280,9 @@ export default function KommuteWalletRechargeScreen() {
           )}
         </View>
 
-        <View style={styles.infoCard}>
+        <View style={styles.warningCard}>
           <AlertCircle size={20} color="#f59e0b" />
-          <Text style={styles.infoText}>
+          <Text style={styles.warningText}>
             Tu recarga será revisada y aprobada en un plazo máximo de 24 horas.
             Recibirás una notificación cuando esté disponible.
           </Text>
@@ -297,27 +334,88 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 4,
   },
-  freeTripsCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#d1fae5',
-    padding: 16,
-    borderRadius: 12,
+  statsContainer: {
+    gap: 12,
     marginBottom: 24,
   },
-  freeTripsText: {
+  infoCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#dbeafe',
+    padding: 16,
+    borderRadius: 12,
+  },
+  infoText: {
     marginLeft: 12,
     flex: 1,
   },
-  freeTripsTitle: {
+  infoTitle: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: '#1e40af',
+  },
+  infoCount: {
+    fontSize: 12,
+    color: '#1e3a8a',
+    marginTop: 2,
+  },
+  infoDescription: {
+    fontSize: 11,
+    color: '#3b82f6',
+    marginTop: 4,
+  },
+  bonusCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#d1fae5',
+    padding: 16,
+    borderRadius: 12,
+  },
+  bonusText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  bonusTitle: {
     fontSize: 14,
     fontWeight: '600' as const,
     color: '#065f46',
   },
-  freeTripsCount: {
+  bonusCount: {
     fontSize: 12,
     color: '#047857',
     marginTop: 2,
+  },
+  bonusDescription: {
+    fontSize: 11,
+    color: '#10b981',
+    marginTop: 4,
+  },
+  progressCard: {
+    backgroundColor: '#f3f4f6',
+    padding: 16,
+    borderRadius: 12,
+  },
+  progressTitle: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: '#374151',
+    marginBottom: 8,
+  },
+  progressCount: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 8,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#6366f1',
+    borderRadius: 4,
   },
   section: {
     marginBottom: 24,
@@ -443,14 +541,14 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
     color: '#6366f1',
   },
-  infoCard: {
+  warningCard: {
     flexDirection: 'row',
     backgroundColor: '#fef3c7',
     padding: 16,
     borderRadius: 12,
     marginBottom: 24,
   },
-  infoText: {
+  warningText: {
     flex: 1,
     fontSize: 13,
     color: '#92400e',

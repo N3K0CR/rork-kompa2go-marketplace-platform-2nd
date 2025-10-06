@@ -72,7 +72,9 @@ export class FirestoreWalletService {
         currency: 'CRC',
         lastUpdated: now,
         createdAt: now,
-        freeTripsUsed: 0
+        noValidationTripsUsed: 0,
+        totalTripsCompleted: 0,
+        bonusTripsAvailable: 0
       });
       
       return balance;
@@ -215,7 +217,9 @@ export class FirestoreWalletService {
             currency: 'CRC',
             lastUpdated: now,
             createdAt: now,
-            freeTripsUsed: 0
+            noValidationTripsUsed: 0,
+            totalTripsCompleted: 0,
+            bonusTripsAvailable: 0
           });
         }
         
@@ -358,14 +362,19 @@ export class FirestoreWalletService {
       
       const balanceRef = doc(db, COLLECTIONS.WALLET_BALANCES, userId);
       const balanceSnap = await getDoc(balanceRef);
-      const freeTripsUsed = balanceSnap.exists() ? (balanceSnap.data().freeTripsUsed || 0) : 0;
+      const balanceData = balanceSnap.exists() ? balanceSnap.data() : null;
+      const noValidationTripsUsed = balanceData?.noValidationTripsUsed || 0;
+      const totalTripsCompleted = balanceData?.totalTripsCompleted || 0;
+      const bonusTripsAvailable = balanceData?.bonusTripsAvailable || 0;
       
       return {
         totalBalance: balance?.balance || 0,
         pendingRecharges: rechargesSnap.size,
         totalTransactions: transactionsSnap.size,
         lastRecharge: lastRechargeSnap.empty ? undefined : lastRechargeSnap.docs[0].data().reviewedAt?.toDate(),
-        freeTripsRemaining: Math.max(0, 2 - freeTripsUsed)
+        noValidationTripsRemaining: Math.max(0, 2 - noValidationTripsUsed),
+        totalTripsCompleted,
+        bonusTripsAvailable
       };
     } catch (error) {
       console.error('[WalletService] Error getting wallet stats:', error);
@@ -387,12 +396,16 @@ export class FirestoreWalletService {
           throw new Error('Wallet not found');
         }
         
-        const currentBalance = balanceSnap.data().balance;
-        const freeTripsUsed = balanceSnap.data().freeTripsUsed || 0;
+        const balanceData = balanceSnap.data();
+        const currentBalance = balanceData.balance;
+        const noValidationTripsUsed = balanceData.noValidationTripsUsed || 0;
+        const totalTripsCompleted = balanceData.totalTripsCompleted || 0;
+        const bonusTripsAvailable = balanceData.bonusTripsAvailable || 0;
         
-        if (freeTripsUsed < 2) {
+        if (bonusTripsAvailable > 0) {
           transaction.update(balanceRef, {
-            freeTripsUsed: freeTripsUsed + 1,
+            bonusTripsAvailable: bonusTripsAvailable - 1,
+            totalTripsCompleted: totalTripsCompleted + 1,
             lastUpdated: Timestamp.now()
           });
           
@@ -404,9 +417,42 @@ export class FirestoreWalletService {
             balanceBefore: currentBalance,
             balanceAfter: currentBalance,
             tripId,
-            description: `Viaje gratis (${freeTripsUsed + 1}/2)`,
+            description: `Viaje bonificado (${bonusTripsAvailable} restantes)`,
             createdAt: Timestamp.now(),
-            metadata: { freeTrip: true }
+            metadata: { bonusTrip: true }
+          });
+          
+          return;
+        }
+        
+        if (noValidationTripsUsed < 2) {
+          if (currentBalance < amount) {
+            throw new Error('Insufficient balance');
+          }
+          
+          const newBalance = currentBalance - amount;
+          const newTotalTrips = totalTripsCompleted + 1;
+          const newBonusTrips = bonusTripsAvailable + (newTotalTrips % 20 === 0 ? 1 : 0);
+          
+          transaction.update(balanceRef, {
+            balance: newBalance,
+            noValidationTripsUsed: noValidationTripsUsed + 1,
+            totalTripsCompleted: newTotalTrips,
+            bonusTripsAvailable: newBonusTrips,
+            lastUpdated: Timestamp.now()
+          });
+          
+          const transactionRef = doc(collection(db, COLLECTIONS.TRANSACTIONS));
+          transaction.set(transactionRef, {
+            userId,
+            type: 'trip_hold',
+            amount,
+            balanceBefore: currentBalance,
+            balanceAfter: newBalance,
+            tripId,
+            description: `Viaje sin validación previa (${noValidationTripsUsed + 1}/2) - ₡${amount.toLocaleString()}`,
+            createdAt: Timestamp.now(),
+            metadata: { noValidationTrip: true }
           });
           
           return;
@@ -417,9 +463,13 @@ export class FirestoreWalletService {
         }
         
         const newBalance = currentBalance - amount;
+        const newTotalTrips = totalTripsCompleted + 1;
+        const newBonusTrips = bonusTripsAvailable + (newTotalTrips % 20 === 0 ? 1 : 0);
         
         transaction.update(balanceRef, {
           balance: newBalance,
+          totalTripsCompleted: newTotalTrips,
+          bonusTripsAvailable: newBonusTrips,
           lastUpdated: Timestamp.now()
         });
         
@@ -431,8 +481,9 @@ export class FirestoreWalletService {
           balanceBefore: currentBalance,
           balanceAfter: newBalance,
           tripId,
-          description: `Fondos retenidos para viaje - ₡${amount.toLocaleString()}`,
-          createdAt: Timestamp.now()
+          description: `Fondos retenidos para viaje - ₡${amount.toLocaleString()}${newTotalTrips % 20 === 0 ? ' (¡Viaje bonificado ganado!)' : ''}`,
+          createdAt: Timestamp.now(),
+          metadata: { bonusEarned: newTotalTrips % 20 === 0 }
         });
       });
     } catch (error) {

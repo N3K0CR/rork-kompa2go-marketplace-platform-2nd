@@ -55,7 +55,9 @@ export type KommuteWalletStats = {
   pendingRecharges: number;
   totalTransactions: number;
   lastRecharge?: Date;
-  freeTripsRemaining: number;
+  noValidationTripsRemaining: number;
+  totalTripsCompleted: number;
+  bonusTripsAvailable: number;
 };
 
 export type RechargeApprovalRequest = {
