@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator,
 import { Stack, router } from 'expo-router';
 import { MapPin, Navigation, Search } from 'lucide-react-native';
 import { useCommute } from '@/src/modules/commute/context/CommuteContext';
-import { Colors, Spacing, BorderRadius, Typography, Shadows } from '@/context-package/design-system';
+
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -164,15 +164,15 @@ export default function CommuteHome() {
         <View style={styles.mapGradient} />
       </View>
 
-      <View style={[styles.searchContainer, { paddingTop: insets.top + Spacing[4] }]}>
+      <View style={[styles.searchContainer, { paddingTop: insets.top + 16 }]}>
         <View style={styles.currentLocationCard}>
           <View style={styles.locationIcon}>
-            <Navigation size={20} color={Colors.primary[500]} />
+            <Navigation size={20} color="#6b9e47" />
           </View>
           <View style={styles.locationInfo}>
             <Text style={styles.locationLabel}>Tu ubicación</Text>
             {loadingLocation ? (
-              <ActivityIndicator size="small" color={Colors.primary[500]} />
+              <ActivityIndicator size="small" color="#6b9e47" />
             ) : (
               <Text style={styles.locationAddress} numberOfLines={1}>{currentAddress}</Text>
             )}
@@ -181,19 +181,19 @@ export default function CommuteHome() {
 
         <View style={styles.destinationCard}>
           <View style={styles.searchIcon}>
-            <Search size={20} color={Colors.neutral[400]} />
+            <Search size={20} color="#6b9e47" />
           </View>
           <TextInput
             style={styles.destinationInput}
             placeholder="¿A dónde vas?"
-            placeholderTextColor={Colors.neutral[400]}
+            placeholderTextColor="#9ca3af"
             value={destination}
             onChangeText={handleDestinationChange}
             autoCapitalize="none"
             autoCorrect={false}
           />
           {searching && (
-            <ActivityIndicator size="small" color={Colors.primary[500]} style={styles.searchingIndicator} />
+            <ActivityIndicator size="small" color="#6b9e47" style={styles.searchingIndicator} />
           )}
         </View>
 
@@ -207,7 +207,7 @@ export default function CommuteHome() {
                   style={styles.suggestionItem}
                   onPress={() => handleSelectDestination(item)}
                 >
-                  <MapPin size={18} color={Colors.neutral[500]} />
+                  <MapPin size={18} color="#6b9e47" />
                   <View style={styles.suggestionTextContainer}>
                     <Text style={styles.suggestionMainText} numberOfLines={1}>
                       {item.address?.road || item.address?.city || 'Ubicación'}
@@ -230,11 +230,11 @@ export default function CommuteHome() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral[100],
+    backgroundColor: '#fafcf8',
   },
   mapBackground: {
     flex: 1,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#e8f5e9',
   },
   mapGradient: {
     flex: 1,
@@ -245,98 +245,105 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: Spacing[4],
-    paddingBottom: Spacing[4],
-    gap: Spacing[3],
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    gap: 12,
   },
   currentLocationCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'white',
-    borderRadius: BorderRadius.lg,
-    padding: Spacing[4],
-    gap: Spacing[3],
-    ...Shadows.md,
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   locationIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.primary[50],
+    backgroundColor: '#ecf4e6',
     justifyContent: 'center',
     alignItems: 'center',
   },
   locationInfo: {
     flex: 1,
-    gap: Spacing[1],
+    gap: 4,
   },
   locationLabel: {
-    ...Typography.textStyles.caption,
-    color: Colors.neutral[500],
     fontSize: 12,
-    fontWeight: Typography.fontWeight.medium,
+    color: '#6b9e47',
+    fontWeight: '500' as const,
   },
   locationAddress: {
-    ...Typography.textStyles.body,
-    color: Colors.neutral[800],
     fontSize: 15,
-    fontWeight: Typography.fontWeight.semibold,
+    color: '#131c0d',
+    fontWeight: '600' as const,
   },
   destinationCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'white',
-    borderRadius: BorderRadius.lg,
-    padding: Spacing[4],
-    gap: Spacing[3],
-    ...Shadows.md,
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   searchIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.neutral[50],
+    backgroundColor: '#ecf4e6',
     justifyContent: 'center',
     alignItems: 'center',
   },
   destinationInput: {
     flex: 1,
-    ...Typography.textStyles.body,
-    color: Colors.neutral[800],
     fontSize: 16,
+    color: '#131c0d',
     padding: 0,
   },
   searchingIndicator: {
-    marginLeft: Spacing[2],
+    marginLeft: 8,
   },
   suggestionsContainer: {
     backgroundColor: 'white',
-    borderRadius: BorderRadius.lg,
+    borderRadius: 12,
     overflow: 'hidden',
-    ...Shadows.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
   },
   suggestionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: Spacing[4],
-    gap: Spacing[3],
+    padding: 16,
+    gap: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral[100],
+    borderBottomColor: '#ecf4e6',
   },
   suggestionTextContainer: {
     flex: 1,
-    gap: Spacing[1],
+    gap: 4,
   },
   suggestionMainText: {
-    ...Typography.textStyles.body,
-    color: Colors.neutral[900],
     fontSize: 16,
-    fontWeight: Typography.fontWeight.bold,
+    color: '#131c0d',
+    fontWeight: '700' as const,
   },
   suggestionSecondaryText: {
-    ...Typography.textStyles.caption,
-    color: Colors.neutral[600],
     fontSize: 13,
-    fontWeight: Typography.fontWeight.medium,
+    color: '#6b9e47',
+    fontWeight: '500' as const,
   },
 });
