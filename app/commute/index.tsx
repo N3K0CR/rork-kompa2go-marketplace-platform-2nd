@@ -332,6 +332,9 @@ export default function CommuteHome() {
       estimatedTime: duration || 0,
       appliedFactors: priceData?.appliedFactors || [],
       surgeMultiplier: priceData?.surgeMultiplier || 1.0,
+      ivaAmount: priceData?.ivaAmount || 0,
+      kompa2goCommission: priceData?.kompa2goCommission || 0,
+      driverEarnings: priceData?.driverEarnings || 0,
     };
   });
 
@@ -544,7 +547,29 @@ export default function CommuteHome() {
                   <View style={styles.tripSummaryIcon}>
                     <DollarSign size={18} color="#6b9e47" />
                   </View>
-                  <Text style={styles.tripSummaryLabel}>Costo total</Text>
+                  <Text style={styles.tripSummaryLabel}>Precio (sin IVA)</Text>
+                  <Text style={styles.tripSummaryValue}>
+                    ₡{(selectedVehicleData.totalPrice - selectedVehicleData.ivaAmount).toLocaleString('es-CR')}
+                  </Text>
+                </View>
+
+                <View style={styles.tripSummaryRow}>
+                  <View style={styles.tripSummaryIcon}>
+                    <DollarSign size={18} color="#ff9800" />
+                  </View>
+                  <Text style={styles.tripSummaryLabel}>IVA (13%)</Text>
+                  <Text style={styles.tripSummaryValueIVA}>
+                    ₡{selectedVehicleData.ivaAmount.toLocaleString('es-CR')}
+                  </Text>
+                </View>
+
+                <View style={styles.tripSummaryDivider} />
+
+                <View style={styles.tripSummaryRow}>
+                  <View style={styles.tripSummaryIcon}>
+                    <DollarSign size={18} color="#65ea06" />
+                  </View>
+                  <Text style={styles.tripSummaryLabel}>Total a pagar</Text>
                   <Text style={styles.tripSummaryValueHighlight}>
                     ₡{selectedVehicleData.totalPrice.toLocaleString('es-CR')}
                   </Text>
@@ -568,8 +593,24 @@ export default function CommuteHome() {
                   </View>
                 )}
 
+                <View style={styles.commissionInfo}>
+                  <Text style={styles.commissionInfoTitle}>Desglose transparente:</Text>
+                  <View style={styles.commissionRow}>
+                    <Text style={styles.commissionLabel}>Conductor (85%):</Text>
+                    <Text style={styles.commissionValue}>
+                      ₡{selectedVehicleData.driverEarnings.toLocaleString('es-CR')}
+                    </Text>
+                  </View>
+                  <View style={styles.commissionRow}>
+                    <Text style={styles.commissionLabel}>Kompa2Go (15%):</Text>
+                    <Text style={styles.commissionValue}>
+                      ₡{selectedVehicleData.kompa2goCommission.toLocaleString('es-CR')}
+                    </Text>
+                  </View>
+                </View>
+
                 <Text style={styles.negotiableNote}>
-                  * El precio es negociable con el conductor
+                  * Precio final incluye IVA para cumplimiento fiscal
                 </Text>
               </View>
             )}
@@ -969,6 +1010,44 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700' as const,
     color: '#ff9800',
+  },
+  tripSummaryValueIVA: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: '#ff9800',
+  },
+  tripSummaryDivider: {
+    height: 1,
+    backgroundColor: '#ecf4e6',
+    marginVertical: 8,
+  },
+  commissionInfo: {
+    padding: 16,
+    backgroundColor: '#f8fff4',
+    borderRadius: 12,
+    gap: 8,
+    marginTop: 8,
+  },
+  commissionInfoTitle: {
+    fontSize: 13,
+    fontWeight: '700' as const,
+    color: '#6b9e47',
+    marginBottom: 4,
+  },
+  commissionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  commissionLabel: {
+    fontSize: 13,
+    fontWeight: '500' as const,
+    color: '#6b9e47',
+  },
+  commissionValue: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: '#131c0d',
   },
   negotiableNote: {
     fontSize: 12,

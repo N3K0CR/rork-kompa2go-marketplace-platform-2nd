@@ -22,6 +22,11 @@ export const PRICING_CONSTANTS = {
   
   // Redondeo a los billetes/monedas más cercanos
   ROUNDING_VALUES: [5, 10, 25, 50, 100, 500, 1000, 2000, 5000, 10000, 20000],
+  
+  // Modelo de comisiones transparente
+  KOMPA2GO_COMMISSION: 0.15, // 15% comisión fija para Kompa2Go
+  DRIVER_SHARE: 0.85, // 85% para el conductor
+  IVA_RATE: 0.13, // 13% IVA de Costa Rica
 } as const;
 
 // Factores de precios dinámicos (similar a Uber)
@@ -102,7 +107,15 @@ export function calculateTripPrice(
     weatherCondition?: 'normal' | 'rain' | 'severe';
     isSpecialEvent?: boolean;
   }
-): { price: number; basePrice: number; appliedFactors: DynamicPricingFactor[] } {
+): { 
+  price: number; 
+  basePrice: number; 
+  appliedFactors: DynamicPricingFactor[];
+  priceWithIVA: number;
+  kompa2goCommission: number;
+  driverEarnings: number;
+  ivaAmount: number;
+} {
   // Convertir distancia a kilómetros
   const distanceKm = distanceMeters / 1000;
   
@@ -121,11 +134,30 @@ export function calculateTripPrice(
   // Aplicar tarifa mínima
   const priceWithMinimum = Math.max(finalPrice, PRICING_CONSTANTS.MINIMUM_FARE);
   
+  // Calcular precio sin IVA (redondeado)
+  const priceWithoutIVA = roundToNearestCurrency(priceWithMinimum);
+  
+  // Calcular IVA (13%)
+  const ivaAmount = roundToNearestCurrency(priceWithoutIVA * PRICING_CONSTANTS.IVA_RATE);
+  
+  // Precio final con IVA incluido
+  const priceWithIVA = priceWithoutIVA + ivaAmount;
+  
+  // Calcular comisión de Kompa2Go (15% del precio sin IVA)
+  const kompa2goCommission = roundToNearestCurrency(priceWithoutIVA * PRICING_CONSTANTS.KOMPA2GO_COMMISSION);
+  
+  // Calcular ganancias del conductor (85% del precio sin IVA)
+  const driverEarnings = roundToNearestCurrency(priceWithoutIVA * PRICING_CONSTANTS.DRIVER_SHARE);
+  
   // Redondear al valor más cercano
   return {
-    price: roundToNearestCurrency(priceWithMinimum),
+    price: priceWithoutIVA,
     basePrice: roundToNearestCurrency(basePrice),
     appliedFactors,
+    priceWithIVA,
+    kompa2goCommission,
+    driverEarnings,
+    ivaAmount,
   };
 }
 
@@ -597,6 +629,10 @@ export function generateVehiclePrices(
   priceRange: { min: number; max: number };
   appliedFactors: DynamicPricingFactor[];
   surgeMultiplier: number;
+  priceWithIVA: number;
+  kompa2goCommission: number;
+  driverEarnings: number;
+  ivaAmount: number;
 }[] {
   const vehicles = [
     { type: 'kommute-4' as const, costFactor: 0.95, name: 'Kommute 4' },
@@ -614,20 +650,72 @@ export function generateVehiclePrices(
     );
     
     // Calcular rango de precios (como Didi permite ajustar ±50)
-    const minPrice = roundToNearestCurrency(result.price - (PRICING_CONSTANTS.PRICE_ADJUSTMENT_STEP * 3));
-    const maxPrice = roundToNearestCurrency(result.price + (PRICING_CONSTANTS.PRICE_ADJUSTMENT_STEP * 3));
+    const minPrice = roundToNearestCurrency(result.priceWithIVA - (PRICING_CONSTANTS.PRICE_ADJUSTMENT_STEP * 3));
+    const maxPrice = roundToNearestCurrency(result.priceWithIVA + (PRICING_CONSTANTS.PRICE_ADJUSTMENT_STEP * 3));
     
     return {
       vehicleType: vehicle.type,
-      price: result.price,
+      price: result.priceWithIVA,
       basePrice: result.basePrice,
-      priceFormatted: formatCRC(result.price),
+      priceFormatted: formatCRC(result.priceWithIVA),
       estimatedTime: `${timeMinutes} min`,
       priceRange: { min: minPrice, max: maxPrice },
       appliedFactors: result.appliedFactors,
       surgeMultiplier,
+      priceWithIVA: result.priceWithIVA,
+      kompa2goCommission: result.kompa2goCommission,
+      driverEarnings: result.driverEarnings,
+      ivaAmount: result.ivaAmount,
     };
   });
+}
+
+/**
+ * Calcula estimaciones de ingresos para Kompa2Go
+ * @param averageTripsPerDay Promedio de viajes por día
+ * @param averageTripPrice Precio promedio por viaje (sin IVA)
+ * @returns Estimaciones de ingresos semanales, mensuales y anuales
+ */
+export function calculateRevenueEstimates(
+  averageTripsPerDay: number,
+  averageTripPrice: number
+): {
+  daily: { trips: number; revenue: number; driverEarnings: number; ivaCollected: number };
+  weekly: { trips: number; revenue: number; driverEarnings: number; ivaCollected: number };
+  monthly: { trips: number; revenue: number; driverEarnings: number; ivaCollected: number };
+  annual: { trips: number; revenue: number; driverEarnings: number; ivaCollected: number };
+} {
+  const dailyTrips = averageTripsPerDay;
+  const dailyRevenue = roundToNearestCurrency(dailyTrips * averageTripPrice * PRICING_CONSTANTS.KOMPA2GO_COMMISSION);
+  const dailyDriverEarnings = roundToNearestCurrency(dailyTrips * averageTripPrice * PRICING_CONSTANTS.DRIVER_SHARE);
+  const dailyIVA = roundToNearestCurrency(dailyTrips * averageTripPrice * PRICING_CONSTANTS.IVA_RATE);
+  
+  return {
+    daily: {
+      trips: dailyTrips,
+      revenue: dailyRevenue,
+      driverEarnings: dailyDriverEarnings,
+      ivaCollected: dailyIVA,
+    },
+    weekly: {
+      trips: dailyTrips * 7,
+      revenue: dailyRevenue * 7,
+      driverEarnings: dailyDriverEarnings * 7,
+      ivaCollected: dailyIVA * 7,
+    },
+    monthly: {
+      trips: dailyTrips * 30,
+      revenue: dailyRevenue * 30,
+      driverEarnings: dailyDriverEarnings * 30,
+      ivaCollected: dailyIVA * 30,
+    },
+    annual: {
+      trips: dailyTrips * 365,
+      revenue: dailyRevenue * 365,
+      driverEarnings: dailyDriverEarnings * 365,
+      ivaCollected: dailyIVA * 365,
+    },
+  };
 }
 
 /**
