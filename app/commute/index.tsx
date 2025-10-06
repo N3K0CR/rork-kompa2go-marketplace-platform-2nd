@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Platform, FlatList, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Platform, FlatList, Alert, ScrollView } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { MapPin, Navigation, Search } from 'lucide-react-native';
+import { MapPin, Navigation, Search, Car, Users, Clock, DollarSign, X } from 'lucide-react-native';
 import { useCommute } from '@/src/modules/commute/context/CommuteContext';
 
 import * as Location from 'expo-location';
@@ -18,6 +18,37 @@ interface AddressSuggestion {
   };
 }
 
+interface VehicleOption {
+  id: 'kommute-4' | 'kommute-large';
+  name: string;
+  capacity: number;
+  icon: typeof Car | typeof Users;
+  basePrice: number;
+  pricePerKm: number;
+  estimatedTime: number;
+}
+
+const VEHICLE_OPTIONS: VehicleOption[] = [
+  {
+    id: 'kommute-4',
+    name: 'Kommute 4',
+    capacity: 4,
+    icon: Car,
+    basePrice: 2.5,
+    pricePerKm: 0.8,
+    estimatedTime: 12,
+  },
+  {
+    id: 'kommute-large',
+    name: 'Kommute Large',
+    capacity: 7,
+    icon: Users,
+    basePrice: 3.5,
+    pricePerKm: 1.1,
+    estimatedTime: 15,
+  },
+];
+
 export default function CommuteHome() {
   const commuteContext = useCommute();
   const { transportModes, createRoute, startTrip } = commuteContext;
@@ -30,6 +61,11 @@ export default function CommuteHome() {
   const [searching, setSearching] = useState(false);
   const [loadingLocation, setLoadingLocation] = useState(true);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [selectedDestination, setSelectedDestination] = useState<AddressSuggestion | null>(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<'kommute-4' | 'kommute-large' | null>(null);
+  const [distance, setDistance] = useState<number>(0);
+  const [duration, setDuration] = useState<number>(0);
+  const [isRequestingTrip, setIsRequestingTrip] = useState(false);
 
   useEffect(() => {
     getCurrentLocationAndAddress();
@@ -138,19 +174,75 @@ export default function CommuteHome() {
 
     setDestination(suggestion.display_name);
     setSuggestions([]);
+    setSelectedDestination(suggestion);
 
-    router.push({
-      pathname: '/commute/vehicle-selection',
-      params: {
-        originLat: userLocation.latitude.toString(),
-        originLon: userLocation.longitude.toString(),
-        originAddress: currentAddress,
-        destLat: suggestion.lat,
-        destLon: suggestion.lon,
-        destAddress: suggestion.display_name,
-      },
-    });
+    const R = 6371;
+    const dLat = (parseFloat(suggestion.lat) - userLocation.latitude) * Math.PI / 180;
+    const dLon = (parseFloat(suggestion.lon) - userLocation.longitude) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(userLocation.latitude * Math.PI / 180) * Math.cos(parseFloat(suggestion.lat) * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distanceKm = R * c;
+
+    setDistance(distanceKm);
+    setDuration(Math.ceil((distanceKm / 40) * 60));
   };
+
+  const handleClearDestination = () => {
+    setDestination('');
+    setSelectedDestination(null);
+    setSelectedVehicle(null);
+    setSuggestions([]);
+  };
+
+  const handleConfirmRide = async () => {
+    if (!selectedVehicle || !selectedDestination || !userLocation) {
+      Alert.alert('Error', 'Por favor completa todos los campos');
+      return;
+    }
+
+    if (!firebaseUser) {
+      Alert.alert('Error', 'Debes iniciar sesión para solicitar un viaje');
+      return;
+    }
+
+    setIsRequestingTrip(true);
+
+    try {
+      const selectedVehicleData = VEHICLE_OPTIONS.find(v => v.id === selectedVehicle);
+      
+      router.push({
+        pathname: '/commute/trip/searching',
+        params: {
+          originLat: userLocation.latitude.toString(),
+          originLon: userLocation.longitude.toString(),
+          originAddress: currentAddress,
+          destLat: selectedDestination.lat,
+          destLon: selectedDestination.lon,
+          destAddress: selectedDestination.display_name,
+          vehicleType: selectedVehicle,
+          vehicleName: selectedVehicleData?.name,
+          estimatedPrice: selectedVehicleData ? (selectedVehicleData.basePrice + (distance * selectedVehicleData.pricePerKm)).toFixed(2) : '0',
+          estimatedTime: duration.toString(),
+          distance: distance.toFixed(2),
+        },
+      });
+    } catch (error) {
+      console.error('Error confirming ride:', error);
+      Alert.alert('Error', 'No se pudo procesar tu solicitud. Intenta nuevamente.');
+    } finally {
+      setIsRequestingTrip(false);
+    }
+  };
+
+  const vehicleDetails = VEHICLE_OPTIONS.map(vehicle => ({
+    ...vehicle,
+    totalPrice: vehicle.basePrice + (distance * vehicle.pricePerKm),
+    estimatedTime: duration || vehicle.estimatedTime,
+  }));
+
+  const selectedVehicleData = vehicleDetails.find(v => v.id === selectedVehicle);
 
   return (
     <View style={styles.container}>
@@ -164,65 +256,182 @@ export default function CommuteHome() {
         <View style={styles.mapGradient} />
       </View>
 
-      <View style={[styles.searchContainer, { paddingTop: insets.top + 16 }]}>
-        <View style={styles.currentLocationCard}>
-          <View style={styles.locationIcon}>
-            <Navigation size={20} color="#6b9e47" />
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[styles.searchContainer, { paddingTop: insets.top + 16 }]}>
+          <View style={styles.currentLocationCard}>
+            <View style={styles.locationIcon}>
+              <Navigation size={20} color="#6b9e47" />
+            </View>
+            <View style={styles.locationInfo}>
+              <Text style={styles.locationLabel}>Tu ubicación</Text>
+              {loadingLocation ? (
+                <ActivityIndicator size="small" color="#6b9e47" />
+              ) : (
+                <Text style={styles.locationAddress} numberOfLines={1}>{currentAddress}</Text>
+              )}
+            </View>
           </View>
-          <View style={styles.locationInfo}>
-            <Text style={styles.locationLabel}>Tu ubicación</Text>
-            {loadingLocation ? (
-              <ActivityIndicator size="small" color="#6b9e47" />
-            ) : (
-              <Text style={styles.locationAddress} numberOfLines={1}>{currentAddress}</Text>
+
+          <View style={styles.destinationCard}>
+            <View style={styles.searchIcon}>
+              <Search size={20} color="#6b9e47" />
+            </View>
+            <TextInput
+              style={styles.destinationInput}
+              placeholder="¿A dónde vas?"
+              placeholderTextColor="#9ca3af"
+              value={destination}
+              onChangeText={handleDestinationChange}
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!selectedDestination}
+            />
+            {searching && (
+              <ActivityIndicator size="small" color="#6b9e47" style={styles.searchingIndicator} />
+            )}
+            {selectedDestination && (
+              <TouchableOpacity onPress={handleClearDestination} style={styles.clearButton}>
+                <X size={20} color="#6b9e47" />
+              </TouchableOpacity>
             )}
           </View>
-        </View>
 
-        <View style={styles.destinationCard}>
-          <View style={styles.searchIcon}>
-            <Search size={20} color="#6b9e47" />
-          </View>
-          <TextInput
-            style={styles.destinationInput}
-            placeholder="¿A dónde vas?"
-            placeholderTextColor="#9ca3af"
-            value={destination}
-            onChangeText={handleDestinationChange}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {searching && (
-            <ActivityIndicator size="small" color="#6b9e47" style={styles.searchingIndicator} />
+          {suggestions.length > 0 && !selectedDestination && (
+            <View style={styles.suggestionsContainer}>
+              <FlatList
+                data={suggestions}
+                keyExtractor={(item) => item.place_id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.suggestionItem}
+                    onPress={() => handleSelectDestination(item)}
+                  >
+                    <MapPin size={18} color="#6b9e47" />
+                    <View style={styles.suggestionTextContainer}>
+                      <Text style={styles.suggestionMainText} numberOfLines={1}>
+                        {item.address?.road || item.address?.city || 'Ubicación'}
+                      </Text>
+                      <Text style={styles.suggestionSecondaryText} numberOfLines={1}>
+                        {item.display_name}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+                scrollEnabled={false}
+              />
+            </View>
           )}
         </View>
 
-        {suggestions.length > 0 && (
-          <View style={styles.suggestionsContainer}>
-            <FlatList
-              data={suggestions}
-              keyExtractor={(item) => item.place_id}
-              renderItem={({ item }) => (
+        {selectedDestination && (
+          <View style={styles.vehicleSelectionContainer}>
+            <Text style={styles.sectionTitle}>Elige un vehículo</Text>
+
+            {vehicleDetails.map((vehicle) => {
+              const Icon = vehicle.icon;
+              const isSelected = selectedVehicle === vehicle.id;
+
+              return (
                 <TouchableOpacity
-                  style={styles.suggestionItem}
-                  onPress={() => handleSelectDestination(item)}
+                  key={vehicle.id}
+                  style={[
+                    styles.vehicleCard,
+                    isSelected && styles.vehicleCardSelected,
+                  ]}
+                  onPress={() => setSelectedVehicle(vehicle.id)}
+                  activeOpacity={0.7}
                 >
-                  <MapPin size={18} color="#6b9e47" />
-                  <View style={styles.suggestionTextContainer}>
-                    <Text style={styles.suggestionMainText} numberOfLines={1}>
-                      {item.address?.road || item.address?.city || 'Ubicación'}
+                  <View style={styles.vehicleInfo}>
+                    <View style={[
+                      styles.vehicleIconContainer,
+                      isSelected && styles.vehicleIconContainerSelected,
+                    ]}>
+                      <Icon size={24} color={isSelected ? '#65ea06' : '#131c0d'} />
+                    </View>
+                    <View style={styles.vehicleDetails}>
+                      <Text style={styles.vehicleName}>{vehicle.name}</Text>
+                      <Text style={styles.vehicleCapacity}>
+                        {vehicle.capacity} pasajeros
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.vehiclePricing}>
+                    <Text style={styles.vehiclePrice}>
+                      ${vehicle.totalPrice.toFixed(2)}
                     </Text>
-                    <Text style={styles.suggestionSecondaryText} numberOfLines={1}>
-                      {item.display_name}
+                    <Text style={styles.vehicleTime}>
+                      {vehicle.estimatedTime} min
                     </Text>
                   </View>
+
+                  <View style={[
+                    styles.vehicleSelector,
+                    isSelected && styles.vehicleSelectorSelected,
+                  ]}>
+                    {isSelected && <View style={styles.vehicleSelectorDot} />}
+                  </View>
                 </TouchableOpacity>
+              );
+            })}
+
+            {selectedVehicleData && (
+              <View style={styles.tripSummary}>
+                <Text style={styles.tripSummaryTitle}>Resumen del viaje</Text>
+                
+                <View style={styles.tripSummaryRow}>
+                  <View style={styles.tripSummaryIcon}>
+                    <MapPin size={18} color="#6b9e47" />
+                  </View>
+                  <Text style={styles.tripSummaryLabel}>Distancia</Text>
+                  <Text style={styles.tripSummaryValue}>{distance.toFixed(2)} km</Text>
+                </View>
+
+                <View style={styles.tripSummaryRow}>
+                  <View style={styles.tripSummaryIcon}>
+                    <Clock size={18} color="#6b9e47" />
+                  </View>
+                  <Text style={styles.tripSummaryLabel}>Tiempo estimado</Text>
+                  <Text style={styles.tripSummaryValue}>{selectedVehicleData.estimatedTime} min</Text>
+                </View>
+
+                <View style={styles.tripSummaryRow}>
+                  <View style={styles.tripSummaryIcon}>
+                    <DollarSign size={18} color="#6b9e47" />
+                  </View>
+                  <Text style={styles.tripSummaryLabel}>Costo total</Text>
+                  <Text style={styles.tripSummaryValueHighlight}>
+                    ${selectedVehicleData.totalPrice.toFixed(2)}
+                  </Text>
+                </View>
+
+                <Text style={styles.negotiableNote}>
+                  * El precio es negociable con el conductor
+                </Text>
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={[
+                styles.confirmButton,
+                (!selectedVehicle || isRequestingTrip) && styles.confirmButtonDisabled,
+              ]}
+              onPress={handleConfirmRide}
+              disabled={!selectedVehicle || isRequestingTrip}
+            >
+              {isRequestingTrip ? (
+                <ActivityIndicator size="small" color="#131c0d" />
+              ) : (
+                <Text style={styles.confirmButtonText}>Solicitar viaje</Text>
               )}
-              scrollEnabled={false}
-            />
+            </TouchableOpacity>
           </View>
         )}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -233,18 +442,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#fafcf8',
   },
   mapBackground: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 300,
     backgroundColor: '#e8f5e9',
   },
   mapGradient: {
     flex: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 32,
+  },
   searchContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
     paddingHorizontal: 16,
     paddingBottom: 16,
     gap: 12,
@@ -345,5 +560,177 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6b9e47',
     fontWeight: '500' as const,
+  },
+  clearButton: {
+    padding: 4,
+  },
+  vehicleSelectionContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    gap: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: '#131c0d',
+  },
+  vehicleCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+    borderWidth: 2,
+    borderColor: '#ecf4e6',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  vehicleCardSelected: {
+    borderColor: '#65ea06',
+    backgroundColor: '#f8fff4',
+  },
+  vehicleInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  vehicleIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#ecf4e6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  vehicleIconContainerSelected: {
+    backgroundColor: '#e6f9e0',
+  },
+  vehicleDetails: {
+    flex: 1,
+    gap: 4,
+  },
+  vehicleName: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: '#131c0d',
+  },
+  vehicleCapacity: {
+    fontSize: 13,
+    fontWeight: '500' as const,
+    color: '#6b9e47',
+  },
+  vehiclePricing: {
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  vehiclePrice: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: '#131c0d',
+  },
+  vehicleTime: {
+    fontSize: 13,
+    fontWeight: '500' as const,
+    color: '#6b9e47',
+  },
+  vehicleSelector: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#ecf4e6',
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  vehicleSelectorSelected: {
+    borderColor: '#65ea06',
+    backgroundColor: '#65ea06',
+  },
+  vehicleSelectorDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: 'white',
+  },
+  tripSummary: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  tripSummaryTitle: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: '#131c0d',
+    marginBottom: 4,
+  },
+  tripSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  tripSummaryIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#ecf4e6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tripSummaryLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500' as const,
+    color: '#6b9e47',
+  },
+  tripSummaryValue: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: '#131c0d',
+  },
+  tripSummaryValueHighlight: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: '#65ea06',
+  },
+  negotiableNote: {
+    fontSize: 12,
+    fontWeight: '500' as const,
+    color: '#9ca3af',
+    fontStyle: 'italic' as const,
+    marginTop: 4,
+  },
+  confirmButton: {
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#65ea06',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#65ea06',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 5,
+    marginTop: 8,
+  },
+  confirmButtonDisabled: {
+    backgroundColor: '#ecf4e6',
+    shadowOpacity: 0,
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: '#131c0d',
   },
 });
