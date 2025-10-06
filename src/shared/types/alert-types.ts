@@ -1,6 +1,37 @@
 export type AlertType = 'danger' | 'rating' | 'complaint';
-export type AlertStatus = 'active' | 'resolved' | 'investigating';
+export type AlertStatus = 'active' | 'resolved' | 'investigating' | 'awaiting_verification' | 'verified';
 export type AlertPriority = 'low' | 'medium' | 'high' | 'critical';
+export type VerificationStep = 'first_question' | 'second_question' | 'completed' | 'failed';
+
+export interface SecurityQuestion {
+  id: string;
+  question: string;
+  answer: string;
+  category: 'primary' | 'secondary';
+  isCostaRicanContext?: boolean;
+}
+
+export interface KommuterSecuritySettings {
+  kommuterId: string;
+  primaryQuestion: SecurityQuestion;
+  secondaryQuestion: SecurityQuestion;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AlertVerification {
+  alertId: string;
+  currentStep: VerificationStep;
+  firstQuestionAsked?: Date;
+  firstQuestionAnswer?: string;
+  firstQuestionCorrect?: boolean;
+  secondQuestionAsked?: Date;
+  secondQuestionAnswer?: string;
+  secondQuestionCorrect?: boolean;
+  verificationCompleted?: Date;
+  actionTaken?: 'enable_tracking' | 'call_911' | 'dismissed';
+  verifiedBy: string;
+}
 
 export interface DriverLocation {
   latitude: number;
@@ -25,6 +56,7 @@ export interface DriverAlert {
   timestamp: Date;
   status: AlertStatus;
   priority: AlertPriority;
+  verification?: AlertVerification;
   tracking?: {
     enabled: boolean;
     lastUpdate?: Date;

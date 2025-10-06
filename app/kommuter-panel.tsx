@@ -36,9 +36,10 @@ import { signInAnonymously } from 'firebase/auth';
 import type { KommuterRegistrationData, VehicleData } from '@/src/shared/types/registration-types';
 import { alertTrackingService } from '@/src/modules/alerts/services/alert-tracking-service';
 import type { DriverTrackingSession } from '@/src/shared/types/alert-types';
+import SecurityVerificationModal from '@/components/SecurityVerificationModal';
 
 type AlertType = 'danger' | 'rating' | 'complaint';
-type AlertStatus = 'active' | 'resolved' | 'investigating';
+type AlertStatus = 'active' | 'resolved' | 'investigating' | 'awaiting_verification';
 
 interface DriverAlert {
   id: string;
@@ -112,6 +113,8 @@ export default function KommuterPanel() {
   const [processingApproval, setProcessingApproval] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [trackingSessions, setTrackingSessions] = useState<Map<string, DriverTrackingSession>>(new Map());
+  const [showSecurityVerificationModal, setShowSecurityVerificationModal] = useState(false);
+  const [verificationAlert, setVerificationAlert] = useState<DriverAlert | null>(null);
 
   const [promotions, setPromotions] = useState<Promotion[]>([
     {
@@ -180,56 +183,13 @@ export default function KommuterPanel() {
   const driverSharePercentage = PRICING_CONSTANTS.DRIVER_SHARE * 100;
   const ivaPercentage = PRICING_CONSTANTS.IVA_RATE * 100;
 
-  const handleAlertAction = async (alertId: string, action: 'resolve' | 'investigate' | 'call911' | 'startTracking') => {
+  const handleAlertAction = async (alertId: string, action: 'resolve' | 'investigate' | 'verify') => {
     const alert = driverAlerts.find(a => a.id === alertId);
     if (!alert) return;
 
-    if (action === 'startTracking') {
-      try {
-        const sessionId = await alertTrackingService.startTracking(alertId, alert.driverId);
-        Alert.alert(
-          '📍 Seguimiento Activado',
-          'El seguimiento en tiempo real del conductor ha sido activado.\n\nLa ubicación se actualizará automáticamente y estará disponible para el 911 si es necesario.'
-        );
-        updateAlertStatus(alertId, 'investigating');
-      } catch (error) {
-        console.error('Error starting tracking:', error);
-        Alert.alert('Error', 'No se pudo iniciar el seguimiento');
-      }
-    } else if (action === 'call911') {
-      Alert.alert(
-        '🚨 Llamar al 911',
-        '¿Confirmar llamada a autoridades?\n\nSe enviará la ubicación en tiempo real y detalles del conductor.',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          {
-            text: 'Llamar 911',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                const call911Id = await alertTrackingService.call911(
-                  alertId,
-                  alert.driverId,
-                  'admin',
-                  {
-                    name: alert.driverName,
-                    phone: 'N/A',
-                    vehicleInfo: 'Ver detalles en sistema'
-                  }
-                );
-                Alert.alert(
-                  '✅ 911 Notificado',
-                  `Autoridades notificadas.\n\nCódigo de despacho: ${call911Id.substring(0, 8)}\n\nLa ubicación en tiempo real está siendo compartida.`
-                );
-                updateAlertStatus(alertId, 'investigating');
-              } catch (error) {
-                console.error('Error calling 911:', error);
-                Alert.alert('Error', 'No se pudo contactar al 911');
-              }
-            }
-          }
-        ]
-      );
+    if (action === 'verify') {
+      setVerificationAlert(alert);
+      setShowSecurityVerificationModal(true);
     } else if (action === 'resolve') {
       updateAlertStatus(alertId, 'resolved');
       Alert.alert('✅ Alerta Resuelta', 'La alerta ha sido marcada como resuelta.');
@@ -237,6 +197,17 @@ export default function KommuterPanel() {
       updateAlertStatus(alertId, 'investigating');
       Alert.alert('🔍 En Investigación', 'La alerta está siendo investigada.');
     }
+  };
+
+  const handleVerificationComplete = (action: 'tracking_enabled' | '911_called' | 'dismissed') => {
+    if (verificationAlert) {
+      if (action === '911_called') {
+        updateAlertStatus(verificationAlert.id, 'investigating');
+      } else if (action === 'dismissed') {
+        updateAlertStatus(verificationAlert.id, 'resolved');
+      }
+    }
+    setVerificationAlert(null);
   };
 
   const updateAlertStatus = (alertId: string, status: AlertStatus) => {
@@ -786,23 +757,16 @@ export default function KommuterPanel() {
                 </View>
 
                 {selectedAlert.type === 'danger' && selectedAlert.status === 'active' && (
-                  <>
-                    <TouchableOpacity
-                      style={styles.trackingButton}
-                      onPress={() => handleAlertAction(selectedAlert.id, 'startTracking')}
-                    >
-                      <MapPin size={20} color="#fff" />
-                      <Text style={styles.trackingButtonText}>Activar Seguimiento en Tiempo Real</Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity
-                      style={styles.call911Button}
-                      onPress={() => handleAlertAction(selectedAlert.id, 'call911')}
-                    >
-                      <Shield size={20} color="#fff" />
-                      <Text style={styles.call911ButtonText}>Llamar al 911</Text>
-                    </TouchableOpacity>
-                  </>
+                  <TouchableOpacity
+                    style={styles.verifyButton}
+                    onPress={() => {
+                      handleAlertAction(selectedAlert.id, 'verify');
+                      setShowAlertDetailModal(false);
+                    }}
+                  >
+                    <Shield size={20} color="#fff" />
+                    <Text style={styles.verifyButtonText}>Iniciar Verificación de Seguridad</Text>
+                  </TouchableOpacity>
                 )}
 
                 <View style={styles.alertActions}>
@@ -984,6 +948,20 @@ export default function KommuterPanel() {
           </ScrollView>
         </View>
       </Modal>
+
+      {verificationAlert && (
+        <SecurityVerificationModal
+          visible={showSecurityVerificationModal}
+          alertId={verificationAlert.id}
+          driverId={verificationAlert.driverId}
+          driverName={verificationAlert.driverName}
+          onClose={() => {
+            setShowSecurityVerificationModal(false);
+            setVerificationAlert(null);
+          }}
+          onVerificationComplete={handleVerificationComplete}
+        />
+      )}
     </View>
   );
 }
@@ -1723,6 +1701,21 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: '#131c0d',
     fontSize: 14,
+    fontWeight: '700' as const,
+  },
+  verifyButton: {
+    backgroundColor: '#FF3B30',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  verifyButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '700' as const,
   },
 });

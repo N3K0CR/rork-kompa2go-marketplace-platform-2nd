@@ -102,6 +102,21 @@ service cloud.firestore {
       allow list: if isAuthenticated();
     }
     
+    // KOMMUTER SECURITY SETTINGS (Security questions)
+    match /kommuter_security_settings/{kommuterId} {
+      // Kommuters can read their own settings
+      allow read: if isAuthenticated();
+      
+      // Kommuters can create/update their own settings
+      allow create, update: if isAuthenticated();
+      
+      // Only admins can delete
+      allow delete: if isAuthenticated();
+      
+      // List for admin panel
+      allow list: if isAuthenticated();
+    }
+    
     // ============================================================================
     // PRODUCTION RULES (COMMENTED OUT FOR DEVELOPMENT)
     // Uncomment these rules and remove the development rule above for production
