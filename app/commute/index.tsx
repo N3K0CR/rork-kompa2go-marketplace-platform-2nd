@@ -62,6 +62,49 @@ export default function CommuteHome() {
     getCurrentLocationAndAddress();
   }, []);
 
+  const reverseGeocode = async (latitude: number, longitude: number, retries = 3): Promise<string> => {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+          {
+            signal: controller.signal,
+            headers: {
+              'User-Agent': 'Kompa2Go/1.0',
+              'Accept': 'application/json',
+            },
+          }
+        );
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const address = data.address?.road 
+          ? `${data.address.road}, ${data.address.city || data.address.town || data.address.village || ''}`.trim()
+          : data.display_name?.split(',').slice(0, 2).join(',').trim();
+        
+        return address || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+      } catch (error) {
+        console.log(`Geocoding attempt ${attempt}/${retries} failed:`, error);
+        
+        if (attempt === retries) {
+          return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
+    }
+    
+    return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+  };
+
   const getCurrentLocationAndAddress = async () => {
     try {
       setLoadingLocation(true);
@@ -78,37 +121,9 @@ export default function CommuteHome() {
             const { latitude, longitude } = position.coords;
             setUserLocation({ latitude, longitude });
             
-            try {
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 5000);
-              
-              const response = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
-                {
-                  signal: controller.signal,
-                  headers: {
-                    'User-Agent': 'Kompa2Go/1.0',
-                  },
-                }
-              );
-              
-              clearTimeout(timeoutId);
-              
-              if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-              }
-              
-              const data = await response.json();
-              const address = data.address?.road 
-                ? `${data.address.road}, ${data.address.city || ''}` 
-                : data.display_name?.split(',').slice(0, 2).join(',');
-              setCurrentAddress(address || 'Ubicación actual');
-            } catch (error) {
-              console.error('Error getting address:', error);
-              setCurrentAddress(`Lat: ${latitude.toFixed(4)}, Lon: ${longitude.toFixed(4)}`);
-            } finally {
-              setLoadingLocation(false);
-            }
+            const address = await reverseGeocode(latitude, longitude);
+            setCurrentAddress(address);
+            setLoadingLocation(false);
           },
           (error) => {
             console.error('Error getting location:', error);
@@ -153,64 +168,59 @@ export default function CommuteHome() {
       return;
     }
 
-    const controller = new AbortController();
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
     try {
       setSearching(true);
       
-      timeoutId = setTimeout(() => {
-        controller.abort();
-      }, 10000);
-      
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 400));
       
       const searchQuery = query.includes('Costa Rica') ? query : `${query}, Costa Rica`;
       
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=8&addressdetails=1&countrycodes=cr`,
-        {
-          signal: controller.signal,
-          method: 'GET',
-          headers: {
-            'User-Agent': 'Kompa2Go/1.0',
-            'Accept': 'application/json',
-          },
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
+          
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=8&addressdetails=1&countrycodes=cr`,
+            {
+              signal: controller.signal,
+              method: 'GET',
+              headers: {
+                'User-Agent': 'Kompa2Go/1.0',
+                'Accept': 'application/json',
+              },
+            }
+          );
+          
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          
+          const data = await response.json();
+          console.log('Search results:', data.length, 'items found for:', query);
+          
+          if (data && Array.isArray(data) && data.length > 0) {
+            setSuggestions(data);
+          } else {
+            setSuggestions([]);
+          }
+          
+          return;
+        } catch (error) {
+          console.log(`Search attempt ${attempt}/2 failed:`, error);
+          
+          if (attempt === 2) {
+            throw error;
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
-      );
-      
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
-      }
-      
-      if (!response.ok) {
-        console.error('Search API error:', response.status, response.statusText);
-        setSuggestions([]);
-        return;
-      }
-      
-      const data = await response.json();
-      console.log('Search results:', data.length, 'items found for:', query);
-      
-      if (data && Array.isArray(data) && data.length > 0) {
-        setSuggestions(data);
-      } else {
-        setSuggestions([]);
       }
     } catch (error) {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      
-      if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          console.log('Search request cancelled');
-        } else {
-          console.error('Error searching destination:', error.message);
-        }
-      } else {
-        console.error('Error searching destination:', error);
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error('Error searching destination:', error.message);
       }
       setSuggestions([]);
     } finally {

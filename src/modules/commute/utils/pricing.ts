@@ -26,47 +26,47 @@ export const PRICING_CONSTANTS = {
 
 // Factores de precios dinámicos (similar a Uber)
 export const DYNAMIC_PRICING_FACTORS = {
-  // Factores por hora del día
+  // Factores por hora del día (ajustados para competir con Uber)
   TIME_OF_DAY: {
-    PEAK_MORNING: { start: 6, end: 9, multiplier: 1.25 },      // 6am-9am: +25%
-    PEAK_EVENING: { start: 17, end: 20, multiplier: 1.28 },   // 5pm-8pm: +28%
-    LATE_NIGHT: { start: 22, end: 4, multiplier: 1.2 },      // 10pm-4am: +20%
+    PEAK_MORNING: { start: 6, end: 9, multiplier: 1.08 },      // 6am-9am: +8%
+    PEAK_EVENING: { start: 17, end: 20, multiplier: 1.10 },   // 5pm-8pm: +10%
+    LATE_NIGHT: { start: 22, end: 4, multiplier: 1.06 },      // 10pm-4am: +6%
     NORMAL: { multiplier: 1.0 },                               // Resto del día: normal
   },
   
-  // Factores por día de la semana
+  // Factores por día de la semana (ajustados para competir con Uber)
   DAY_OF_WEEK: {
-    WEEKEND: { multiplier: 1.12 },      // Fin de semana: +12%
-    FRIDAY: { multiplier: 1.15 },        // Viernes: +15%
+    WEEKEND: { multiplier: 1.04 },      // Fin de semana: +4%
+    FRIDAY: { multiplier: 1.05 },        // Viernes: +5%
     WEEKDAY: { multiplier: 1.0 },       // Días normales: normal
   },
   
-  // Factores por tráfico
+  // Factores por tráfico (ajustados para competir con Uber)
   TRAFFIC: {
-    HEAVY: { multiplier: 1.35 },         // Tráfico pesado: +35%
-    MODERATE: { multiplier: 1.18 },      // Tráfico moderado: +18%
+    HEAVY: { multiplier: 1.12 },         // Tráfico pesado: +12%
+    MODERATE: { multiplier: 1.06 },      // Tráfico moderado: +6%
     LIGHT: { multiplier: 1.0 },         // Tráfico ligero: normal
   },
   
-  // Factores por demanda
+  // Factores por demanda (ajustados para competir con Uber)
   DEMAND: {
-    VERY_HIGH: { multiplier: 1.45 },     // Demanda muy alta: +45%
-    HIGH: { multiplier: 1.25 },          // Demanda alta: +25%
-    MODERATE: { multiplier: 1.12 },     // Demanda moderada: +12%
+    VERY_HIGH: { multiplier: 1.15 },     // Demanda muy alta: +15%
+    HIGH: { multiplier: 1.10 },          // Demanda alta: +10%
+    MODERATE: { multiplier: 1.05 },     // Demanda moderada: +5%
     NORMAL: { multiplier: 1.0 },        // Demanda normal: normal
   },
   
-  // Factores por eventos especiales
+  // Factores por eventos especiales (ajustados para competir con Uber)
   EVENTS: {
-    MAJOR_EVENT: { multiplier: 1.5 },   // Evento mayor: +50%
-    HOLIDAY: { multiplier: 1.35 },       // Día festivo: +35%
-    SPECIAL: { multiplier: 1.2 },      // Evento especial: +20%
+    MAJOR_EVENT: { multiplier: 1.18 },   // Evento mayor: +18%
+    HOLIDAY: { multiplier: 1.12 },       // Día festivo: +12%
+    SPECIAL: { multiplier: 1.08 },      // Evento especial: +8%
   },
   
-  // Factores por clima
+  // Factores por clima (ajustados para competir con Uber)
   WEATHER: {
-    SEVERE: { multiplier: 1.25 },        // Clima severo: +25%
-    RAIN: { multiplier: 1.12 },         // Lluvia: +12%
+    SEVERE: { multiplier: 1.10 },        // Clima severo: +10%
+    RAIN: { multiplier: 1.05 },         // Lluvia: +5%
     NORMAL: { multiplier: 1.0 },        // Clima normal: normal
   },
 } as const;
@@ -421,29 +421,29 @@ export function calculateDemandLevel(
   const hour = timestamp.getHours();
   const day = timestamp.getDay();
   
-  // Hora pico de la mañana (6am-9am) en días laborables
-  if (hour >= 6 && hour < 9 && day >= 1 && day <= 5) {
-    return 'very_high';
+  // Hora pico de la mañana (7am-9am) en días laborables - demanda alta pero no extrema
+  if (hour >= 7 && hour < 9 && day >= 1 && day <= 5) {
+    return 'high';
   }
   
-  // Hora pico de la tarde (5pm-8pm) en días laborables
-  if (hour >= 17 && hour < 20 && day >= 1 && day <= 5) {
-    return 'very_high';
+  // Hora pico de la tarde (5pm-7pm) en días laborables - demanda alta pero no extrema
+  if (hour >= 17 && hour < 19 && day >= 1 && day <= 5) {
+    return 'high';
   }
   
-  // Viernes en la noche (8pm-12am)
+  // Viernes en la noche (8pm-12am) - demanda moderada
   if (day === 5 && hour >= 20) {
-    return 'high';
+    return 'moderate';
   }
   
-  // Fin de semana en la noche (8pm-2am)
+  // Fin de semana en la noche (8pm-2am) - demanda moderada
   if ((day === 0 || day === 6) && (hour >= 20 || hour < 2)) {
-    return 'high';
+    return 'moderate';
   }
   
-  // Días festivos
+  // Días festivos - demanda moderada
   if (isHoliday(timestamp)) {
-    return 'high';
+    return 'moderate';
   }
   
   // Horas normales en días laborables
@@ -463,18 +463,18 @@ export function calculateTrafficLevel(
   const hour = timestamp.getHours();
   const day = timestamp.getDay();
   
-  // Hora pico de la mañana (6am-9am) en días laborables
-  if (hour >= 6 && hour < 9 && day >= 1 && day <= 5) {
+  // Hora pico de la mañana (7am-9am) en días laborables
+  if (hour >= 7 && hour < 9 && day >= 1 && day <= 5) {
     return 'heavy';
   }
   
-  // Hora pico de la tarde (5pm-8pm) en días laborables
-  if (hour >= 17 && hour < 20 && day >= 1 && day <= 5) {
+  // Hora pico de la tarde (5pm-7pm) en días laborables
+  if (hour >= 17 && hour < 19 && day >= 1 && day <= 5) {
     return 'heavy';
   }
   
   // Horas normales en días laborables
-  if (day >= 1 && day <= 5 && ((hour >= 9 && hour < 17) || (hour >= 20 && hour < 22))) {
+  if (day >= 1 && day <= 5 && ((hour >= 9 && hour < 17) || (hour >= 19 && hour < 22))) {
     return 'moderate';
   }
   
