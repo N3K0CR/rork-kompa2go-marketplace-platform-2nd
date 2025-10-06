@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Car, Users, MapPin, Clock, DollarSign } from 'lucide-react-native';
+import { ArrowLeft, Car, Users, MapPin, Clock, DollarSign, Plus, Minus } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCommute } from '@/src/modules/commute/context/CommuteContext';
-import { calculateTripPrice } from '@/src/modules/commute/utils/pricing';
+import { calculateTripPrice, adjustPrice, formatCRC } from '@/src/modules/commute/utils/pricing';
 
 interface VehicleOption {
   id: 'kommute-4' | 'kommute-large';
@@ -20,14 +20,14 @@ const VEHICLE_OPTIONS: VehicleOption[] = [
     name: 'Kommute 4',
     capacity: 4,
     icon: Car,
-    costFactor: 0.95,
+    costFactor: 0.85,
   },
   {
     id: 'kommute-large',
     name: 'Kommute Large',
     capacity: 7,
     icon: Users,
-    costFactor: 1.35,
+    costFactor: 1.25,
   },
 ];
 
@@ -51,6 +51,7 @@ export default function VehicleSelection() {
   const [isSearching, setIsSearching] = useState(false);
   const [distance, setDistance] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
+  const [customPrices, setCustomPrices] = useState<Record<string, number>>({});
 
   useEffect(() => {
     calculateRouteDetails();
@@ -77,15 +78,17 @@ export default function VehicleSelection() {
     return VEHICLE_OPTIONS.map(vehicle => {
       const distanceMeters = distance * 1000;
       const durationSeconds = duration * 60;
-      const price = calculateTripPrice(distanceMeters, durationSeconds, vehicle.costFactor);
+      const basePrice = calculateTripPrice(distanceMeters, durationSeconds, vehicle.costFactor);
+      const price = customPrices[vehicle.id] ?? basePrice;
       
       return {
         ...vehicle,
+        basePrice,
         totalPrice: price,
         estimatedTime: duration,
       };
     });
-  }, [distance, duration]);
+  }, [distance, duration, customPrices]);
 
   const handleConfirmRide = async () => {
     if (!selectedVehicle) {
@@ -212,12 +215,36 @@ export default function VehicleSelection() {
               </View>
 
               <View style={styles.vehiclePricing}>
-                <Text style={styles.vehiclePrice}>
-                  ₡{vehicle.totalPrice.toLocaleString('es-CR')}
-                </Text>
-                <Text style={styles.vehicleTime}>
-                  {vehicle.estimatedTime} min
-                </Text>
+                <View style={styles.priceAdjuster}>
+                  <TouchableOpacity
+                    style={styles.priceButton}
+                    onPress={() => {
+                      const newPrice = adjustPrice(vehicle.totalPrice, 'down');
+                      setCustomPrices(prev => ({ ...prev, [vehicle.id]: newPrice }));
+                    }}
+                  >
+                    <Minus size={16} color="#6b9e47" />
+                  </TouchableOpacity>
+                  
+                  <View style={styles.priceDisplay}>
+                    <Text style={styles.vehiclePrice}>
+                      {formatCRC(vehicle.totalPrice)}
+                    </Text>
+                    <Text style={styles.vehicleTime}>
+                      {vehicle.estimatedTime} min
+                    </Text>
+                  </View>
+                  
+                  <TouchableOpacity
+                    style={styles.priceButton}
+                    onPress={() => {
+                      const newPrice = adjustPrice(vehicle.totalPrice, 'up');
+                      setCustomPrices(prev => ({ ...prev, [vehicle.id]: newPrice }));
+                    }}
+                  >
+                    <Plus size={16} color="#6b9e47" />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <View style={[
@@ -256,12 +283,12 @@ export default function VehicleSelection() {
               </View>
               <Text style={styles.tripSummaryLabel}>Costo total</Text>
               <Text style={styles.tripSummaryValueHighlight}>
-                ₡{selectedVehicleData.totalPrice.toLocaleString('es-CR')}
+                {formatCRC(selectedVehicleData.totalPrice)}
               </Text>
             </View>
 
             <Text style={styles.negotiableNote}>
-              * El precio es negociable con el conductor
+              * Ajusta el precio con los botones + y - • El conductor puede aceptar o proponer otro precio
             </Text>
           </View>
         )}
@@ -438,16 +465,36 @@ const styles = StyleSheet.create({
     color: '#6b9e47',
   },
   vehiclePricing: {
-    alignItems: 'flex-end',
+    alignItems: 'center',
+    gap: 8,
+  },
+  priceAdjuster: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  priceButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#ecf4e6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#6b9e47',
+  },
+  priceDisplay: {
+    alignItems: 'center',
     gap: 2,
+    minWidth: 80,
   },
   vehiclePrice: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700' as const,
     color: '#131c0d',
   },
   vehicleTime: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500' as const,
     color: '#6b9e47',
   },

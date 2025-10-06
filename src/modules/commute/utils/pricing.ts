@@ -5,17 +5,20 @@
 
 // Constantes de precios
 export const PRICING_CONSTANTS = {
-  // Tarifa base por kilómetro en CRC (ajustada para competir con Uber/Didi)
-  BASE_RATE_PER_KM: 280, // ₡280 por km (competitivo con mercado)
+  // Tarifa base por kilómetro en CRC (competitiva con Uber X y Didi)
+  BASE_RATE_PER_KM: 180, // ₡180 por km (más bajo que Uber X)
   
   // Tarifa mínima del viaje en CRC
-  MINIMUM_FARE: 1500, // ₡1,500 mínimo
+  MINIMUM_FARE: 1200, // ₡1,200 mínimo
   
   // Tarifa de inicio (banderazo) en CRC
-  BASE_FARE: 800, // ₡800 al iniciar el viaje
+  BASE_FARE: 600, // ₡600 al iniciar el viaje
   
   // Tarifa por minuto de espera en CRC
-  WAIT_TIME_PER_MINUTE: 50, // ₡50 por minuto
+  WAIT_TIME_PER_MINUTE: 40, // ₡40 por minuto
+  
+  // Incremento/decremento de precio (como Didi)
+  PRICE_ADJUSTMENT_STEP: 50, // ₡50 para ajustar precio
   
   // Redondeo a los billetes/monedas más cercanos
   ROUNDING_VALUES: [5, 10, 25, 50, 100, 500, 1000, 2000, 5000, 10000, 20000],
@@ -156,22 +159,43 @@ export function generateVehiclePrices(
   price: number;
   priceFormatted: string;
   estimatedTime: string;
+  priceRange: { min: number; max: number };
 }[] {
   const vehicles = [
-    { type: 'kommute-4' as const, costFactor: 0.95, name: 'Kommute 4' },
-    { type: 'kommute-large' as const, costFactor: 1.35, name: 'Kommute Large' },
-    { type: 'kommute-premium' as const, costFactor: 1.65, name: 'Kommute Premium' },
+    { type: 'kommute-4' as const, costFactor: 0.85, name: 'Kommute 4' },
+    { type: 'kommute-large' as const, costFactor: 1.25, name: 'Kommute Large' },
+    { type: 'kommute-premium' as const, costFactor: 1.45, name: 'Kommute Premium' },
   ];
 
   return vehicles.map((vehicle) => {
-    const price = calculateTripPrice(distanceMeters, durationSeconds, vehicle.costFactor);
+    const basePrice = calculateTripPrice(distanceMeters, durationSeconds, vehicle.costFactor);
     const timeMinutes = Math.ceil(durationSeconds / 60);
+    
+    // Calcular rango de precios (como Didi permite ajustar ±50)
+    const minPrice = roundToNearestCurrency(basePrice - (PRICING_CONSTANTS.PRICE_ADJUSTMENT_STEP * 3));
+    const maxPrice = roundToNearestCurrency(basePrice + (PRICING_CONSTANTS.PRICE_ADJUSTMENT_STEP * 3));
     
     return {
       vehicleType: vehicle.type,
-      price,
-      priceFormatted: formatCRC(price),
+      price: basePrice,
+      priceFormatted: formatCRC(basePrice),
       estimatedTime: `${timeMinutes} min`,
+      priceRange: { min: minPrice, max: maxPrice },
     };
   });
+}
+
+/**
+ * Ajusta el precio en incrementos de ₡50 (como Didi)
+ * @param currentPrice Precio actual
+ * @param direction 'up' para aumentar, 'down' para disminuir
+ * @returns Nuevo precio ajustado
+ */
+export function adjustPrice(currentPrice: number, direction: 'up' | 'down'): number {
+  const adjustment = direction === 'up' 
+    ? PRICING_CONSTANTS.PRICE_ADJUSTMENT_STEP 
+    : -PRICING_CONSTANTS.PRICE_ADJUSTMENT_STEP;
+  
+  const newPrice = currentPrice + adjustment;
+  return roundToNearestCurrency(newPrice);
 }
