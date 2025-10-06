@@ -826,19 +826,28 @@ export default function HomeScreen() {
                 )}
               </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.adminActionCard}>
+            <TouchableOpacity 
+              style={styles.adminActionCard}
+              onPress={() => router.push('/database-management')}
+            >
               <View style={styles.adminActionContent}>
                 <Users size={20} color="#D81B60" />
                 <Text style={styles.adminActionText}>{t('manage_users')}</Text>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.adminActionCard}>
+            <TouchableOpacity 
+              style={styles.adminActionCard}
+              onPress={() => router.push('/provider-registration')}
+            >
               <View style={styles.adminActionContent}>
                 <TrendingUp size={20} color="#D81B60" />
                 <Text style={styles.adminActionText}>{t('approve_providers')}</Text>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.adminActionCard}>
+            <TouchableOpacity 
+              style={styles.adminActionCard}
+              onPress={() => Alert.alert('Transacciones', 'Funcionalidad en desarrollo')}  
+            >
               <View style={styles.adminActionContent}>
                 <Calendar size={20} color="#D81B60" />
                 <Text style={styles.adminActionText}>{t('view_transactions')}</Text>
@@ -855,11 +864,11 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.adminActionCard}
-              onPress={() => router.push('/revenue-estimates')}
+              onPress={() => router.push('/kommuter-panel')}
             >
               <View style={styles.adminActionContent}>
                 <TrendingUp size={20} color="#65ea06" />
-                <Text style={styles.adminActionText}>Estimación de Ingresos</Text>
+                <Text style={styles.adminActionText}>Kommuter Panel</Text>
               </View>
             </TouchableOpacity>
           </View>
