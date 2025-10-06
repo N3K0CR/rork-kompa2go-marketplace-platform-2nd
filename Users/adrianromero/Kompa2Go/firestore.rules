@@ -13,6 +13,17 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/admin_users/$(request.auth.uid));
+    }
+    
+    // Admin Users collection (only admins can read/write)
+    match /admin_users/{userId} {
+      allow read, write: if isAdmin();
+    }
+    
     // Routes collection
     match /routes/{routeId} {
       // Anyone authenticated can read routes
@@ -69,69 +80,142 @@ service cloud.firestore {
     
     // Kommute Wallet Balances
     match /kommute_wallet_balances/{userId} {
-      allow read: if isOwner(userId);
-      allow write: if false;
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId);
+      allow update: if false;
+      allow delete: if false;
     }
     
     // Kommute Wallet Recharges
     match /kommute_wallet_recharges/{rechargeId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if false;
+      // Users can read their own recharges, admins can read all
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        isAdmin()
+      );
+      
+      // Users can create recharges for themselves
+      allow create: if isAuthenticated() && 
+                      request.resource.data.userId == request.auth.uid;
+      
+      // Only admins can update (approve/reject)
+      allow update: if isAdmin();
+      
+      allow delete: if false;
     }
     
     // Kommute Wallet Transactions
     match /kommute_wallet_transactions/{transactionId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Users can read their own transactions, admins can read all
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        isAdmin()
+      );
+      
       allow write: if false;
     }
     
     // Kommute Payment Distributions
     match /kommute_payment_distributions/{distributionId} {
-      allow read: if isAuthenticated() && resource.data.kommuterId == request.auth.uid;
+      // Kommuters can read their own distributions, admins can read all
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.kommuterId ||
+        isAdmin()
+      );
+      
       allow write: if false;
     }
     
     // User Profiles
     match /user_profiles/{userId} {
-      allow read: if isOwner(userId);
+      allow read: if isOwner(userId) || isAdmin();
       allow create, update: if isOwner(userId);
       allow delete: if false;
     }
     
     // Kommuter Profiles
     match /kommuter_profiles/{kommuterId} {
+      // Anyone authenticated can read kommuter profiles (for matching)
+      // Admins can read all
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Users can create their own kommuter profile
+      allow create: if isAuthenticated() && 
+                      request.resource.data.userId == request.auth.uid;
+      
+      // Users can update their own profile, admins can update any
+      allow update: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+      
       allow delete: if false;
     }
     
-    // Kommuter Applications
+    // Kommuter Applications (Pending Approvals)
     match /kommuter_applications/{applicationId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Users can read their own applications, admins can read all
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        isAdmin()
+      );
+      
+      // Users can create applications for themselves
+      allow create: if isAuthenticated() && 
+                      request.resource.data.userId == request.auth.uid;
+      
+      // Users can update their own applications, admins can update any (approve/reject)
+      allow update: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+      
       allow delete: if false;
     }
     
     // Alert Tracking
     match /alert_tracking/{alertId} {
+      // Users can read alerts where they are involved, admins can read all
       allow read: if isAuthenticated() && (
-        resource.data.userId == request.auth.uid ||
-        resource.data.kommuterId == request.auth.uid
+        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.kommuterId ||
+        isAdmin()
       );
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      
+      // Users can create alerts for themselves
+      allow create: if isAuthenticated() && 
+                      request.resource.data.userId == request.auth.uid;
+      
+      // Users involved can update, admins can update any
       allow update: if isAuthenticated() && (
         resource.data.userId == request.auth.uid ||
-        resource.data.kommuterId == request.auth.uid
+        resource.data.kommuterId == request.auth.uid ||
+        isAdmin()
       );
+      
+      allow delete: if false;
+    }
+    
+    // Alert Location Tracking (Real-time location updates)
+    match /alert_location_tracking/{alertId} {
+      // Users involved and admins can read
+      allow read: if isAuthenticated();
+      
+      // Kommuters can create/update their location during active alerts
+      allow create, update: if isAuthenticated();
+      
       allow delete: if false;
     }
     
     // Security Questions
     match /security_questions/{userId} {
       allow read, write: if isOwner(userId);
+    }
+    
+    // System Transactions (All transactions for admin panel)
+    match /system_transactions/{transactionId} {
+      allow read: if isAdmin();
+      allow write: if false;
     }
     
     // Default deny all other collections
