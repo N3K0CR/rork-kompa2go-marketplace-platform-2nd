@@ -155,7 +155,9 @@ export default function HomeScreen() {
           >
             <View style={styles.kommuteHeader}>
               <Text style={styles.kommuteTitle}>Kommute</Text>
-              <Text style={styles.kommuteBadge}>NUEVO</Text>
+              <View style={styles.newTripButton}>
+                <Text style={styles.newTripButtonText}>Nuevo Viaje</Text>
+              </View>
             </View>
             <Text style={styles.kommuteDescription}>
               Comparte viajes, ahorra dinero y reduce tu huella de carbono
@@ -2061,6 +2063,17 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     color: 'white',
+  },
+  newTripButton: {
+    backgroundColor: '#65ea06',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  newTripButtonText: {
+    fontSize: 12,
+    fontWeight: 'bold' as const,
+    color: '#131c0d',
   },
   kommuteDescription: {
     fontSize: 14,
