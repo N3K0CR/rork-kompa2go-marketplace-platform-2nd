@@ -34,8 +34,8 @@ const VEHICLE_OPTIONS: VehicleOption[] = [
     name: 'Kommute 4',
     capacity: 4,
     icon: Car,
-    basePrice: 600,
-    pricePerKm: 150,
+    basePrice: 1200,
+    pricePerKm: 280,
     estimatedTime: 12,
   },
   {
@@ -43,8 +43,8 @@ const VEHICLE_OPTIONS: VehicleOption[] = [
     name: 'Kommute Large',
     capacity: 7,
     icon: Users,
-    basePrice: 800,
-    pricePerKm: 200,
+    basePrice: 1500,
+    pricePerKm: 350,
     estimatedTime: 15,
   },
 ];
@@ -180,11 +180,17 @@ export default function CommuteHome() {
       return;
     }
 
+    const controller = new AbortController();
+    let timeoutId: NodeJS.Timeout | null = null;
+
     try {
       setSearching(true);
       
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      timeoutId = setTimeout(() => {
+        controller.abort();
+      }, 8000);
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=8&addressdetails=1&countrycodes=cr`,
@@ -197,30 +203,33 @@ export default function CommuteHome() {
         }
       );
       
-      clearTimeout(timeoutId);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
       
       if (!response.ok) {
         console.error('Search API error:', response.status, response.statusText);
-        throw new Error(`HTTP error! status: ${response.status}`);
+        return;
       }
       
       const data = await response.json();
       console.log('Search results:', data.length, 'items found for:', query);
       
-      if (data && Array.isArray(data)) {
+      if (data && Array.isArray(data) && data.length > 0) {
         setSuggestions(data);
       } else {
-        console.warn('Invalid search response format');
         setSuggestions([]);
       }
     } catch (error) {
-      console.error('Error searching destination:', error);
-      if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          console.log('Search request timed out - keeping previous suggestions');
-        } else {
-          console.error('Search error details:', error.message);
-        }
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('Search request cancelled');
+      } else {
+        console.error('Error searching destination:', error);
       }
     } finally {
       setSearching(false);
