@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, Platform, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, Platform } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { Search, MapPin, Navigation, X } from 'lucide-react-native';
 import { useCommute } from '@/hooks/useCommute';
@@ -69,15 +69,14 @@ export default function CommuteSearch() {
       
       console.log('🔍 Searching address:', query);
       
-      // Agregar Costa Rica al query para mejorar resultados
       const searchQuery = query.includes('Costa Rica') ? query : `${query}, Costa Rica`;
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5&addressdetails=1&countrycodes=cr`;
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=10&addressdetails=1&countrycodes=cr`;
       
       const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'Kompa2Go/1.0', // Nominatim requiere User-Agent
+          'User-Agent': 'Kompa2Go/1.0',
         },
       });
       
@@ -90,8 +89,14 @@ export default function CommuteSearch() {
       
       if (type === 'origin') {
         setOriginSuggestions(data);
+        if (data.length > 0) {
+          setShowOriginSuggestions(true);
+        }
       } else {
         setDestinationSuggestions(data);
+        if (data.length > 0) {
+          setShowDestinationSuggestions(true);
+        }
       }
     } catch (error) {
       console.error('❌ Error searching address:', error);
@@ -423,23 +428,22 @@ export default function CommuteSearch() {
       
       {showSuggestions && suggestions.length > 0 && (
         <View style={styles.suggestionsContainer}>
-          <FlatList
-            data={suggestions}
-            keyExtractor={(item) => item.place_id}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.suggestionItem}
-                onPress={() => selectAddressSuggestion(item, type)}
-              >
-                <MapPin size={16} color={Colors.neutral[500]} />
-                <Text style={styles.suggestionText} numberOfLines={2}>
-                  {item.display_name}
-                </Text>
-              </TouchableOpacity>
-            )}
-            style={styles.suggestionsList}
-            scrollEnabled={false}
-          />
+          {suggestions.map((item) => (
+            <TouchableOpacity
+              key={item.place_id}
+              style={styles.suggestionItem}
+              onPress={() => {
+                console.log('🎯 Suggestion clicked:', item.display_name);
+                selectAddressSuggestion(item, type);
+              }}
+              activeOpacity={0.7}
+            >
+              <MapPin size={16} color={Colors.neutral[500]} />
+              <Text style={styles.suggestionText} numberOfLines={2}>
+                {item.display_name}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
       )}
       
@@ -635,11 +639,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.neutral[300],
     marginBottom: Spacing[3],
-    maxHeight: 200,
+    maxHeight: 300,
     ...Shadows.md,
-  },
-  suggestionsList: {
-    maxHeight: 200,
   },
   suggestionItem: {
     flexDirection: 'row',
