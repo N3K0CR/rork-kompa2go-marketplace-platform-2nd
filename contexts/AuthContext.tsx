@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setAuthToken } from '@/lib/trpc';
+import { useFirebaseAuth } from './FirebaseAuthContext';
 
 interface User {
   id: string;
@@ -34,10 +35,20 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const { firebaseUser } = useFirebaseAuth();
 
   useEffect(() => {
     loadStoredUser();
   }, []);
+
+  useEffect(() => {
+    if (!firebaseUser && user) {
+      console.log('[AuthContext] Firebase user signed out, clearing app user');
+      setUser(null);
+      AsyncStorage.removeItem('user');
+      setAuthToken(null);
+    }
+  }, [firebaseUser]);
 
   const loadStoredUser = async () => {
     try {
@@ -81,8 +92,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!firebaseUser) {
+        throw new Error('Debe autenticarse con Firebase primero');
+      }
       
       // Test users as specified
       const testUsers = [
@@ -172,8 +184,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, userData: Partial<User>) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!firebaseUser) {
+        throw new Error('Debe autenticarse con Firebase primero');
+      }
       
       const userType = userData.userType || 'client';
       const uniqueId = userType !== 'admin' ? generateUniqueId(userType) : undefined;

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ScrollView, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ScrollView, Modal, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { useFirebaseAuth } from '@/contexts/FirebaseAuthContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
@@ -53,6 +54,7 @@ export default function AuthScreen() {
     password: '',
     targetRole: 'client' as 'client' | 'provider',
   });
+  const { signInWithEmail, signUpWithEmail, signOut: firebaseSignOut, resetPassword: firebaseResetPassword, firebaseUser, loading: firebaseLoading } = useFirebaseAuth();
   const { signIn, signUp, switchRole, resetPassword } = useAuth();
 
   const totalProviderSteps = 4;
@@ -98,20 +100,34 @@ export default function AuthScreen() {
       return;
     }
 
+    if (!isLogin && !formData.name) {
+      Alert.alert('Error', 'Por favor ingresa tu nombre');
+      return;
+    }
+
     setLoading(true);
     try {
       if (isLogin) {
+        console.log('[Auth] Signing in with Firebase...');
+        await signInWithEmail(formData.email, formData.password);
+        console.log('[Auth] Firebase sign in successful, now signing in to app...');
         await signIn(formData.email, formData.password);
+        console.log('[Auth] App sign in successful');
       } else {
+        console.log('[Auth] Creating Firebase account...');
+        await signUpWithEmail(formData.email, formData.password, formData.name);
+        console.log('[Auth] Firebase account created, now creating app account...');
         await signUp(formData.email, formData.password, {
           name: formData.name,
           phone: formData.phone,
           location: formData.location,
           userType,
         });
+        console.log('[Auth] App account created');
       }
       router.replace('/(tabs)');
     } catch (error: any) {
+      console.error('[Auth] Error:', error);
       Alert.alert('Error', error.message || 'Ocurrió un error');
     } finally {
       setLoading(false);
@@ -145,11 +161,13 @@ export default function AuthScreen() {
 
     setLoading(true);
     try {
-      await resetPassword(forgotPasswordEmail);
+      console.log('[Auth] Sending password reset email...');
+      await firebaseResetPassword(forgotPasswordEmail);
       Alert.alert('Éxito', 'Se ha enviado un correo de recuperación a tu email');
       setShowForgotPassword(false);
       setForgotPasswordEmail('');
     } catch (error: any) {
+      console.error('[Auth] Password reset error:', error);
       Alert.alert('Error', error.message || 'Error al enviar el correo de recuperación');
     } finally {
       setLoading(false);
