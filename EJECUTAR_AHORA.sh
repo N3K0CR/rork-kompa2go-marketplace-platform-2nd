@@ -1,10 +1,26 @@
 #!/bin/bash
 
-# Hacer todos los scripts ejecutables
-chmod +x /home/user/rork-app/START_BACKEND_NOW.sh
-chmod +x /home/user/rork-app/VERIFY_STATUS.sh
-chmod +x /home/user/rork-app/check-status-now.sh
-chmod +x /home/user/rork-app/init-backend-simple.sh
+echo "🚀 Iniciando Backend de Kompa2Go"
+echo "=================================="
+echo ""
 
-# Ejecutar el script de inicio
-bash /home/user/rork-app/START_BACKEND_NOW.sh
+# Verificar que Node.js está instalado
+if ! command -v node &> /dev/null; then
+    echo "❌ Node.js no está instalado"
+    exit 1
+fi
+
+echo "✅ Node.js encontrado: $(node --version)"
+echo ""
+
+# Verificar que las dependencias están instaladas
+if [ ! -d "node_modules" ]; then
+    echo "📦 Instalando dependencias..."
+    bun install
+    echo ""
+fi
+
+# Iniciar el backend
+echo "🔥 Iniciando servidor backend..."
+echo ""
+node start-backend-fixed.js
