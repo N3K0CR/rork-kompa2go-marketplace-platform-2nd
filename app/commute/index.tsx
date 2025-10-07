@@ -5,6 +5,7 @@ import { MapPin, Navigation, Search, Car, Users, Clock, DollarSign, X, TrendingU
 import { useCommute } from '@/src/modules/commute/context/CommuteContext';
 import { generateVehiclePrices, calculateDemandLevel, calculateTrafficLevel } from '@/src/modules/commute/utils/pricing';	
 import * as Location from 'expo-location';
+import { trpc } from '@/lib/trpc';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 	
 interface AddressSuggestion {
@@ -65,32 +66,13 @@ export default function CommuteHome() {
   const reverseGeocode = async (latitude: number, longitude: number, retries = 3): Promise<string> => {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const result = await trpc.geocoding.reverse.query({ latitude, longitude });
         
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
-          {
-            signal: controller.signal,
-            headers: {
-              'User-Agent': 'Kompa2Go/1.0',
-              'Accept': 'application/json',
-            },
-          }
-        );
-        
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+        if (result) {
+          return result.address;
         }
         
-        const data = await response.json();
-        const address = data.address?.road 
-          ? `${data.address.road}, ${data.address.city || data.address.town || data.address.village || ''}`.trim()
-          : data.display_name?.split(',').slice(0, 2).join(',').trim();
-        
-        return address || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+        return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
       } catch (error) {
         console.log(`Geocoding attempt ${attempt}/${retries} failed:`, error);
         
@@ -173,54 +155,28 @@ export default function CommuteHome() {
       
       await new Promise(resolve => setTimeout(resolve, 400));
       
-      const searchQuery = query.includes('Costa Rica') ? query : `${query}, Costa Rica`;
+      const results = await trpc.geocoding.search.query({ query, countryCode: 'cr' });
       
-      for (let attempt = 1; attempt <= 2; attempt++) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 8000);
-          
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=8&addressdetails=1&countrycodes=cr`,
-            {
-              signal: controller.signal,
-              method: 'GET',
-              headers: {
-                'User-Agent': 'Kompa2Go/1.0',
-                'Accept': 'application/json',
-              },
-            }
-          );
-          
-          clearTimeout(timeoutId);
-          
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-          
-          const data = await response.json();
-          console.log('Search results:', data.length, 'items found for:', query);
-          
-          if (data && Array.isArray(data) && data.length > 0) {
-            setSuggestions(data);
-          } else {
-            setSuggestions([]);
-          }
-          
-          return;
-        } catch (error) {
-          console.log(`Search attempt ${attempt}/2 failed:`, error);
-          
-          if (attempt === 2) {
-            throw error;
-          }
-          
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
+      console.log('Search results:', results.length, 'items found for:', query);
+      
+      const suggestions: AddressSuggestion[] = results.map((result: { placeId: number; displayName: string; latitude: number; longitude: number; address: string }) => ({
+        place_id: result.placeId.toString(),
+        display_name: result.displayName,
+        lat: result.latitude.toString(),
+        lon: result.longitude.toString(),
+        address: {
+          road: result.address,
+          city: '',
+        },
+      }));
+      
+      setSuggestions(suggestions);
     } catch (error) {
-      if (error instanceof Error && error.name !== 'AbortError') {
+      if (error instanceof Error) {
         console.error('Error searching destination:', error.message);
+        if (error.message.includes('Rate limit')) {
+          Alert.alert('Límite de búsqueda', 'Por favor espera un momento antes de buscar de nuevo.');
+        }
       }
       setSuggestions([]);
     } finally {

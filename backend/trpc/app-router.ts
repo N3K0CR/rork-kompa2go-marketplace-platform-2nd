@@ -31,12 +31,14 @@ import {
   getSurgeHeatmapProcedure,
 } from './routes/commute/surge-pricing-routes';
 import { registrationRouter } from './routes/registration/routes';
+import { geocodingRouter } from './routes/geocoding/routes';
 
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
     hi: hiRoute,
   }),
   registration: registrationRouter,
+  geocoding: geocodingRouter,
   payments: createTRPCRouter({
     create: paymentRoutes.createPayment,
     get: paymentRoutes.getPayment,
