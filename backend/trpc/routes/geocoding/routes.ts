@@ -4,10 +4,10 @@
 // tRPC routes for geocoding services
 
 import { z } from 'zod';
-import { publicProcedure, router } from '../../create-context';
+import { publicProcedure, createTRPCRouter } from '../../create-context';
 import { geocodingService } from './service';
 
-export const geocodingRouter = router({
+export const geocodingRouter = createTRPCRouter({
   search: publicProcedure
     .input(
       z.object({
