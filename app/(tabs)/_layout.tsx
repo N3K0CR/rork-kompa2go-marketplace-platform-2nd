@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Home, Search, Calendar, BarChart3, Bell, LayoutGrid, User, MessageCircle, Gift } from "lucide-react-native";
+import { Home, Search, Calendar, BarChart3, LayoutGrid, MessageCircle, Gift, UserCircle } from "lucide-react-native";
 import React from "react";
 import { View, Text } from "react-native";
 import { useAuth } from "@/contexts/AuthContext";
@@ -101,24 +101,31 @@ export default function TabLayout() {
       {userType === 'admin' && (
         <>
           <Tabs.Screen
-            name="analytics"
+            name="search"
             options={{
-              title: 'Analytics',
-              tabBarIcon: ({ color, size }) => <BarChart3 color={color} size={size} />,
+              title: 'Búsqueda',
+              tabBarIcon: ({ color, size }) => <Search color={color} size={size} />,
             }}
           />
           <Tabs.Screen
             name="profile"
             options={{
               title: 'Perfil',
-              tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
+              tabBarIcon: ({ color, size }) => <UserCircle color={color} size={size} />,
             }}
           />
           <Tabs.Screen
-            name="chat"
+            name="calendar"
             options={{
-              title: 'Notificaciones',
-              tabBarIcon: ({ color, size }) => <Bell color={color} size={size} />,
+              title: 'Calendario',
+              tabBarIcon: ({ color, size }) => <Calendar color={color} size={size} />,
+            }}
+          />
+          <Tabs.Screen
+            name="analytics"
+            options={{
+              title: 'Analytics',
+              tabBarIcon: ({ color, size }) => <BarChart3 color={color} size={size} />,
             }}
           />
         </>
@@ -129,7 +136,7 @@ export default function TabLayout() {
           name="profile"
           options={{
             title: 'Perfil',
-            tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
+            tabBarIcon: ({ color, size }) => <UserCircle color={color} size={size} />,
           }}
         />
       )}
@@ -147,7 +154,7 @@ export default function TabLayout() {
             name="profile"
             options={{
               title: 'Perfil',
-              tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
+              tabBarIcon: ({ color, size }) => <UserCircle color={color} size={size} />,
             }}
           />
         </>
@@ -224,6 +231,16 @@ export default function TabLayout() {
       {userType === 'admin' && (
         <Tabs.Screen
           name="chat"
+          options={{
+            href: null,
+          }}
+        />
+      )}
+      
+      {/* Hide programas tab for admin users */}
+      {userType === 'admin' && (
+        <Tabs.Screen
+          name="programas"
           options={{
             href: null,
           }}
