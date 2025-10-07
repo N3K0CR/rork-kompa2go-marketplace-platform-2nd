@@ -21,7 +21,8 @@ service cloud.firestore {
     
     // Admin Users collection (only admins can read/write)
     match /admin_users/{userId} {
-      allow read, write: if isAdmin();
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
     
     // Routes collection
@@ -62,8 +63,8 @@ service cloud.firestore {
     
     // Users collection
     match /users/{userId} {
-      // Users can read their own profile
-      allow read: if isOwner(userId);
+      // Users can read their own profile or admins can read all
+      allow read: if isOwner(userId) || isAdmin();
       
       // Users can create/update their own profile
       allow create, update: if isOwner(userId);
@@ -72,17 +73,17 @@ service cloud.firestore {
       allow delete: if false;
     }
     
-    // Statistics collection (read-only for users)
+    // Statistics collection (read-only for authenticated users)
     match /statistics/{statId} {
       allow read: if isAuthenticated();
-      allow write: if false;
+      allow write: if isAdmin();
     }
     
     // Kommute Wallet Balances
     match /kommute_wallet_balances/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId);
-      allow update: if false;
+      allow update: if isAdmin();
       allow delete: if false;
     }
     
@@ -112,7 +113,8 @@ service cloud.firestore {
         isAdmin()
       );
       
-      allow write: if false;
+      allow create: if isAdmin();
+      allow update, delete: if false;
     }
     
     // Kommute Payment Distributions
@@ -123,7 +125,8 @@ service cloud.firestore {
         isAdmin()
       );
       
-      allow write: if false;
+      allow create: if isAdmin();
+      allow update, delete: if false;
     }
     
     // User Profiles
@@ -136,7 +139,6 @@ service cloud.firestore {
     // Kommuter Profiles
     match /kommuter_profiles/{kommuterId} {
       // Anyone authenticated can read kommuter profiles (for matching)
-      // Admins can read all
       allow read: if isAuthenticated();
       
       // Users can create their own kommuter profile
@@ -233,7 +235,20 @@ service cloud.firestore {
     // System Transactions (All transactions for admin panel)
     match /system_transactions/{transactionId} {
       allow read: if isAdmin();
-      allow write: if false;
+      allow create: if isAdmin();
+      allow update, delete: if false;
+    }
+    
+    // Services collection (for app configuration - read by all authenticated users)
+    match /services/{serviceId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    
+    // App Configuration (read by all authenticated users)
+    match /app_config/{configId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
     
     // Default deny all other collections
