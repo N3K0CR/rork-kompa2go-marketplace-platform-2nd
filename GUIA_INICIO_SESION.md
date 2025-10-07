@@ -1,297 +1,103 @@
-# 📱 Guía de Inicio de Sesión - Kompa2Go
+# Guía de Inicio de Sesión - Kompa2Go
 
-## 🎯 Cómo Iniciar Sesión en la Aplicación
+## Credenciales de Prueba
 
-### 1️⃣ **Acceder a la Pantalla de Autenticación**
+### Usuarios Administradores
+1. **Neko1 (Admin)**
+   - Email: `agostounonueve@gmail.com`
+   - Contraseña: `kompa2go_admin12025`
 
-La aplicación tiene una pantalla de autenticación ubicada en: `/auth`
+2. **Neko2 (Admin)**
+   - Email: `onlycr@yahoo.com`
+   - Contraseña: `kompa2go_admin22025`
 
-**Rutas disponibles:**
-- `app/auth.tsx` - Pantalla principal de autenticación
-- `app/onboarding.tsx` - Pantalla de bienvenida (opcional)
+### Usuarios Proveedores (2-Kompa)
+1. **Proveedor Demo 1**
+   - Email: `agostounonueve@gmail.com`
+   - Contraseña: `kompa2go_2kompa12025`
+   - ID Único: `2KPAB123`
 
----
+2. **Proveedor Demo 2**
+   - Email: `onlycr@yahoo.com`
+   - Contraseña: `kompa2go_2kompa22025`
+   - ID Único: `2KPCD456`
 
-## 🔐 **Opciones de Inicio de Sesión**
+3. **Sakura Beauty Salon** (Proveedor Especial)
+   - Email: `Marfanar@`
+   - Contraseña: `lov3myJob25`
+   - ID Único: `2KPSK789`
+   - Nota: Este proveedor tiene acceso sin restricciones
 
-### **Opción A: Iniciar Sesión con Cuenta Existente**
+### Usuarios Clientes (Mi-Kompa)
+1. **Cliente Demo 1**
+   - Email: `agostounonueve@gmail.com`
+   - Contraseña: `kompa2go_mikompa12025`
+   - ID Único: `MKPXY123`
 
-1. **Abrir la aplicación** y navegar a la pantalla de autenticación
-2. **Asegurarse de estar en modo "Iniciar Sesión"** (por defecto)
-3. **Ingresar credenciales:**
-   - ✉️ **Correo electrónico**
-   - 🔒 **Contraseña**
-4. **Presionar el botón** "Iniciar Sesión"
+2. **Cliente Demo 2**
+   - Email: `onlycr@yahoo.com`
+   - Contraseña: `kompa2go_mikompa22025`
+   - ID Único: `MKPZW456`
 
-```typescript
-// Ejemplo de credenciales de prueba
-Email: usuario@ejemplo.com
-Password: tu_contraseña_segura
-```
+## Pasos para Iniciar Sesión
 
----
+### Opción 1: Inicio de Sesión Directo
+1. Abre la aplicación Kompa2Go
+2. En la pantalla de autenticación, asegúrate de estar en modo "Iniciar Sesión"
+3. Ingresa uno de los correos electrónicos de arriba
+4. Ingresa la contraseña correspondiente
+5. Presiona el botón "Iniciar Sesión"
 
-### **Opción B: Crear Nueva Cuenta**
+### Opción 2: Cambio de Rol
+Si ya has iniciado sesión y quieres cambiar de rol (por ejemplo, de Cliente a Proveedor):
 
-Si no tienes cuenta, puedes registrarte:
-
-1. **Presionar** "¿No tienes cuenta? Regístrate"
-2. **Seleccionar tipo de usuario:**
-   - 👤 **Mi-Kompa (Cliente)** - Para usuarios que buscan servicios
-   - 🏢 **2-Kompa (Proveedor)** - Para proveedores de servicios
-
-#### **Registro como Cliente (Mi-Kompa):**
-- Nombre completo
-- Correo electrónico
-- Contraseña
-- Teléfono
-- Fecha de nacimiento
-- Ubicación
-- ¿Cómo nos encontraste?
-
-#### **Registro como Proveedor (2-Kompa):**
-El registro de proveedor tiene **4 pasos:**
-
-**Paso 1: Información Básica**
-- Nombre completo
-- Teléfono
-- Fecha de nacimiento
-- ¿Cómo nos encontraste?
-
-**Paso 2: Detalles del Negocio**
-- Nombre del negocio
-- Servicios que ofreces
-- Link a lista de precios pública
-
-**Paso 3: Logística de Servicios**
-- ¿Requiere que clientes viajen a tu ubicación?
-- ¿Servicio a domicilio?
-- ¿Trabajas con rutas de ventas?
-
-**Paso 4: Detalles Finales**
-- Redes sociales (Facebook, Instagram, Website)
-
----
-
-## 🔄 **Cambiar de Rol (Cliente ↔ Proveedor)**
-
-Si ya tienes una cuenta y quieres cambiar de rol:
-
-1. En la pantalla de inicio de sesión, presiona **"Cambiar a Proveedor/Cliente"**
-2. Ingresa tus credenciales
-3. Selecciona el rol deseado
+1. En la pantalla de inicio de sesión, presiona "Cambiar a Proveedor/Cliente"
+2. Selecciona el rol que deseas (Mi-Kompa o 2-Kompa)
+3. Ingresa las credenciales correspondientes al rol seleccionado
 4. Presiona "Cambiar Rol"
 
----
+## Solución de Problemas
 
-## 🔑 **¿Olvidaste tu Contraseña?**
+### Error: "Error al iniciar sesión"
+Este error puede ocurrir por varias razones:
 
-1. En la pantalla de inicio de sesión, presiona **"¿Olvidó su contraseña?"**
-2. Ingresa tu correo electrónico
-3. Presiona "Enviar Correo"
-4. Revisa tu email para el enlace de recuperación
+1. **Firebase no está autenticado**: 
+   - Asegúrate de que Firebase esté configurado correctamente
+   - Verifica que las credenciales de Firebase en `lib/firebase.ts` sean correctas
 
----
+2. **Credenciales incorrectas**:
+   - Verifica que el email y la contraseña sean exactamente como se muestran arriba
+   - Las contraseñas son sensibles a mayúsculas y minúsculas
 
-## 🌐 **Cambiar Idioma**
+3. **Problema de conexión**:
+   - Verifica tu conexión a internet
+   - Asegúrate de que Firebase esté accesible
 
-En la esquina superior derecha de la pantalla de autenticación, encontrarás el **selector de idioma** para cambiar entre:
-- 🇪🇸 Español
-- 🇺🇸 English
-- 🇫🇷 Français
+### Verificar los Logs
+Para ver información detallada sobre el proceso de autenticación, abre la consola del navegador o los logs de la aplicación. Busca mensajes que comiencen con:
+- `[Auth]` - Logs de la pantalla de autenticación
+- `[FirebaseAuth]` - Logs de Firebase Authentication
+- `[AuthContext]` - Logs del contexto de autenticación de la app
 
----
+### Mensajes de Error Mejorados
+Ahora la aplicación muestra mensajes de error más específicos:
+- **"Error de Firebase: [mensaje]"** - Indica un problema con Firebase Authentication
+- **"Error de aplicación: [mensaje]"** - Indica un problema con la autenticación de la app
+- **"Debe autenticarse con Firebase primero"** - Firebase no ha completado la autenticación
 
-## 🚀 **Flujo Completo de Autenticación**
+## Notas Importantes
 
-```
-┌─────────────────────────────────────┐
-│   Abrir Aplicación                  │
-└──────────────┬──────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────┐
-│   Pantalla de Autenticación         │
-│   (app/auth.tsx)                    │
-└──────────────┬──────────────────────┘
-               │
-       ┌───────┴───────┐
-       │               │
-       ▼               ▼
-┌─────────────┐  ┌─────────────┐
-│ Iniciar     │  │ Registrarse │
-│ Sesión      │  │             │
-└──────┬──────┘  └──────┬──────┘
-       │                │
-       │                ▼
-       │         ┌─────────────┐
-       │         │ Seleccionar │
-       │         │ Tipo Usuario│
-       │         └──────┬──────┘
-       │                │
-       │         ┌──────┴──────┐
-       │         │             │
-       │         ▼             ▼
-       │    ┌─────────┐  ┌─────────┐
-       │    │ Cliente │  │Proveedor│
-       │    └────┬────┘  └────┬────┘
-       │         │            │
-       └─────────┴────────────┘
-                 │
-                 ▼
-       ┌─────────────────┐
-       │ Firebase Auth   │
-       │ + App Context   │
-       └────────┬────────┘
-                │
-                ▼
-       ┌─────────────────┐
-       │ Pantalla        │
-       │ Principal       │
-       │ (tabs)          │
-       └─────────────────┘
-```
+1. **Múltiples Roles**: Los emails `agostounonueve@gmail.com` y `onlycr@yahoo.com` pueden usarse con diferentes contraseñas para acceder a diferentes roles (Admin, Proveedor, Cliente)
 
----
+2. **Primer Inicio de Sesión**: La primera vez que inicies sesión, Firebase puede tardar un poco más en autenticar
 
-## 🔧 **Contextos de Autenticación**
+3. **Persistencia**: Una vez que inicies sesión, tu sesión se mantendrá incluso si cierras la aplicación
 
-La aplicación utiliza dos sistemas de autenticación:
+4. **Recuperación de Contraseña**: Si olvidas tu contraseña, puedes usar la opción "¿Olvidó su contraseña?" en la pantalla de inicio de sesión
 
-### 1. **Firebase Authentication** (`FirebaseAuthContext`)
-- Maneja la autenticación con Firebase
-- Funciones disponibles:
-  - `signInWithEmail(email, password)`
-  - `signUpWithEmail(email, password, displayName)`
-  - `signOut()`
-  - `resetPassword(email)`
-  - `changePassword(currentPassword, newPassword)`
+## Contacto de Soporte
 
-### 2. **App Authentication** (`AuthContext`)
-- Maneja el estado de la aplicación
-- Sincroniza con Firebase
-- Gestiona roles de usuario (cliente/proveedor)
-
----
-
-## 📝 **Ejemplo de Código para Iniciar Sesión**
-
-```typescript
-import { useFirebaseAuth } from '@/contexts/FirebaseAuthContext';
-import { useAuth } from '@/contexts/AuthContext';
-
-function LoginComponent() {
-  const { signInWithEmail } = useFirebaseAuth();
-  const { signIn } = useAuth();
-
-  const handleLogin = async () => {
-    try {
-      // 1. Autenticar con Firebase
-      await signInWithEmail(email, password);
-      
-      // 2. Iniciar sesión en la app
-      await signIn(email, password);
-      
-      // 3. Navegar a la pantalla principal
-      router.replace('/(tabs)');
-    } catch (error) {
-      console.error('Error al iniciar sesión:', error);
-    }
-  };
-}
-```
-
----
-
-## ⚠️ **Solución de Problemas Comunes**
-
-### **Error: "Missing or insufficient permissions"**
-- **Causa:** Las reglas de Firestore no están configuradas correctamente
-- **Solución:** Ejecutar el script de despliegue de reglas:
-  ```bash
-  chmod +x deploy-firestore-rules.sh
-  ./deploy-firestore-rules.sh
-  ```
-
-### **Error: "User not found"**
-- **Causa:** El usuario no existe en Firebase
-- **Solución:** Crear una nueva cuenta usando el formulario de registro
-
-### **Error: "Wrong password"**
-- **Causa:** Contraseña incorrecta
-- **Solución:** Usar la función "¿Olvidó su contraseña?" para recuperarla
-
-### **Error: "Network request failed"**
-- **Causa:** Problemas de conexión a internet
-- **Solución:** Verificar la conexión y reintentar
-
----
-
-## 🎨 **Características de la Pantalla de Autenticación**
-
-- ✅ **Diseño moderno** con gradiente rosa
-- ✅ **Validación de formularios** en tiempo real
-- ✅ **Mensajes de error** en español
-- ✅ **Soporte multiidioma**
-- ✅ **Registro paso a paso** para proveedores
-- ✅ **Recuperación de contraseña**
-- ✅ **Cambio de rol** sin crear nueva cuenta
-- ✅ **Indicadores de carga** durante el proceso
-
----
-
-## 📱 **Navegación Post-Autenticación**
-
-Después de iniciar sesión exitosamente, serás redirigido a:
-
-```
-/(tabs) - Pantalla principal con pestañas
-  ├── index - Inicio
-  ├── search - Búsqueda
-  ├── calendar - Calendario
-  ├── chat - Chat
-  ├── profile - Perfil
-  └── ... otras pestañas
-```
-
----
-
-## 🔐 **Seguridad**
-
-- 🔒 **Contraseñas encriptadas** con Firebase Auth
-- 🔒 **Tokens seguros** para sesiones
-- 🔒 **Reglas de Firestore** para proteger datos
-- 🔒 **Validación de email** requerida
-- 🔒 **Límite de intentos** para prevenir ataques
-
----
-
-## 📞 **Soporte**
-
-Si tienes problemas para iniciar sesión:
-1. Verifica tu conexión a internet
-2. Asegúrate de que Firebase esté configurado correctamente
-3. Revisa los logs de la consola para más detalles
-4. Contacta al administrador del sistema
-
----
-
-## 🎯 **Resumen Rápido**
-
-**Para iniciar sesión:**
-1. Abre la app → Pantalla de autenticación
-2. Ingresa email y contraseña
-3. Presiona "Iniciar Sesión"
-4. ¡Listo! Estás dentro
-
-**Para registrarte:**
-1. Presiona "¿No tienes cuenta? Regístrate"
-2. Selecciona tipo de usuario (Cliente o Proveedor)
-3. Completa el formulario
-4. Presiona "Crear mi cuenta"
-5. ¡Bienvenido a Kompa2Go!
-
----
-
-**Última actualización:** 2025-10-07
-**Versión:** 1.0
+Si continúas teniendo problemas para iniciar sesión después de seguir esta guía, por favor contacta al equipo de soporte con:
+- El mensaje de error completo
+- Los logs de la consola
+- El email que estás intentando usar
