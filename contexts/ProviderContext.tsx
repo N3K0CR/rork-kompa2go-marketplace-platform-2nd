@@ -270,13 +270,40 @@ export const [ProviderProvider, useProvider] = createContextHook(() => {
       setIsLoading(true);
       setContextState(prev => ({ ...prev, syncStatus: 'syncing' }));
       
-      const storageKey = `${STORAGE_KEY}_${user?.id}`;
-      const backupKey = `${BACKUP_STORAGE_KEY}_${user?.id}`;
+      if (!user?.id) {
+        setIsLoading(false);
+        return;
+      }
+      
+      // Try to load from Firestore first
+      try {
+        console.log('🔄 Loading provider data from Firestore...');
+        const firestoreData = await FirestoreProviderService.getProviderData(user.id);
+        
+        if (firestoreData) {
+          console.log('✅ Provider data loaded from Firestore');
+          setProviderData(firestoreData);
+          await saveToStorage(firestoreData);
+          setContextState(prev => ({ 
+            ...prev, 
+            syncStatus: 'success',
+            lastBackup: firestoreData.lastSyncTimestamp 
+          }));
+          await loadSyncQueue();
+          setIsLoading(false);
+          return;
+        }
+      } catch (firestoreError) {
+        console.error('⚠️ Error loading from Firestore, falling back to local storage:', firestoreError);
+      }
+      
+      // Fallback to AsyncStorage
+      const storageKey = `${STORAGE_KEY}_${user.id}`;
+      const backupKey = `${BACKUP_STORAGE_KEY}_${user.id}`;
       
       let storedData = await AsyncStorage.getItem(storageKey);
       let dataSource = 'primary';
       
-      // If primary storage fails, try backup
       if (!storedData) {
         storedData = await AsyncStorage.getItem(backupKey);
         dataSource = 'backup';
@@ -290,14 +317,21 @@ export const [ProviderProvider, useProvider] = createContextHook(() => {
           syncStatus: 'success',
           lastBackup: parsedData.lastSyncTimestamp 
         }));
-        console.log(`Provider data loaded from ${dataSource} storage:`, parsedData);
+        console.log(`Provider data loaded from ${dataSource} storage`);
         
-        // If loaded from backup, try to restore to primary
+        // Sync to Firestore in background
+        try {
+          await FirestoreProviderService.createProviderData(user.id, parsedData);
+          console.log('✅ Local data synced to Firestore');
+        } catch (syncError) {
+          console.error('⚠️ Error syncing to Firestore:', syncError);
+        }
+        
         if (dataSource === 'backup') {
           await saveToStorageWithRetry(parsedData);
         }
       } else {
-        // First time user - set default data and save it
+        // First time user - create default data
         const initialData = {
           ...defaultProviderData,
           businessName: user?.name || 'Mi Negocio',
@@ -306,19 +340,25 @@ export const [ProviderProvider, useProvider] = createContextHook(() => {
         };
         setProviderData(initialData);
         await saveToStorage(initialData);
+        
+        // Create in Firestore
+        try {
+          await FirestoreProviderService.createProviderData(user.id, initialData);
+          console.log('✅ Initial provider data created in Firestore');
+        } catch (createError) {
+          console.error('⚠️ Error creating in Firestore:', createError);
+        }
+        
         setContextState(prev => ({ ...prev, syncStatus: 'success' }));
         console.log('Default provider data set for new user');
       }
       
-      // Load pending sync operations
       await loadSyncQueue();
       
     } catch (error) {
       console.error('Error loading provider data:', error);
       setProviderData(defaultProviderData);
       setContextState(prev => ({ ...prev, syncStatus: 'error' }));
-      
-
     } finally {
       setIsLoading(false);
     }
@@ -485,49 +525,75 @@ export const [ProviderProvider, useProvider] = createContextHook(() => {
     
     try {
       await saveToStorage(updatedData);
-      if (!contextState.isOnline) {
-        await addToSyncQueue({ type: 'updateBusinessName', data: { name: sanitizedName } });
+      
+      if (user?.id) {
+        try {
+          await FirestoreProviderService.updateBusinessName(user.id, sanitizedName);
+          console.log('✅ Business name synced to Firestore');
+        } catch (firestoreError) {
+          console.error('⚠️ Error syncing to Firestore:', firestoreError);
+          await addToSyncQueue({ type: 'updateBusinessName', data: { name: sanitizedName } });
+        }
       }
     } catch (error) {
       console.error('Error updating business name:', error);
       await addToSyncQueue({ type: 'updateBusinessName', data: { name: sanitizedName } });
     }
-  }, [providerData, saveToStorage, contextState.isOnline, addToSyncQueue]);
+  }, [providerData, saveToStorage, user, addToSyncQueue]);
 
   const addService = useCallback(async (service: Omit<Service, 'id'>) => {
     const newService: Service = {
       ...service,
       id: Date.now().toString()
     };
+    const updatedServices = [...providerData.services, newService];
     const updatedData = {
       ...providerData,
-      services: [...providerData.services, newService]
+      services: updatedServices
     };
     setProviderData(updatedData);
     
     try {
       await saveToStorage(updatedData);
-      if (!contextState.isOnline) {
-        await addToSyncQueue({ type: 'addService', data: newService });
+      
+      if (user?.id) {
+        try {
+          await FirestoreProviderService.addService(user.id, newService, providerData.services);
+          console.log('✅ Service synced to Firestore');
+        } catch (firestoreError) {
+          console.error('⚠️ Error syncing to Firestore:', firestoreError);
+          await addToSyncQueue({ type: 'addService', data: newService });
+        }
       }
     } catch (error) {
       console.error('Error adding service:', error);
       await addToSyncQueue({ type: 'addService', data: newService });
     }
-  }, [providerData, saveToStorage, contextState.isOnline, addToSyncQueue]);
+  }, [providerData, saveToStorage, user, addToSyncQueue]);
 
   const updateService = useCallback(async (serviceId: string, updates: Partial<Omit<Service, 'id'>>) => {
+    const updatedServices = providerData.services.map(service => 
+      service.id === serviceId 
+        ? { ...service, ...updates }
+        : service
+    );
     const updatedData = {
       ...providerData,
-      services: providerData.services.map(service => 
-        service.id === serviceId 
-          ? { ...service, ...updates }
-          : service
-      )
+      services: updatedServices
     };
     setProviderData(updatedData);
     await saveToStorage(updatedData);
-  }, [providerData, saveToStorage]);
+    
+    if (user?.id) {
+      try {
+        await FirestoreProviderService.updateServices(user.id, updatedServices);
+        console.log('✅ Service updated in Firestore');
+      } catch (error) {
+        console.error('⚠️ Error syncing to Firestore:', error);
+        await addToSyncQueue({ type: 'updateService', data: { serviceId, updates } });
+      }
+    }
+  }, [providerData, saveToStorage, user, addToSyncQueue]);
 
   const toggleServiceStatus = useCallback(async (serviceId: string) => {
     const updatedData = {
@@ -553,35 +619,68 @@ export const [ProviderProvider, useProvider] = createContextHook(() => {
   }, [providerData, saveToStorage, user, addToSyncQueue]);
 
   const removeService = useCallback(async (serviceId: string) => {
+    const updatedServices = providerData.services.filter(s => s.id !== serviceId);
     const updatedData = {
       ...providerData,
-      services: providerData.services.filter(s => s.id !== serviceId)
+      services: updatedServices
     };
     setProviderData(updatedData);
     await saveToStorage(updatedData);
-  }, [providerData, saveToStorage]);
+    
+    if (user?.id) {
+      try {
+        await FirestoreProviderService.removeService(user.id, serviceId, providerData.services);
+        console.log('✅ Service removed from Firestore');
+      } catch (error) {
+        console.error('⚠️ Error syncing to Firestore:', error);
+        await addToSyncQueue({ type: 'removeService', data: { serviceId } });
+      }
+    }
+  }, [providerData, saveToStorage, user, addToSyncQueue]);
 
   const addGalleryMedia = useCallback(async (media: Omit<GalleryMedia, 'id'>) => {
     const newMedia: GalleryMedia = {
       ...media,
       id: Date.now().toString()
     };
+    const updatedGallery = [...providerData.gallery, newMedia];
     const updatedData = {
       ...providerData,
-      gallery: [...providerData.gallery, newMedia]
+      gallery: updatedGallery
     };
     setProviderData(updatedData);
     await saveToStorage(updatedData);
-  }, [providerData, saveToStorage]);
+    
+    if (user?.id) {
+      try {
+        await FirestoreProviderService.addGalleryMedia(user.id, newMedia, providerData.gallery);
+        console.log('✅ Gallery media synced to Firestore');
+      } catch (error) {
+        console.error('⚠️ Error syncing to Firestore:', error);
+        await addToSyncQueue({ type: 'addGalleryMedia', data: newMedia });
+      }
+    }
+  }, [providerData, saveToStorage, user, addToSyncQueue]);
 
   const removeGalleryMedia = useCallback(async (mediaId: string) => {
+    const updatedGallery = providerData.gallery.filter(item => item.id !== mediaId);
     const updatedData = {
       ...providerData,
-      gallery: providerData.gallery.filter(item => item.id !== mediaId)
+      gallery: updatedGallery
     };
     setProviderData(updatedData);
     await saveToStorage(updatedData);
-  }, [providerData, saveToStorage]);
+    
+    if (user?.id) {
+      try {
+        await FirestoreProviderService.removeGalleryMedia(user.id, mediaId, providerData.gallery);
+        console.log('✅ Gallery media removed from Firestore');
+      } catch (error) {
+        console.error('⚠️ Error syncing to Firestore:', error);
+        await addToSyncQueue({ type: 'removeGalleryMedia', data: { mediaId } });
+      }
+    }
+  }, [providerData, saveToStorage, user, addToSyncQueue]);
 
   const addSupportTicket = useCallback(async (ticket: Omit<SupportTicket, 'id' | 'createdAt'>) => {
     const newTicket: SupportTicket = {
@@ -589,13 +688,24 @@ export const [ProviderProvider, useProvider] = createContextHook(() => {
       id: Date.now().toString(),
       createdAt: new Date().toISOString()
     };
+    const updatedTickets = [...providerData.supportTickets, newTicket];
     const updatedData = {
       ...providerData,
-      supportTickets: [...providerData.supportTickets, newTicket]
+      supportTickets: updatedTickets
     };
     setProviderData(updatedData);
     await saveToStorage(updatedData);
-  }, [providerData, saveToStorage]);
+    
+    if (user?.id) {
+      try {
+        await FirestoreProviderService.addSupportTicket(user.id, newTicket, providerData.supportTickets);
+        console.log('✅ Support ticket synced to Firestore');
+      } catch (error) {
+        console.error('⚠️ Error syncing to Firestore:', error);
+        await addToSyncQueue({ type: 'addSupportTicket', data: newTicket });
+      }
+    }
+  }, [providerData, saveToStorage, user, addToSyncQueue]);
 
   const updateBusinessBranding = useCallback(async (branding: BusinessBranding) => {
     const updatedData = {
@@ -604,7 +714,17 @@ export const [ProviderProvider, useProvider] = createContextHook(() => {
     };
     setProviderData(updatedData);
     await saveToStorage(updatedData);
-  }, [providerData, saveToStorage]);
+    
+    if (user?.id) {
+      try {
+        await FirestoreProviderService.updateBusinessBranding(user.id, branding);
+        console.log('✅ Business branding synced to Firestore');
+      } catch (error) {
+        console.error('⚠️ Error syncing to Firestore:', error);
+        await addToSyncQueue({ type: 'updateBusinessBranding', data: branding });
+      }
+    }
+  }, [providerData, saveToStorage, user, addToSyncQueue]);
 
   const updateContactInfo = useCallback(async (contactInfo: ContactInfo) => {
     const updatedData = {
@@ -613,7 +733,17 @@ export const [ProviderProvider, useProvider] = createContextHook(() => {
     };
     setProviderData(updatedData);
     await saveToStorage(updatedData);
-  }, [providerData, saveToStorage]);
+    
+    if (user?.id) {
+      try {
+        await FirestoreProviderService.updateContactInfo(user.id, contactInfo);
+        console.log('✅ Contact info synced to Firestore');
+      } catch (error) {
+        console.error('⚠️ Error syncing to Firestore:', error);
+        await addToSyncQueue({ type: 'updateContactInfo', data: contactInfo });
+      }
+    }
+  }, [providerData, saveToStorage, user, addToSyncQueue]);
 
   const updateBusinessHours = useCallback(async (businessHours: BusinessHours) => {
     const updatedData = {
@@ -622,42 +752,85 @@ export const [ProviderProvider, useProvider] = createContextHook(() => {
     };
     setProviderData(updatedData);
     await saveToStorage(updatedData);
-  }, [providerData, saveToStorage]);
+    
+    if (user?.id) {
+      try {
+        await FirestoreProviderService.updateBusinessHours(user.id, businessHours);
+        console.log('✅ Business hours synced to Firestore');
+      } catch (error) {
+        console.error('⚠️ Error syncing to Firestore:', error);
+        await addToSyncQueue({ type: 'updateBusinessHours', data: businessHours });
+      }
+    }
+  }, [providerData, saveToStorage, user, addToSyncQueue]);
 
   const addServiceArea = useCallback(async (area: Omit<ServiceArea, 'id'>) => {
     const newArea: ServiceArea = {
       ...area,
       id: Date.now().toString()
     };
+    const updatedServiceAreas = [...providerData.serviceAreas, newArea];
     const updatedData = {
       ...providerData,
-      serviceAreas: [...providerData.serviceAreas, newArea]
+      serviceAreas: updatedServiceAreas
     };
     setProviderData(updatedData);
     await saveToStorage(updatedData);
-  }, [providerData, saveToStorage]);
+    
+    if (user?.id) {
+      try {
+        await FirestoreProviderService.updateServiceAreas(user.id, updatedServiceAreas);
+        console.log('✅ Service area synced to Firestore');
+      } catch (error) {
+        console.error('⚠️ Error syncing to Firestore:', error);
+        await addToSyncQueue({ type: 'addServiceArea', data: newArea });
+      }
+    }
+  }, [providerData, saveToStorage, user, addToSyncQueue]);
 
   const updateServiceArea = useCallback(async (areaId: string, updates: Partial<Omit<ServiceArea, 'id'>>) => {
+    const updatedServiceAreas = providerData.serviceAreas.map(area => 
+      area.id === areaId 
+        ? { ...area, ...updates }
+        : area
+    );
     const updatedData = {
       ...providerData,
-      serviceAreas: providerData.serviceAreas.map(area => 
-        area.id === areaId 
-          ? { ...area, ...updates }
-          : area
-      )
+      serviceAreas: updatedServiceAreas
     };
     setProviderData(updatedData);
     await saveToStorage(updatedData);
-  }, [providerData, saveToStorage]);
+    
+    if (user?.id) {
+      try {
+        await FirestoreProviderService.updateServiceAreas(user.id, updatedServiceAreas);
+        console.log('✅ Service area updated in Firestore');
+      } catch (error) {
+        console.error('⚠️ Error syncing to Firestore:', error);
+        await addToSyncQueue({ type: 'updateServiceArea', data: { areaId, updates } });
+      }
+    }
+  }, [providerData, saveToStorage, user, addToSyncQueue]);
 
   const removeServiceArea = useCallback(async (areaId: string) => {
+    const updatedServiceAreas = providerData.serviceAreas.filter(area => area.id !== areaId);
     const updatedData = {
       ...providerData,
-      serviceAreas: providerData.serviceAreas.filter(area => area.id !== areaId)
+      serviceAreas: updatedServiceAreas
     };
     setProviderData(updatedData);
     await saveToStorage(updatedData);
-  }, [providerData, saveToStorage]);
+    
+    if (user?.id) {
+      try {
+        await FirestoreProviderService.updateServiceAreas(user.id, updatedServiceAreas);
+        console.log('✅ Service area removed from Firestore');
+      } catch (error) {
+        console.error('⚠️ Error syncing to Firestore:', error);
+        await addToSyncQueue({ type: 'removeServiceArea', data: { areaId } });
+      }
+    }
+  }, [providerData, saveToStorage, user, addToSyncQueue]);
 
   const updateProfile = useCallback(async (profile: ProviderProfile) => {
     const updatedData = {
@@ -666,7 +839,17 @@ export const [ProviderProvider, useProvider] = createContextHook(() => {
     };
     setProviderData(updatedData);
     await saveToStorage(updatedData);
-  }, [providerData, saveToStorage]);
+    
+    if (user?.id) {
+      try {
+        await FirestoreProviderService.updateProfile(user.id, profile);
+        console.log('✅ Profile synced to Firestore');
+      } catch (error) {
+        console.error('⚠️ Error syncing to Firestore:', error);
+        await addToSyncQueue({ type: 'updateProfile', data: profile });
+      }
+    }
+  }, [providerData, saveToStorage, user, addToSyncQueue]);
 
   const updateAmbulanteStatus = useCallback(async (isAmbulante: boolean) => {
     const updatedData = {
@@ -675,7 +858,17 @@ export const [ProviderProvider, useProvider] = createContextHook(() => {
     };
     setProviderData(updatedData);
     await saveToStorage(updatedData);
-  }, [providerData, saveToStorage]);
+    
+    if (user?.id) {
+      try {
+        await FirestoreProviderService.updateAmbulanteStatus(user.id, isAmbulante);
+        console.log('✅ Ambulante status synced to Firestore');
+      } catch (error) {
+        console.error('⚠️ Error syncing to Firestore:', error);
+        await addToSyncQueue({ type: 'updateAmbulanteStatus', data: { isAmbulante } });
+      }
+    }
+  }, [providerData, saveToStorage, user, addToSyncQueue]);
 
   // Force sync function for manual retry
   const forceSync = useCallback(async () => {
