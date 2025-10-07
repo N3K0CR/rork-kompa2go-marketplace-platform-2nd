@@ -217,8 +217,8 @@ export const [ProviderProvider, useProvider] = createContextHook(() => {
     pendingOperations: 0
   });
   const [syncQueue, setSyncQueue] = useState<SyncOperation[]>([]);
-  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const backupIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const backupIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isProcessingRef = useRef(false);
 
   // Enhanced storage operations with retry and backup

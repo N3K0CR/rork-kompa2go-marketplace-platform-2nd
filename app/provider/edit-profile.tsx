@@ -4,6 +4,7 @@ import { Stack, router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useProvider } from '@/contexts/ProviderContext';
+import type { Service, GalleryMedia, SupportTicket } from '@/contexts/ProviderContext';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { 
@@ -11,7 +12,6 @@ import {
   Building2, 
   Plus, 
   X, 
-  Check, 
   Camera, 
   Upload, 
   AlertTriangle,
@@ -22,96 +22,6 @@ import {
   Image as ImageIcon,
   Folder
 } from 'lucide-react-native';
-
-interface Service {
-  id: string;
-  name: string;
-  price: number;
-  duration: number;
-  description: string;
-  isActive: boolean;
-}
-
-interface GalleryMedia {
-  id: string;
-  uri: string;
-  description: string;
-  type: 'image' | 'video';
-  fileName?: string;
-  size?: number;
-}
-
-interface BusinessBranding {
-  logo?: string;
-  logoFileName?: string;
-  logoSize?: number;
-  hasCustomLogo: boolean;
-}
-
-interface SupportTicket {
-  id: string;
-  type: 'price_change' | 'block_service';
-  serviceId?: string;
-  serviceName?: string;
-  newPriceListUrl?: string;
-  justification?: string;
-  status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
-}
-
-const mockServices: Service[] = [
-  {
-    id: '1',
-    name: 'Limpieza General',
-    price: 15000,
-    duration: 120,
-    description: 'Limpieza completa de espacios residenciales',
-    isActive: true
-  },
-  {
-    id: '2',
-    name: 'Limpieza Profunda',
-    price: 25000,
-    duration: 180,
-    description: 'Limpieza detallada incluyendo áreas difíciles',
-    isActive: true
-  },
-  {
-    id: '3',
-    name: 'Organización',
-    price: 12000,
-    duration: 90,
-    description: 'Organización y ordenamiento de espacios',
-    isActive: false
-  }
-];
-
-const mockGallery: GalleryMedia[] = [
-  {
-    id: '1',
-    uri: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=300&h=200&fit=crop',
-    description: 'Limpieza de cocina',
-    type: 'image'
-  },
-  {
-    id: '2',
-    uri: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop',
-    description: 'Organización de closet',
-    type: 'image'
-  },
-  {
-    id: '3',
-    uri: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=300&h=200&fit=crop',
-    description: 'Limpieza de baño',
-    type: 'image'
-  },
-  {
-    id: '4',
-    uri: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
-    description: 'Video de trabajo completado',
-    type: 'video'
-  }
-];
 
 export default function EditProfileScreen() {
   const { user } = useAuth();
@@ -140,7 +50,6 @@ export default function EditProfileScreen() {
     setBusinessName(providerContext.businessName);
   }, [providerContext.businessName]);
 
-  // Early return after all hooks are called
   if (user?.userType !== 'provider') {
     return (
       <View style={styles.container}>
@@ -150,7 +59,8 @@ export default function EditProfileScreen() {
     );
   }
 
-  const handleSaveBusinessName = () => {
+  const handleSaveBusinessName = async () => {
+    await providerContext.updateBusinessName(businessName);
     Alert.alert(
       'Nombre Actualizado',
       `El nombre de tu negocio ha sido actualizado a: "${businessName}"`,
@@ -158,14 +68,13 @@ export default function EditProfileScreen() {
     );
   };
 
-  const handleAddService = () => {
+  const handleAddService = async () => {
     if (!newService.name || !newService.price || !newService.duration) {
       Alert.alert('Error', 'Por favor completa todos los campos obligatorios');
       return;
     }
 
-    const service: Service = {
-      id: Date.now().toString(),
+    const service: Omit<Service, 'id'> = {
       name: newService.name,
       price: parseInt(newService.price),
       duration: parseInt(newService.duration),
@@ -173,14 +82,14 @@ export default function EditProfileScreen() {
       isActive: true
     };
 
-    setServices(prev => [...prev, service]);
+    await providerContext.addService(service);
     setNewService({ name: '', price: '', duration: '', description: '' });
     setShowAddServiceModal(false);
     Alert.alert('Éxito', 'Servicio agregado correctamente');
   };
 
   const handleToggleServiceStatus = async (serviceId: string) => {
-    const service = providerContext.services.find(s => s.id === serviceId);
+    const service = providerContext.services.find((s: Service) => s.id === serviceId);
     if (!service) return;
 
     const newStatus = !service.isActive;
@@ -208,7 +117,7 @@ export default function EditProfileScreen() {
   };
 
   const handleRemoveService = (serviceId: string) => {
-    const service = services.find(s => s.id === serviceId);
+    const service = providerContext.services.find((s: Service) => s.id === serviceId);
     if (!service) return;
 
     Alert.alert(
@@ -219,8 +128,8 @@ export default function EditProfileScreen() {
         {
           text: 'Remover',
           style: 'destructive',
-          onPress: () => {
-            setServices(prev => prev.filter(s => s.id !== serviceId));
+          onPress: async () => {
+            await providerContext.removeService(serviceId);
             Alert.alert('Éxito', 'Servicio removido correctamente');
           }
         }
@@ -228,43 +137,39 @@ export default function EditProfileScreen() {
     );
   };
 
-  const handleRequestPriceChange = () => {
+  const handleRequestPriceChange = async () => {
     if (!selectedService || !priceChangeData.newPriceListUrl || !priceChangeData.justification) {
       Alert.alert('Error', 'Por favor completa todos los campos obligatorios');
       return;
     }
 
-    const ticket: SupportTicket = {
-      id: Date.now().toString(),
+    const ticket: Omit<SupportTicket, 'id' | 'createdAt'> = {
       type: 'price_change',
       serviceId: selectedService.id,
       serviceName: selectedService.name,
       newPriceListUrl: priceChangeData.newPriceListUrl,
       justification: priceChangeData.justification,
-      status: 'pending',
-      createdAt: new Date().toISOString()
+      status: 'pending'
     };
 
-    setSupportTickets(prev => [...prev, ticket]);
+    await providerContext.addSupportTicket(ticket);
     setPriceChangeData({ newPriceListUrl: '', justification: '' });
     setSelectedService(null);
     setShowPriceChangeModal(false);
     Alert.alert('Solicitud Enviada', 'Tu solicitud de cambio de precio ha sido enviada al equipo de administración.');
   };
 
-  const handleRequestBlockService = () => {
+  const handleRequestBlockService = async () => {
     if (!selectedService) return;
 
-    const ticket: SupportTicket = {
-      id: Date.now().toString(),
+    const ticket: Omit<SupportTicket, 'id' | 'createdAt'> = {
       type: 'block_service',
       serviceId: selectedService.id,
       serviceName: selectedService.name,
-      status: 'pending',
-      createdAt: new Date().toISOString()
+      status: 'pending'
     };
 
-    setSupportTickets(prev => [...prev, ticket]);
+    await providerContext.addSupportTicket(ticket);
     setSelectedService(null);
     setShowBlockServiceModal(false);
     Alert.alert('Solicitud Enviada', 'Tu solicitud para bloquear el servicio ha sido enviada al equipo de administración.');
@@ -288,10 +193,10 @@ export default function EditProfileScreen() {
   };
 
   const handleAddGalleryMedia = () => {
-    if (gallery.length >= maxGallerySize) {
+    if (providerContext.gallery.length >= providerContext.maxGallerySize) {
       Alert.alert(
         'Límite Alcanzado',
-        `Has alcanzado el límite de ${maxGallerySize} archivos en tu galería. Completa logros para aumentar este límite.`,
+        `Has alcanzado el límite de ${providerContext.maxGallerySize} archivos en tu galería. Completa logros para aumentar este límite.`,
         [{ text: 'OK' }]
       );
       return;
@@ -309,13 +214,12 @@ export default function EditProfileScreen() {
         allowsEditing: true,
         aspect: mediaType === 'photo' ? [16, 9] : undefined,
         quality: 0.8,
-        videoMaxDuration: 30, // 30 seconds max for videos
+        videoMaxDuration: 30,
       });
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
-        const newMedia: GalleryMedia = {
-          id: Date.now().toString(),
+        const newMedia: Omit<GalleryMedia, 'id'> = {
           uri: asset.uri,
           description: `Nuevo ${mediaType === 'photo' ? 'imagen' : 'video'} desde cámara`,
           type: mediaType === 'photo' ? 'image' : 'video',
@@ -323,7 +227,7 @@ export default function EditProfileScreen() {
           size: asset.fileSize
         };
 
-        setGallery(prev => [...prev, newMedia]);
+        await providerContext.addGalleryMedia(newMedia);
         setShowMediaModal(false);
         Alert.alert('Éxito', `${mediaType === 'photo' ? 'Imagen' : 'Video'} agregado a tu galería de trabajos`);
       }
@@ -335,11 +239,11 @@ export default function EditProfileScreen() {
 
   const handleFileUpload = async (multiple: boolean = false) => {
     try {
-      const remainingSlots = maxGallerySize - gallery.length;
+      const remainingSlots = providerContext.maxGallerySize - providerContext.gallery.length;
       if (remainingSlots <= 0) {
         Alert.alert(
           'Límite Alcanzado',
-          `Has alcanzado el límite de ${maxGallerySize} archivos en tu galería.`,
+          `Has alcanzado el límite de ${providerContext.maxGallerySize} archivos en tu galería.`,
           [{ text: 'OK' }]
         );
         return;
@@ -353,10 +257,9 @@ export default function EditProfileScreen() {
 
       if (!result.canceled && result.assets.length > 0) {
         const assetsToAdd = result.assets.slice(0, remainingSlots);
-        const newMediaItems: GalleryMedia[] = [];
+        const newMediaItems: Omit<GalleryMedia, 'id'>[] = [];
         
         for (const asset of assetsToAdd) {
-          // Check file size (max 50MB)
           if (asset.size && asset.size > 50 * 1024 * 1024) {
             Alert.alert(
               'Archivo Muy Grande',
@@ -372,8 +275,7 @@ export default function EditProfileScreen() {
                          asset.name.toLowerCase().includes('.avi') ||
                          asset.name.toLowerCase().includes('.mkv');
           
-          const newMedia: GalleryMedia = {
-            id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          const newMedia: Omit<GalleryMedia, 'id'> = {
             uri: asset.uri,
             description: `Archivo subido: ${asset.name}`,
             type: isVideo ? 'video' : 'image',
@@ -385,7 +287,9 @@ export default function EditProfileScreen() {
         }
 
         if (newMediaItems.length > 0) {
-          setGallery(prev => [...prev, ...newMediaItems]);
+          for (const media of newMediaItems) {
+            await providerContext.addGalleryMedia(media);
+          }
           setShowMediaModal(false);
           Alert.alert(
             'Éxito', 
@@ -414,8 +318,7 @@ export default function EditProfileScreen() {
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
-        const newMedia: GalleryMedia = {
-          id: Date.now().toString(),
+        const newMedia: Omit<GalleryMedia, 'id'> = {
           uri: asset.uri,
           description: `Archivo desde galería`,
           type: asset.type === 'video' ? 'video' : 'image',
@@ -423,7 +326,7 @@ export default function EditProfileScreen() {
           size: asset.fileSize
         };
 
-        setGallery(prev => [...prev, newMedia]);
+        await providerContext.addGalleryMedia(newMedia);
         setShowMediaModal(false);
         Alert.alert('Éxito', 'Archivo agregado a tu galería de trabajos');
       }
@@ -444,18 +347,17 @@ export default function EditProfileScreen() {
         result = await ImagePicker.launchCameraAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           allowsEditing: true,
-          aspect: [1, 1], // Square aspect for logos
+          aspect: [1, 1],
           quality: 0.9,
         });
       } else if (method === 'gallery') {
         result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           allowsEditing: true,
-          aspect: [1, 1], // Square aspect for logos
+          aspect: [1, 1],
           quality: 0.9,
         });
       } else {
-        // File picker
         const docResult = await DocumentPicker.getDocumentAsync({
           type: ['image/*'],
           copyToCacheDirectory: true,
@@ -464,7 +366,6 @@ export default function EditProfileScreen() {
         if (!docResult.canceled && docResult.assets[0]) {
           const asset = docResult.assets[0];
           
-          // Check file size (max 10MB for logos)
           if (asset.size && asset.size > 10 * 1024 * 1024) {
             Alert.alert(
               'Archivo Muy Grande',
@@ -474,7 +375,7 @@ export default function EditProfileScreen() {
             return;
           }
           
-          setBusinessBranding({
+          await providerContext.updateBusinessBranding({
             hasCustomLogo: true,
             logo: asset.uri,
             logoFileName: asset.name,
@@ -491,7 +392,6 @@ export default function EditProfileScreen() {
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
         
-        // Check file size (max 10MB for logos)
         if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) {
           Alert.alert(
             'Archivo Muy Grande',
@@ -501,7 +401,7 @@ export default function EditProfileScreen() {
           return;
         }
         
-        setBusinessBranding({
+        await providerContext.updateBusinessBranding({
           hasCustomLogo: true,
           logo: asset.uri,
           logoFileName: asset.fileName || `logo_${Date.now()}.jpg`,
@@ -518,7 +418,7 @@ export default function EditProfileScreen() {
   };
 
   const handleRemoveGalleryMedia = (mediaId: string) => {
-    const media = gallery.find(item => item.id === mediaId);
+    const media = providerContext.gallery.find((item: GalleryMedia) => item.id === mediaId);
     if (!media) return;
 
     Alert.alert(
@@ -529,8 +429,8 @@ export default function EditProfileScreen() {
         {
           text: 'Eliminar',
           style: 'destructive',
-          onPress: () => {
-            setGallery(prev => prev.filter(item => item.id !== mediaId));
+          onPress: async () => {
+            await providerContext.removeGalleryMedia(mediaId);
           }
         }
       ]
@@ -554,7 +454,6 @@ export default function EditProfileScreen() {
       />
 
       <ScrollView style={styles.content}>
-        {/* Business Name Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Building2 size={24} color="#D81B60" />
@@ -572,7 +471,6 @@ export default function EditProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Business Branding Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <ImageIcon size={24} color="#D81B60" />
@@ -601,8 +499,8 @@ export default function EditProfileScreen() {
                       {
                         text: 'Eliminar',
                         style: 'destructive',
-                        onPress: () => {
-                          setBusinessBranding({ hasCustomLogo: false });
+                        onPress: async () => {
+                          await providerContext.updateBusinessBranding({ hasCustomLogo: false });
                           Alert.alert('Éxito', 'Logo eliminado correctamente');
                         }
                       }
@@ -640,7 +538,6 @@ export default function EditProfileScreen() {
                     {
                       text: 'Solicitar',
                       onPress: () => {
-                        // Send alert to admin panel
                         Alert.alert(
                           'Solicitud Enviada',
                           'Tu solicitud de creación de logo ha sido enviada al equipo de Kompa2go Utilities. Te contactaremos pronto para coordinar el servicio.',
@@ -666,7 +563,6 @@ export default function EditProfileScreen() {
           </View>
         </View>
 
-        {/* Services Management Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <FileText size={24} color="#D81B60" />
@@ -737,7 +633,6 @@ export default function EditProfileScreen() {
           ))}
         </View>
 
-        {/* Work Gallery Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Camera size={24} color="#D81B60" />
@@ -805,7 +700,6 @@ export default function EditProfileScreen() {
           </View>
         </View>
 
-        {/* Support Tickets Section */}
         {providerContext.supportTickets.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -841,7 +735,6 @@ export default function EditProfileScreen() {
           </View>
         )}
 
-        {/* Information Note */}
         <View style={styles.infoSection}>
           <AlertTriangle size={20} color="#2196F3" />
           <Text style={styles.infoText}>
@@ -850,7 +743,6 @@ export default function EditProfileScreen() {
         </View>
       </ScrollView>
 
-      {/* Add Service Modal */}
       <Modal
         visible={showAddServiceModal}
         transparent
@@ -934,7 +826,6 @@ export default function EditProfileScreen() {
         </View>
       </Modal>
 
-      {/* Price Change Modal */}
       <Modal
         visible={showPriceChangeModal}
         transparent
@@ -999,7 +890,6 @@ export default function EditProfileScreen() {
         </View>
       </Modal>
 
-      {/* Block Service Modal */}
       <Modal
         visible={showBlockServiceModal}
         transparent
@@ -1017,7 +907,7 @@ export default function EditProfileScreen() {
             
             <View style={styles.modalBody}>
               <Text style={styles.modalSubtitle}>
-                ¿Estás seguro que deseas solicitar el bloqueo del servicio "{selectedService?.name}"?
+                ¿Estás seguro que deseas solicitar el bloqueo del servicio &quot;{selectedService?.name}&quot;?
               </Text>
               <Text style={styles.modalDescription}>
                 Esta solicitud será revisada por el equipo de administración. El servicio permanecerá activo hasta que se apruebe la solicitud.
@@ -1042,7 +932,6 @@ export default function EditProfileScreen() {
         </View>
       </Modal>
 
-      {/* Media Upload Modal */}
       <Modal
         visible={showMediaModal}
         transparent
@@ -1104,17 +993,17 @@ export default function EditProfileScreen() {
                 <TouchableOpacity 
                   style={styles.mediaOption}
                   onPress={() => handleFileUpload(true)}
-                  disabled={maxGallerySize - gallery.length <= 1}
+                  disabled={providerContext.maxGallerySize - providerContext.gallery.length <= 1}
                 >
-                  <Upload size={24} color={maxGallerySize - gallery.length <= 1 ? "#999" : "#D81B60"} />
+                  <Upload size={24} color={providerContext.maxGallerySize - providerContext.gallery.length <= 1 ? "#999" : "#D81B60"} />
                   <View style={styles.mediaOptionContent}>
                     <Text style={[
                       styles.mediaOptionTitle,
-                      maxGallerySize - gallery.length <= 1 && styles.mediaOptionDisabled
+                      providerContext.maxGallerySize - providerContext.gallery.length <= 1 && styles.mediaOptionDisabled
                     ]}>Subir Múltiples Archivos</Text>
                     <Text style={[
                       styles.mediaOptionDescription,
-                      maxGallerySize - gallery.length <= 1 && styles.mediaOptionDisabled
+                      providerContext.maxGallerySize - providerContext.gallery.length <= 1 && styles.mediaOptionDisabled
                     ]}>Selecciona varios archivos a la vez</Text>
                   </View>
                 </TouchableOpacity>
@@ -1136,7 +1025,7 @@ export default function EditProfileScreen() {
                 <Text style={styles.mediaLimitsText}>• Tamaño máximo: 50MB por archivo</Text>
                 <Text style={styles.mediaLimitsText}>• Imágenes: JPG, PNG, GIF, WEBP</Text>
                 <Text style={styles.mediaLimitsText}>• Videos: MP4, MOV, AVI, MKV (máx. 30s)</Text>
-                <Text style={styles.mediaLimitsText}>• Capacidad actual: {gallery.length}/{maxGallerySize} archivos</Text>
+                <Text style={styles.mediaLimitsText}>• Capacidad actual: {providerContext.gallery.length}/{providerContext.maxGallerySize} archivos</Text>
               </View>
             </View>
             
@@ -1150,7 +1039,6 @@ export default function EditProfileScreen() {
         </View>
       </Modal>
 
-      {/* Logo Upload Modal */}
       <Modal
         visible={showLogoModal}
         transparent
