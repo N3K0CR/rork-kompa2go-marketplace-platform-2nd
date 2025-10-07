@@ -1,11 +1,11 @@
 [install]
-# Configuración de instalación de paquetes
 peer = true
 
 [run]
-# Configuración para ejecutar scripts
 bun = true
 
-# Excluir archivos de React Native del procesamiento de Bun
 [loader]
 ".flow" = "text"
+
+[define]
+"process.env.NODE_ENV" = "\"development\""

@@ -1,5 +1,4 @@
 import app from "./hono";
-import { serve } from "@hono/node-server";
 
 const PORT = parseInt(process.env.PORT || "8082", 10);
 const HOST = process.env.HOST || "0.0.0.0";
@@ -9,7 +8,7 @@ console.log(`📍 Port: ${PORT}`);
 console.log(`📍 Host: ${HOST}`);
 console.log(`📍 Environment: ${process.env.NODE_ENV || "development"}`);
 
-const server = serve({
+const server = Bun.serve({
   fetch: app.fetch,
   port: PORT,
   hostname: HOST,
@@ -21,10 +20,12 @@ console.log(`✅ Health check: http://${HOST}:${PORT}/api/health/db`);
 
 process.on("SIGINT", () => {
   console.log("\n👋 Shutting down backend...");
+  server.stop();
   process.exit(0);
 });
 
 process.on("SIGTERM", () => {
   console.log("\n👋 Shutting down backend...");
+  server.stop();
   process.exit(0);
 });
