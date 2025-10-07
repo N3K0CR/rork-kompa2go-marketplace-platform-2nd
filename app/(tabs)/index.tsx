@@ -875,6 +875,39 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🧪 Test Environment</Text>
+          <View style={styles.testEnvironmentCard}>
+            <Text style={styles.testEnvironmentTitle}>Herramientas de Prueba</Text>
+            <Text style={styles.testEnvironmentDescription}>
+              Accede a las herramientas de prueba y validación del sistema
+            </Text>
+            
+            <View style={styles.testButtonsContainer}>
+              <TouchableOpacity 
+                style={styles.testButton}
+                onPress={() => router.push('/test-kompi')}
+              >
+                <Text style={styles.testButtonText}>Test Kompi Brain</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.testButton, styles.firebaseTestButton]}
+                onPress={() => router.push('/firebase-test')}
+              >
+                <Text style={styles.testButtonText}>🔥 Test Firebase</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.testButton, styles.kommuteTestButton]}
+                onPress={() => router.push('/kommute-full-test')}
+              >
+                <Text style={styles.testButtonText}>🚗 Prueba Completa Kommute</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('test_users')}</Text>
           <TouchableOpacity 
             style={styles.testUserButton}
@@ -2162,6 +2195,57 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     flex: 1,
     textAlign: 'center',
+  },
+
+  testEnvironmentCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#9C27B0',
+  },
+  testEnvironmentTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#9C27B0',
+    marginBottom: 8,
+  },
+  testEnvironmentDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  testButtonsContainer: {
+    gap: 12,
+  },
+  testButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  firebaseTestButton: {
+    backgroundColor: '#FF6B35',
+  },
+  kommuteTestButton: {
+    backgroundColor: '#007AFF',
+  },
+  testButtonText: {
+    color: 'white',
+    fontSize: 15,
+    fontWeight: '600',
   },
 
 });
