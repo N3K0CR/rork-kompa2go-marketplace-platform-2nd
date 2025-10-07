@@ -92,7 +92,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('[AuthContext] SignIn attempt:', { email, hasPassword: !!password });
+      
       if (!firebaseUser) {
+        console.error('[AuthContext] No Firebase user found');
         throw new Error('Debe autenticarse con Firebase primero');
       }
       
@@ -114,13 +117,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         { email: 'onlycr@yahoo.com', password: 'kompa2go_mikompa22025', name: 'Cliente Demo 2', alias: 'mikompa2', userType: 'client' as const, uniqueId: 'MKPZW456' },
       ];
       
-      console.log('🔍 SignIn attempt:', { email, password });
-      console.log('🔍 Available test users:', testUsers.map(u => ({ email: u.email, password: u.password, userType: u.userType, name: u.name })));
+      console.log('[AuthContext] Available test users:', testUsers.map(u => ({ email: u.email, userType: u.userType, name: u.name })));
       
       // Find matching user
       const testUser = testUsers.find(user => user.email === email && user.password === password);
       
-      console.log('🔍 Found test user:', testUser);
+      console.log('[AuthContext] Found test user:', testUser ? { name: testUser.name, userType: testUser.userType } : 'none');
       
       let mockUser: User;
       if (testUser) {
@@ -137,7 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           uniqueId: (testUser as any).uniqueId || (testUser.userType === 'client' || testUser.userType === 'provider' ? generateUniqueId(testUser.userType) : undefined),
           isSpecialProvider: (testUser as any).isSpecialProvider || false,
         };
-        console.log('✅ Created mock user:', mockUser);
+        console.log('[AuthContext] Created mock user:', { id: mockUser.id, name: mockUser.name, userType: mockUser.userType });
       } else if (email.includes('admin')) {
         mockUser = {
           id: '1',
@@ -169,16 +171,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
       }
 
+      console.log('[AuthContext] Saving user to AsyncStorage...');
       await AsyncStorage.setItem('user', JSON.stringify(mockUser));
-      console.log('✅ User saved to storage and state:', mockUser);
+      console.log('[AuthContext] User saved to storage successfully');
       
       // Set auth token for tRPC client
       const token = mockUser.userType === 'admin' ? 'admin-token' : 'client-token';
       setAuthToken(token);
+      console.log('[AuthContext] Auth token set');
       
       setUser(mockUser);
-    } catch (error) {
-      throw new Error('Error al iniciar sesión');
+      console.log('[AuthContext] User state updated successfully');
+    } catch (error: any) {
+      console.error('[AuthContext] SignIn error:', error);
+      // Re-throw the original error message if it exists, otherwise use generic message
+      throw new Error(error.message || 'Error al iniciar sesión');
     }
   };
 

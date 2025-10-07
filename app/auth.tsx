@@ -108,27 +108,60 @@ export default function AuthScreen() {
     setLoading(true);
     try {
       if (isLogin) {
-        console.log('[Auth] Signing in with Firebase...');
-        await signInWithEmail(formData.email, formData.password);
-        console.log('[Auth] Firebase sign in successful, now signing in to app...');
-        await signIn(formData.email, formData.password);
-        console.log('[Auth] App sign in successful');
+        console.log('[Auth] Starting login process...');
+        console.log('[Auth] Step 1: Signing in with Firebase...');
+        
+        try {
+          await signInWithEmail(formData.email, formData.password);
+          console.log('[Auth] Step 1 completed: Firebase sign in successful');
+        } catch (firebaseError: any) {
+          console.error('[Auth] Firebase sign in failed:', firebaseError);
+          throw new Error(`Error de Firebase: ${firebaseError.message}`);
+        }
+        
+        console.log('[Auth] Step 2: Signing in to app...');
+        try {
+          await signIn(formData.email, formData.password);
+          console.log('[Auth] Step 2 completed: App sign in successful');
+        } catch (appError: any) {
+          console.error('[Auth] App sign in failed:', appError);
+          throw new Error(`Error de aplicación: ${appError.message}`);
+        }
       } else {
-        console.log('[Auth] Creating Firebase account...');
-        await signUpWithEmail(formData.email, formData.password, formData.name);
-        console.log('[Auth] Firebase account created, now creating app account...');
-        await signUp(formData.email, formData.password, {
-          name: formData.name,
-          phone: formData.phone,
-          location: formData.location,
-          userType,
-        });
-        console.log('[Auth] App account created');
+        console.log('[Auth] Starting registration process...');
+        console.log('[Auth] Step 1: Creating Firebase account...');
+        
+        try {
+          await signUpWithEmail(formData.email, formData.password, formData.name);
+          console.log('[Auth] Step 1 completed: Firebase account created');
+        } catch (firebaseError: any) {
+          console.error('[Auth] Firebase account creation failed:', firebaseError);
+          throw new Error(`Error de Firebase: ${firebaseError.message}`);
+        }
+        
+        console.log('[Auth] Step 2: Creating app account...');
+        try {
+          await signUp(formData.email, formData.password, {
+            name: formData.name,
+            phone: formData.phone,
+            location: formData.location,
+            userType,
+          });
+          console.log('[Auth] Step 2 completed: App account created');
+        } catch (appError: any) {
+          console.error('[Auth] App account creation failed:', appError);
+          throw new Error(`Error de aplicación: ${appError.message}`);
+        }
       }
+      
+      console.log('[Auth] Authentication successful, navigating to tabs...');
       router.replace('/(tabs)');
     } catch (error: any) {
-      console.error('[Auth] Error:', error);
-      Alert.alert('Error', error.message || 'Ocurrió un error');
+      console.error('[Auth] Authentication failed:', error);
+      Alert.alert(
+        'Error de Autenticación', 
+        error.message || 'Ocurrió un error durante la autenticación. Por favor verifica tus credenciales e inténtalo de nuevo.'
+      );
     } finally {
       setLoading(false);
     }
