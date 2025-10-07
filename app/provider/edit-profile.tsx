@@ -179,6 +179,31 @@ export default function EditProfileScreen() {
     Alert.alert('Éxito', 'Servicio agregado correctamente');
   };
 
+  const handleToggleServiceStatus = (serviceId: string) => {
+    const service = services.find(s => s.id === serviceId);
+    if (!service) return;
+
+    const newStatus = !service.isActive;
+    const statusText = newStatus ? 'activar' : 'desactivar';
+
+    Alert.alert(
+      `${newStatus ? 'Activar' : 'Desactivar'} Servicio`,
+      `¿Estás seguro que deseas ${statusText} "${service.name}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: newStatus ? 'Activar' : 'Desactivar',
+          onPress: () => {
+            setServices(prev => prev.map(s => 
+              s.id === serviceId ? { ...s, isActive: newStatus } : s
+            ));
+            Alert.alert('Éxito', `Servicio ${newStatus ? 'activado' : 'desactivado'} correctamente`);
+          }
+        }
+      ]
+    );
+  };
+
   const handleRemoveService = (serviceId: string) => {
     const service = services.find(s => s.id === serviceId);
     if (!service) return;
@@ -657,14 +682,18 @@ export default function EditProfileScreen() {
             <View key={service.id} style={styles.serviceCard}>
               <View style={styles.serviceHeader}>
                 <Text style={styles.serviceName}>{service.name}</Text>
-                <View style={[
-                  styles.serviceStatus,
-                  { backgroundColor: service.isActive ? '#4CAF50' : '#FF5722' }
-                ]}>
+                <TouchableOpacity
+                  style={[
+                    styles.serviceStatus,
+                    { backgroundColor: service.isActive ? '#4CAF50' : '#FF5722' }
+                  ]}
+                  onPress={() => handleToggleServiceStatus(service.id)}
+                  activeOpacity={0.7}
+                >
                   <Text style={styles.serviceStatusText}>
                     {service.isActive ? 'Activo' : 'Inactivo'}
                   </Text>
-                </View>
+                </TouchableOpacity>
               </View>
               <Text style={styles.servicePrice}>₡{service.price.toLocaleString()}</Text>
               <Text style={styles.serviceDuration}>{service.duration} minutos</Text>
