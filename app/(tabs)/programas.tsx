@@ -19,6 +19,37 @@ export default function ProgramasScreen() {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Show different content for providers
+  if (user?.userType === 'provider') {
+    return (
+      <View style={styles.container}>
+        <ScrollView style={styles.scrollView}>
+          <LinearGradient
+            colors={['#D81B60', '#E91E63']}
+            style={styles.header}
+          >
+            <Text style={styles.title}>Programas</Text>
+            <Text style={styles.subtitle}>Próximamente disponible</Text>
+          </LinearGradient>
+
+          <View style={styles.content}>
+            <View style={styles.comingSoonProviderCard}>
+              <Gift size={48} color="#D81B60" />
+              <Text style={styles.comingSoonProviderTitle}>Programas de Participación</Text>
+              <Text style={styles.comingSoonProviderDescription}>
+                Pronto estarán disponibles programas de participación para aumentar su visibilidad y audiencia.
+              </Text>
+              <Text style={styles.comingSoonProviderSubtext}>
+                Manténgase atento a las actualizaciones.
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+        <FloatingKompi isVisible={true} />
+      </View>
+    );
+  }
+
   // Only show for clients
   if (user?.userType !== 'client') {
     return (
@@ -550,6 +581,39 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  comingSoonProviderCard: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    marginTop: 20,
+  },
+  comingSoonProviderTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#D81B60',
+    marginTop: 20,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  comingSoonProviderDescription: {
+    fontSize: 16,
+    color: '#333',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 12,
+  },
+  comingSoonProviderSubtext: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   // Modal styles
   modalOverlay: {
