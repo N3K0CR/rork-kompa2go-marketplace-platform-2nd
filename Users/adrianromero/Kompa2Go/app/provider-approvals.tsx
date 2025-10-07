@@ -23,7 +23,7 @@ import {
   orderBy,
   Timestamp,
 } from 'firebase/firestore';
-import { ProviderRegistrationData, KommuterRegistrationData } from '@/Users/adrianromero/Kompa2Go/src/shared/types/registration-types';
+import { ProviderRegistrationData, KommuterRegistrationData } from '@/src/shared/types/registration-types';
 import { CheckCircle, XCircle, Eye, User, Building2, Car, FileText, Calendar, Phone, Mail } from 'lucide-react-native';
 
 type PendingProvider = {
