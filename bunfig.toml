@@ -9,3 +9,7 @@ bun = true
 
 [define]
 "process.env.NODE_ENV" = "\"development\""
+
+# Exclude React Native from backend builds
+[backend]
+external = ["react-native", "react-native-web", "expo", "expo-*"]
