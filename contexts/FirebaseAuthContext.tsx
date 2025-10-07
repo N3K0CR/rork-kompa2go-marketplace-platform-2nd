@@ -168,13 +168,15 @@ function getAuthErrorMessage(errorCode: string): string {
     case 'auth/operation-not-allowed':
       return 'Operación no permitida';
     case 'auth/weak-password':
-      return 'La contraseña es muy débil';
+      return 'La contraseña es muy débil (mínimo 6 caracteres)';
     case 'auth/user-disabled':
       return 'Esta cuenta ha sido deshabilitada';
     case 'auth/user-not-found':
-      return 'Usuario no encontrado';
+      return 'Usuario no encontrado. Por favor regístrate primero';
     case 'auth/wrong-password':
       return 'Contraseña incorrecta';
+    case 'auth/invalid-credential':
+      return 'Credenciales inválidas. Si no tienes cuenta, regístrate primero';
     case 'auth/too-many-requests':
       return 'Demasiados intentos. Intenta más tarde';
     case 'auth/network-request-failed':
