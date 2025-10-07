@@ -1,35 +1,32 @@
-/**
- * Backend Server Entry Point
- * Servidor HTTP que monta la aplicación Hono
- */
+import app from "./hono";
 
-import { serve } from '@hono/node-server';
-import app from './hono';
+const PORT = parseInt(process.env.PORT || "8082", 10);
+const HOST = process.env.HOST || "0.0.0.0";
 
-const PORT = parseInt(process.env.PORT || '8082', 10);
-const HOST = process.env.HOST || '0.0.0.0';
+console.log("🚀 Starting Kompa2Go Backend...");
+console.log(`📍 Port: ${PORT}`);
+console.log(`📍 Host: ${HOST}`);
+console.log(`📍 Environment: ${process.env.NODE_ENV || "development"}`);
 
-console.log('🔧 Configurando servidor...');
-
-serve({
-  fetch: app.fetch,
+const server = Bun.serve({
   port: PORT,
   hostname: HOST,
-}, (info) => {
-  console.log('✅ Backend iniciado correctamente');
-  console.log(`📍 Servidor escuchando en: http://${info.address}:${info.port}`);
-  console.log(`📍 API disponible en: http://${info.address}:${info.port}/api`);
-  console.log(`📍 tRPC endpoint: http://${info.address}:${info.port}/api/trpc`);
-  console.log(`📍 Health check: http://${info.address}:${info.port}/api/health/db`);
+  fetch: app.fetch,
+  development: process.env.NODE_ENV !== "production",
 });
 
-// Manejo de señales de terminación
-process.on('SIGINT', () => {
-  console.log('\n⏹️  Deteniendo servidor...');
+console.log(`✅ Backend running at http://${HOST}:${PORT}`);
+console.log(`✅ tRPC endpoint: http://${HOST}:${PORT}/api/trpc`);
+console.log(`✅ Health check: http://${HOST}:${PORT}/api/health/db`);
+
+process.on("SIGINT", () => {
+  console.log("\n👋 Shutting down backend...");
+  server.stop();
   process.exit(0);
 });
 
-process.on('SIGTERM', () => {
-  console.log('\n⏹️  Deteniendo servidor...');
+process.on("SIGTERM", () => {
+  console.log("\n👋 Shutting down backend...");
+  server.stop();
   process.exit(0);
 });
