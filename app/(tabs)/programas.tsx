@@ -19,6 +19,11 @@ export default function ProgramasScreen() {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Debug logs
+  console.log('🔍 ProgramasScreen - User:', user);
+  console.log('🔍 ProgramasScreen - UserType:', user?.userType);
+  console.log('🔍 ProgramasScreen - Is Provider?:', user?.userType === 'provider');
+
   // Show different content for providers
   if (user?.userType === 'provider') {
     return (
