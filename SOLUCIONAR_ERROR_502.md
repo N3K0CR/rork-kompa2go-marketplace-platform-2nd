@@ -1,146 +1,149 @@
-# 🔧 Solución para Error 502 (Bad Gateway)
+# 🔧 Solución al Error 502 - Backend No Responde
 
-## ❌ Problema
-El error 502 indica que el backend no está corriendo o no es accesible.
+## 🎯 Problema
+El error 502 indica que el backend en `http://localhost:8082` no está respondiendo a las peticiones del frontend.
 
-## ✅ Solución Rápida
+## 📍 ¿Dónde ejecutar los scripts?
 
-### Opción 1: Ejecutar script de diagnóstico
+**IMPORTANTE**: Debes ejecutar estos scripts en la **terminal de tu proyecto**, en la raíz del directorio `Kompa2Go`.
+
 ```bash
+# Asegúrate de estar en la raíz del proyecto
+cd /ruta/a/tu/proyecto/Kompa2Go
+
+# Verifica que estás en el lugar correcto
+ls -la | grep "package.json"
+```
+
+## 🔍 Paso 1: Diagnosticar el Problema
+
+```bash
+# Dale permisos de ejecución al script
 chmod +x diagnose-backend.sh
+
+# Ejecuta el diagnóstico
 ./diagnose-backend.sh
 ```
 
-### Opción 2: Ejecutar script de reparación
+Este script te dirá:
+- ✅ Si el backend está corriendo en el puerto 8082
+- ✅ Si el frontend está corriendo en el puerto 8081
+- ✅ Qué procesos están activos
+- ✅ Configuración de variables de entorno
+
+## 🔧 Paso 2: Solucionar el Problema
+
+### Opción A: Script Automático (Recomendado)
+
 ```bash
+# Dale permisos de ejecución
 chmod +x fix-backend-connection.sh
+
+# Ejecuta el script de solución
 ./fix-backend-connection.sh
 ```
 
-### Opción 3: Iniciar backend manualmente
-```bash
-chmod +x START_BACKEND_NOW.sh
-./START_BACKEND_NOW.sh
-```
+Este script:
+1. Detiene cualquier proceso en el puerto 8082
+2. Verifica que el puerto esté libre
+3. Inicia el backend correctamente con tunnel
 
-## 🔍 Verificación Manual
+### Opción B: Manual
 
-### 1. Verificar si el backend está corriendo
-```bash
-pgrep -af "rork start"
-```
-
-Si no muestra nada, el backend NO está corriendo.
-
-### 2. Verificar puertos
-```bash
-lsof -i :8082
-```
-
-El puerto 8082 debe estar en uso por el proceso de Rork.
-
-### 3. Probar conexión al backend
-```bash
-curl http://localhost:8082/api
-```
-
-Debería responder con: `{"status":"ok","message":"API is running"}`
-
-## 🚀 Iniciar Backend Paso a Paso
+Si el script no funciona, hazlo manualmente:
 
 ```bash
-# 1. Limpiar procesos anteriores
-pkill -f "rork start"
+# 1. Detener procesos en puerto 8082
+lsof -ti:8082 | xargs kill -9
 
 # 2. Esperar 2 segundos
 sleep 2
 
-# 3. Iniciar backend
-bunx rork start -p z5be445fq2fb0yuu32aht > /tmp/kompa2go-backend.log 2>&1 &
-
-# 4. Esperar 10 segundos
-sleep 10
-
-# 5. Verificar
-curl http://localhost:8082/api
+# 3. Iniciar el backend
+bunx rork start -p z5be445fq2fb0yuu32aht --api --tunnel
 ```
 
-## 📝 Ver Logs del Backend
+## 📋 Configuración de Terminales
+
+Para que todo funcione correctamente, necesitas **2 terminales abiertas**:
+
+### Terminal 1: Frontend (Puerto 8081)
+```bash
+cd /ruta/a/tu/proyecto/Kompa2Go
+bun start
+# o
+bunx rork start -p z5be445fq2fb0yuu32aht --tunnel
+```
+
+### Terminal 2: Backend (Puerto 8082)
+```bash
+cd /ruta/a/tu/proyecto/Kompa2Go
+./fix-backend-connection.sh
+# o manualmente:
+bunx rork start -p z5be445fq2fb0yuu32aht --api --tunnel
+```
+
+## ✅ Verificar que Funciona
+
+Después de iniciar el backend, verifica que responde:
 
 ```bash
-# Ver logs en tiempo real
-tail -f /tmp/kompa2go-backend.log
+# En otra terminal, prueba el endpoint de salud
+curl http://localhost:8082/api/
 
-# Ver últimas 50 líneas
-tail -50 /tmp/kompa2go-backend.log
+# Deberías ver algo como:
+# {"status":"ok","message":"API is running"}
 ```
 
-## ⚠️ Problemas Comunes
+## 🐛 Si Aún No Funciona
 
-### El backend no inicia
-- **Causa**: Puerto 8082 ocupado por otro proceso
-- **Solución**: 
-  ```bash
-  lsof -ti :8082 | xargs kill -9
-  ```
+1. **Verifica los logs del backend**: Busca errores en la terminal donde corre el backend
 
-### Backend inicia pero no responde
-- **Causa**: El backend está iniciando (tarda ~10-15 segundos)
-- **Solución**: Esperar más tiempo y verificar logs
-
-### Error de conexión en el frontend
-- **Causa**: Variable de entorno incorrecta
-- **Solución**: Verificar que `.env.local` tenga:
-  ```
-  EXPO_PUBLIC_RORK_API_BASE_URL=http://localhost:8082
-  ```
-
-## 🎯 Comandos Útiles
-
-```bash
-# Detener backend
-pkill -f "rork start"
-
-# Ver procesos de Rork
-pgrep -af rork
-
-# Verificar puertos en uso
-lsof -i :8081  # Frontend
-lsof -i :8082  # Backend
-
-# Limpiar todo y reiniciar
-pkill -f "rork start" && sleep 2 && ./START_BACKEND_NOW.sh
-```
-
-## 📊 Estado Esperado
-
-Cuando todo funciona correctamente:
-
-1. ✅ Proceso `rork start` corriendo
-2. ✅ Puerto 8082 en uso
-3. ✅ `curl http://localhost:8082/api` responde con JSON
-4. ✅ Frontend puede hacer llamadas tRPC sin error 502
-
-## 🆘 Si Nada Funciona
-
-1. Revisar logs completos:
+2. **Verifica la configuración**:
    ```bash
-   cat /tmp/kompa2go-backend.log
+   cat .env.local | grep EXPO_PUBLIC_RORK_API_BASE_URL
+   # Debe mostrar: EXPO_PUBLIC_RORK_API_BASE_URL=http://localhost:8082
    ```
 
-2. Verificar que Rork CLI esté instalado:
+3. **Reinicia ambos servicios**:
    ```bash
-   bunx rork --version
-   ```
-
-3. Reiniciar todo el entorno:
-   ```bash
-   pkill -f rork
+   # Detén todo
+   lsof -ti:8081 | xargs kill -9
+   lsof -ti:8082 | xargs kill -9
+   
+   # Espera 3 segundos
+   sleep 3
+   
+   # Inicia backend primero
+   bunx rork start -p z5be445fq2fb0yuu32aht --api --tunnel &
+   
+   # Espera 5 segundos
    sleep 5
-   ./START_BACKEND_NOW.sh
+   
+   # Inicia frontend
+   bunx rork start -p z5be445fq2fb0yuu32aht --tunnel
    ```
 
-4. Si el problema persiste, el backend puede tener un error de código. Revisar:
-   - `backend/hono.ts`
-   - `backend/trpc/app-router.ts`
-   - Logs en `/tmp/kompa2go-backend.log`
+4. **Verifica que no haya problemas de firewall**: Asegúrate de que los puertos 8081 y 8082 no estén bloqueados
+
+## 📝 Notas Importantes
+
+- ⚠️ El backend DEBE estar corriendo en el puerto 8082
+- ⚠️ El frontend corre en el puerto 8081
+- ⚠️ Ambos procesos deben estar activos simultáneamente
+- ⚠️ No cierres las terminales donde corren estos procesos
+- ⚠️ Si usas tunnel, asegúrate de que esté activo y funcionando
+
+## 🆘 Ayuda Adicional
+
+Si después de seguir estos pasos aún tienes problemas:
+
+1. Ejecuta el diagnóstico completo:
+   ```bash
+   ./diagnose-backend.sh > diagnostico.txt
+   cat diagnostico.txt
+   ```
+
+2. Verifica los logs de ambos servicios
+
+3. Asegúrate de que no haya otros servicios usando los puertos 8081 o 8082

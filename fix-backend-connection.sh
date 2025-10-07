@@ -1,70 +1,44 @@
 #!/bin/bash
-set -e
 
-echo "🔧 SOLUCIONANDO CONEXIÓN DEL BACKEND"
-echo "====================================="
+echo "🔧 Solucionando conexión del Backend - Kompa2Go"
+echo "================================================"
 echo ""
 
-# 1. Detener procesos anteriores
-echo "1️⃣ Deteniendo procesos anteriores..."
-pkill -9 -f "rork start" 2>/dev/null || true
-sleep 2
-echo "   ✅ Procesos detenidos"
-echo ""
-
-# 2. Verificar que el puerto 8082 esté libre
-echo "2️⃣ Verificando puerto 8082..."
-if lsof -i :8082 > /dev/null 2>&1; then
-    echo "   ⚠️ Puerto 8082 en uso, liberando..."
-    lsof -ti :8082 | xargs kill -9 2>/dev/null || true
-    sleep 1
-fi
-echo "   ✅ Puerto 8082 libre"
-echo ""
-
-# 3. Iniciar backend
-echo "3️⃣ Iniciando backend..."
-cd "$(dirname "$0")"
-bunx rork start -p z5be445fq2fb0yuu32aht > /tmp/kompa2go-backend.log 2>&1 &
-BACKEND_PID=$!
-echo "   ✅ Backend iniciado (PID: $BACKEND_PID)"
-echo ""
-
-# 4. Esperar y verificar
-echo "4️⃣ Esperando 15 segundos para que el backend inicie..."
-for i in {15..1}; do
-    echo -ne "\r   ⏳ $i segundos restantes..."
-    sleep 1
-done
-echo -e "\r   ✅ Tiempo de espera completado    "
-echo ""
-
-# 5. Verificar conexión
-echo "5️⃣ Verificando conexión..."
-MAX_RETRIES=5
-RETRY=0
-while [ $RETRY -lt $MAX_RETRIES ]; do
-    if curl -s --max-time 2 http://localhost:8082/api > /dev/null 2>&1; then
-        echo "   ✅ Backend respondiendo correctamente"
-        echo ""
-        echo "📊 Respuesta del servidor:"
-        curl -s http://localhost:8082/api | head -5
-        echo ""
-        echo ""
-        echo "✅ BACKEND FUNCIONANDO CORRECTAMENTE"
-        echo "   URL: http://localhost:8082/api"
-        echo "   Logs: tail -f /tmp/kompa2go-backend.log"
-        exit 0
-    fi
-    RETRY=$((RETRY + 1))
-    echo "   ⏳ Intento $RETRY/$MAX_RETRIES..."
+# Paso 1: Detener procesos existentes en puerto 8082
+echo "1️⃣ Deteniendo procesos en puerto 8082..."
+BACKEND_PID=$(lsof -ti:8082)
+if [ ! -z "$BACKEND_PID" ]; then
+    echo "   Matando proceso $BACKEND_PID..."
+    kill -9 $BACKEND_PID 2>/dev/null
     sleep 2
-done
+    echo "✅ Proceso detenido"
+else
+    echo "   No hay procesos en puerto 8082"
+fi
 
-echo "   ❌ Backend no responde después de $MAX_RETRIES intentos"
 echo ""
-echo "📝 Mostrando últimas líneas del log:"
-tail -20 /tmp/kompa2go-backend.log
+
+# Paso 2: Verificar que el puerto esté libre
+echo "2️⃣ Verificando que el puerto 8082 esté libre..."
+if lsof -Pi :8082 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
+    echo "❌ El puerto 8082 aún está en uso. Intenta manualmente:"
+    echo "   lsof -ti:8082 | xargs kill -9"
+    exit 1
+else
+    echo "✅ Puerto 8082 está libre"
+fi
+
 echo ""
-echo "❌ ERROR: No se pudo iniciar el backend correctamente"
-exit 1
+
+# Paso 3: Iniciar el backend
+echo "3️⃣ Iniciando el backend en puerto 8082..."
+echo "   Comando: bunx rork start -p z5be445fq2fb0yuu32aht --api --tunnel"
+echo ""
+echo "⚠️  IMPORTANTE: Este proceso debe quedar corriendo en esta terminal"
+echo "   Para detenerlo, presiona Ctrl+C"
+echo ""
+echo "🚀 Iniciando en 3 segundos..."
+sleep 3
+
+# Iniciar el backend
+bunx rork start -p z5be445fq2fb0yuu32aht --api --tunnel
