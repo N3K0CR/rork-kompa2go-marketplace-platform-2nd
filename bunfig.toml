@@ -9,7 +9,3 @@ bun = true
 # Excluir archivos de React Native del procesamiento de Bun
 [loader]
 ".flow" = "text"
-
-# Preload para el backend
-[preload]
-# Ningún preload necesario
