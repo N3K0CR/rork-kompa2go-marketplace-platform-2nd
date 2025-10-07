@@ -1,3 +1,4 @@
+/// <reference types="@types/bun" />
 import app from "./hono";
 
 const PORT = parseInt(process.env.PORT || "8082", 10);
