@@ -44,9 +44,6 @@ export default function TabLayout() {
           backgroundColor: 'white',
           borderTopWidth: 1,
           borderTopColor: '#E5E5E5',
-          paddingBottom: 8,
-          paddingTop: 8,
-          height: 80,
         },
       }}
     >
@@ -58,194 +55,83 @@ export default function TabLayout() {
         }}
       />
       
-      {userType === 'client' && (
-        <Tabs.Screen
-          name="search"
-          options={{
-            title: t('search'),
-            tabBarIcon: ({ color, size }) => <Search color={color} size={size} />,
-          }}
-        />
-      )}
+      <Tabs.Screen
+        name="search"
+        options={{
+          title: userType === 'admin' ? 'Búsqueda' : t('search'),
+          tabBarIcon: ({ color, size }) => <Search color={color} size={size} />,
+          href: userType === 'client' || userType === 'admin' ? undefined : null,
+        }}
+      />
 
-      {userType === 'client' && (
-        <Tabs.Screen
-          name="calendar"
-          options={{
-            title: t('calendar'),
-            tabBarIcon: ({ color, size }) => <Calendar color={color} size={size} />,
-          }}
-        />
-      )}
+      <Tabs.Screen
+        name="calendar"
+        options={{
+          title: userType === 'admin' ? 'Calendario' : t('calendar'),
+          tabBarIcon: ({ color, size }) => <Calendar color={color} size={size} />,
+          href: userType === 'client' || userType === 'provider' || userType === 'admin' ? undefined : null,
+        }}
+      />
 
-      {userType === 'client' && (
-        <Tabs.Screen
-          name="programas"
-          options={{
-            title: 'Programas',
-            tabBarIcon: ({ color, size }) => <Gift color={color} size={size} />,
-          }}
-        />
-      )}
+      <Tabs.Screen
+        name="programas"
+        options={{
+          title: 'Programas',
+          tabBarIcon: ({ color, size }) => <Gift color={color} size={size} />,
+          href: userType === 'client' ? undefined : null,
+        }}
+      />
 
-      {userType === 'provider' && (
-        <Tabs.Screen
-          name="calendar"
-          options={{
-            title: t('calendar'),
-            tabBarIcon: ({ color, size }) => <Calendar color={color} size={size} />,
-          }}
-        />
-      )}
+      <Tabs.Screen
+        name="analytics"
+        options={{
+          title: userType === 'provider' ? 'Programas' : 'Analytics',
+          tabBarIcon: ({ color, size }) => userType === 'provider' ? <LayoutGrid color={color} size={size} /> : <BarChart3 color={color} size={size} />,
+          href: userType === 'admin' || userType === 'provider' ? undefined : null,
+        }}
+      />
 
-      {userType === 'admin' && (
-        <>
-          <Tabs.Screen
-            name="search"
-            options={{
-              title: 'Búsqueda',
-              tabBarIcon: ({ color, size }) => <Search color={color} size={size} />,
-            }}
-          />
-          <Tabs.Screen
-            name="profile"
-            options={{
-              title: 'Perfil',
-              tabBarIcon: ({ color, size }) => <UserCircle color={color} size={size} />,
-            }}
-          />
-          <Tabs.Screen
-            name="calendar"
-            options={{
-              title: 'Calendario',
-              tabBarIcon: ({ color, size }) => <Calendar color={color} size={size} />,
-            }}
-          />
-          <Tabs.Screen
-            name="analytics"
-            options={{
-              title: 'Analytics',
-              tabBarIcon: ({ color, size }) => <BarChart3 color={color} size={size} />,
-            }}
-          />
-        </>
-      )}
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Perfil',
+          tabBarIcon: ({ color, size }) => <UserCircle color={color} size={size} />,
+        }}
+      />
 
-      {userType === 'client' && (
-        <Tabs.Screen
-          name="profile"
-          options={{
-            title: 'Perfil',
-            tabBarIcon: ({ color, size }) => <UserCircle color={color} size={size} />,
-          }}
-        />
-      )}
-
-      {userType === 'provider' && (
-        <>
-          <Tabs.Screen
-            name="analytics"
-            options={{
-              title: 'Programas',
-              tabBarIcon: ({ color, size }) => <LayoutGrid color={color} size={size} />,
-            }}
-          />
-          <Tabs.Screen
-            name="profile"
-            options={{
-              title: 'Perfil',
-              tabBarIcon: ({ color, size }) => <UserCircle color={color} size={size} />,
-            }}
-          />
-        </>
-      )}
-
-      {/* Hide search for providers */}
-      {userType === 'provider' && (
-        <Tabs.Screen
-          name="search"
-          options={{
-            href: null,
-          }}
-        />
-      )}
-
-      {/* Chat tab for clients and providers */}
-      {(userType === 'client' || userType === 'provider') && (
-        <Tabs.Screen
-          name="chat"
-          options={{
-            title: 'Chats',
-            href: '/chats',
-            tabBarIcon: ({ color, size }) => (
-              <View style={{ position: 'relative' }}>
-                <MessageCircle color={color} size={size} />
-                {unreadCount > 0 && (
-                  <View style={{
-                    position: 'absolute',
-                    top: -4,
-                    right: -4,
-                    backgroundColor: '#FF3B30',
-                    borderRadius: 8,
-                    paddingHorizontal: 4,
-                    paddingVertical: 1,
-                    minWidth: 16,
-                    alignItems: 'center',
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: 'Chats',
+          href: userType === 'client' || userType === 'provider' ? '/chats' : null,
+          tabBarIcon: ({ color, size }) => (
+            <View style={{ position: 'relative' }}>
+              <MessageCircle color={color} size={size} />
+              {unreadCount > 0 && (
+                <View style={{
+                  position: 'absolute',
+                  top: -4,
+                  right: -4,
+                  backgroundColor: '#FF3B30',
+                  borderRadius: 8,
+                  paddingHorizontal: 4,
+                  paddingVertical: 1,
+                  minWidth: 16,
+                  alignItems: 'center',
+                }}>
+                  <Text style={{
+                    color: 'white',
+                    fontSize: 10,
+                    fontWeight: 'bold',
                   }}>
-                    <Text style={{
-                      color: 'white',
-                      fontSize: 10,
-                      fontWeight: 'bold',
-                    }}>
-                      {unreadCount > 99 ? '99+' : unreadCount}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            ),
-          }}
-        />
-      )}
-      
-      {/* Hide analytics tab for client users */}
-      {userType === 'client' && (
-        <Tabs.Screen
-          name="analytics"
-          options={{
-            href: null,
-          }}
-        />
-      )}
-      
-      {/* Hide programas tab for non-client users */}
-      {userType !== 'client' && (
-        <Tabs.Screen
-          name="programas"
-          options={{
-            href: null,
-          }}
-        />
-      )}
-      
-      {/* Hide chat tab for admin users */}
-      {userType === 'admin' && (
-        <Tabs.Screen
-          name="chat"
-          options={{
-            href: null,
-          }}
-        />
-      )}
-      
-      {/* Hide programas tab for admin users */}
-      {userType === 'admin' && (
-        <Tabs.Screen
-          name="programas"
-          options={{
-            href: null,
-          }}
-        />
-      )}
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+          ),
+        }}
+      />
     </Tabs>
   );
 }
