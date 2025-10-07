@@ -4,9 +4,22 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     // ============================================================================
-    // HELPER FUNCTIONS
+    // DEVELOPMENT MODE - ALLOW ALL ACCESS (UNAUTHENTICATED)
+    // WARNING: Change these rules before deploying to production!
     // ============================================================================
     
+    // Allow all read/write operations for development
+    match /{document=**} {
+      allow read, write: if true;
+    }
+    
+    // ============================================================================
+    // PRODUCTION RULES (COMMENTED OUT FOR DEVELOPMENT)
+    // Uncomment these rules and remove the development rule above for production
+    // ============================================================================
+    
+    /*
+    // HELPER FUNCTIONS
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -19,197 +32,105 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == driverId;
     }
     
-    // ============================================================================
-    // DEVELOPMENT MODE - ALLOW ALL ACCESS
-    // WARNING: Change these rules before deploying to production!
-    // ============================================================================
-    
     // KOMMUTERS COLLECTION (Registration)
     match /kommuters/{kommuterId} {
-      // Anyone authenticated can read (for admin panel)
       allow read: if isAuthenticated();
-      
-      // Users can create their own registration
       allow create: if isAuthenticated();
-      
-      // Only admins or the owner can update
       allow update: if isAuthenticated();
-      
-      // Only admins can delete
       allow delete: if isAuthenticated();
-      
-      // List all for admin panel
       allow list: if isAuthenticated();
     }
     
     // DRIVER ALERTS COLLECTION
     match /driver_alerts/{alertId} {
-      // Authenticated users can read alerts
       allow read: if isAuthenticated();
-      
-      // Drivers can create their own alerts
       allow create: if isAuthenticated();
-      
-      // Admins and drivers can update alerts
       allow update: if isAuthenticated();
-      
-      // Only admins can delete
       allow delete: if isAuthenticated();
-      
-      // List all for admin panel
       allow list: if isAuthenticated();
     }
     
     // DRIVER TRACKING (Real-time location)
     match /driver_tracking/{driverId} {
-      // Anyone authenticated can read for safety monitoring
       allow read: if isAuthenticated();
-      
-      // Only the driver can update their location
       allow create, update: if isAuthenticated() && driverId == request.auth.uid;
-      
-      // List all for admin monitoring
       allow list: if isAuthenticated();
     }
     
     // DRIVER TRACKING SESSIONS (Alert tracking)
     match /driver_tracking_sessions/{sessionId} {
-      // Anyone authenticated can read for safety monitoring
       allow read: if isAuthenticated();
-      
-      // Admins and system can create/update tracking sessions
       allow create, update: if isAuthenticated();
-      
-      // Only admins can delete
       allow delete: if isAuthenticated();
-      
-      // List all for admin monitoring
       allow list: if isAuthenticated();
     }
     
     // 911 CALLS (Emergency calls)
     match /alert_911_calls/{callId} {
-      // Anyone authenticated can read for emergency monitoring
       allow read: if isAuthenticated();
-      
-      // Admins can create 911 calls
       allow create, update: if isAuthenticated();
-      
-      // Only admins can delete
       allow delete: if isAuthenticated();
-      
-      // List all for admin monitoring
       allow list: if isAuthenticated();
     }
     
     // KOMMUTER SECURITY SETTINGS (Security questions)
     match /kommuter_security_settings/{kommuterId} {
-      // Kommuters can read their own settings
       allow read: if isAuthenticated();
-      
-      // Kommuters can create/update their own settings
       allow create, update: if isAuthenticated();
-      
-      // Only admins can delete
       allow delete: if isAuthenticated();
-      
-      // List for admin panel
       allow list: if isAuthenticated();
     }
     
     // SERVICES COLLECTION (For database seeding and management)
     match /services/{serviceId} {
-      // Anyone authenticated can read services
       allow read: if isAuthenticated();
-      
-      // Admins can create/update/delete services
       allow create, update, delete: if isAuthenticated();
-      
-      // List all services
       allow list: if isAuthenticated();
     }
     
     // PROVIDERS COLLECTION (For provider management)
     match /providers/{providerId} {
-      // Anyone authenticated can read providers
       allow read: if isAuthenticated();
-      
-      // Admins can create/update/delete providers
       allow create, update, delete: if isAuthenticated();
-      
-      // List all providers
       allow list: if isAuthenticated();
     }
     
     // APPOINTMENTS COLLECTION
     match /appointments/{appointmentId} {
-      // Users can read their own appointments
       allow read: if isAuthenticated();
-      
-      // Users can create appointments
       allow create: if isAuthenticated();
-      
-      // Users can update their own appointments
       allow update: if isAuthenticated();
-      
-      // List appointments
       allow list: if isAuthenticated();
     }
     
     // CHAT MESSAGES COLLECTION
     match /chatMessages/{messageId} {
-      // Users can read messages
       allow read: if isAuthenticated();
-      
-      // Users can create messages
       allow create: if isAuthenticated();
-      
-      // List messages
       allow list: if isAuthenticated();
     }
     
     // OKOINS TRANSACTIONS COLLECTION
     match /okoinsTransactions/{transactionId} {
-      // Users can read their own transactions
       allow read: if isAuthenticated();
-      
-      // System can create transactions
       allow create: if isAuthenticated();
-      
-      // List transactions
       allow list: if isAuthenticated();
     }
     
     // WALLET TRANSACTIONS COLLECTION
     match /walletTransactions/{transactionId} {
-      // Users can read their own transactions
       allow read: if isAuthenticated();
-      
-      // System can create transactions
       allow create: if isAuthenticated();
-      
-      // List transactions
       allow list: if isAuthenticated();
     }
     
     // REVIEWS COLLECTION
     match /reviews/{reviewId} {
-      // Anyone can read reviews
       allow read: if isAuthenticated();
-      
-      // Users can create reviews
       allow create: if isAuthenticated();
-      
-      // List reviews
       allow list: if isAuthenticated();
     }
     
-    // ============================================================================
-    // PRODUCTION RULES (COMMENTED OUT FOR DEVELOPMENT)
-    // Uncomment these rules and remove the development rule above for production
-    // ============================================================================
-    
-    /*
     // KOMMUTE ROUTES
     match /kommute_routes/{routeId} {
       allow get: if isAuthenticated() && resource.data.userId == request.auth.uid;
