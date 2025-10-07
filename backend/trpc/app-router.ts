@@ -31,7 +31,6 @@ import {
   getSurgeHeatmapProcedure,
 } from './routes/commute/surge-pricing-routes';
 import { registrationRouter } from './routes/registration/routes';
-import * as kommuteWalletRoutes from "@/backend/trpc/routes/kommute-wallet/routes";
 
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
@@ -121,19 +120,6 @@ export const appRouter = createTRPCRouter({
     getSurgePricingAnalytics: getSurgePricingAnalyticsProcedure,
     getMultiZoneSurgePrice: getMultiZoneSurgePricingProcedure,
     getSurgeHeatmap: getSurgeHeatmapProcedure,
-  }),
-  kommuteWallet: createTRPCRouter({
-    getBalance: kommuteWalletRoutes.getBalance,
-    getTransactions: kommuteWalletRoutes.getTransactions,
-    getStats: kommuteWalletRoutes.getStats,
-    createRecharge: kommuteWalletRoutes.createRecharge,
-    getPendingRecharges: kommuteWalletRoutes.getPendingRecharges,
-    approveRecharge: kommuteWalletRoutes.approveRecharge,
-    rejectRecharge: kommuteWalletRoutes.rejectRecharge,
-    getAllTransactions: kommuteWalletRoutes.getAllTransactions,
-    getPendingDistributions: kommuteWalletRoutes.getPendingDistributions,
-    markDistributionCompleted: kommuteWalletRoutes.markDistributionCompleted,
-    markDistributionFailed: kommuteWalletRoutes.markDistributionFailed,
   }),
 });
 
