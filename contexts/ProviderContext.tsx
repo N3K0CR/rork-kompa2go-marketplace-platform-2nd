@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import createContextHook from '@nkzw/create-context-hook';
 import { useAuth } from './AuthContext';
 import { Platform } from 'react-native';
+import { FirestoreProviderService } from '@/src/modules/provider/services/firestore-provider-service';
 
 export interface Service {
   id: string;
@@ -539,7 +540,17 @@ export const [ProviderProvider, useProvider] = createContextHook(() => {
     };
     setProviderData(updatedData);
     await saveToStorage(updatedData);
-  }, [providerData, saveToStorage]);
+    
+    if (user?.id) {
+      try {
+        await FirestoreProviderService.toggleServiceStatus(user.id, serviceId, providerData.services);
+        console.log('✅ Service status synced to Firestore');
+      } catch (error) {
+        console.error('❌ Error syncing service status to Firestore:', error);
+        await addToSyncQueue({ type: 'toggleServiceStatus', data: { serviceId } });
+      }
+    }
+  }, [providerData, saveToStorage, user, addToSyncQueue]);
 
   const removeService = useCallback(async (serviceId: string) => {
     const updatedData = {

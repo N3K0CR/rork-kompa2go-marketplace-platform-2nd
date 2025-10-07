@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Modal, Image, Platform } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useProvider } from '@/contexts/ProviderContext';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { 
@@ -115,10 +116,9 @@ const mockGallery: GalleryMedia[] = [
 export default function EditProfileScreen() {
   const { user } = useAuth();
   const { t } = useLanguage();
-  const [businessName, setBusinessName] = useState(user?.name || 'Mi Negocio');
-  const [services, setServices] = useState<Service[]>(mockServices);
-  const [gallery, setGallery] = useState<GalleryMedia[]>(mockGallery);
-  const [maxGallerySize, setMaxGallerySize] = useState(10); // Can be increased through achievements
+  const providerContext = useProvider();
+  
+  const [businessName, setBusinessName] = useState(providerContext.businessName || user?.name || 'Mi Negocio');
   const [showMediaModal, setShowMediaModal] = useState(false);
   const [showAddServiceModal, setShowAddServiceModal] = useState(false);
   const [showPriceChangeModal, setShowPriceChangeModal] = useState(false);
@@ -134,11 +134,11 @@ export default function EditProfileScreen() {
     newPriceListUrl: '',
     justification: ''
   });
-  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
-  const [businessBranding, setBusinessBranding] = useState<BusinessBranding>({
-    hasCustomLogo: false
-  });
   const [showLogoModal, setShowLogoModal] = useState(false);
+  
+  useEffect(() => {
+    setBusinessName(providerContext.businessName);
+  }, [providerContext.businessName]);
 
   // Early return after all hooks are called
   if (user?.userType !== 'provider') {
@@ -179,8 +179,8 @@ export default function EditProfileScreen() {
     Alert.alert('Éxito', 'Servicio agregado correctamente');
   };
 
-  const handleToggleServiceStatus = (serviceId: string) => {
-    const service = services.find(s => s.id === serviceId);
+  const handleToggleServiceStatus = async (serviceId: string) => {
+    const service = providerContext.services.find(s => s.id === serviceId);
     if (!service) return;
 
     const newStatus = !service.isActive;
@@ -193,11 +193,14 @@ export default function EditProfileScreen() {
         { text: 'Cancelar', style: 'cancel' },
         {
           text: newStatus ? 'Activar' : 'Desactivar',
-          onPress: () => {
-            setServices(prev => prev.map(s => 
-              s.id === serviceId ? { ...s, isActive: newStatus } : s
-            ));
-            Alert.alert('Éxito', `Servicio ${newStatus ? 'activado' : 'desactivado'} correctamente`);
+          onPress: async () => {
+            try {
+              await providerContext.toggleServiceStatus(serviceId);
+              Alert.alert('Éxito', `Servicio ${newStatus ? 'activado' : 'desactivado'} correctamente`);
+            } catch (error) {
+              console.error('Error toggling service status:', error);
+              Alert.alert('Error', 'No se pudo actualizar el estado del servicio');
+            }
           }
         }
       ]
@@ -576,14 +579,14 @@ export default function EditProfileScreen() {
             <Text style={styles.sectionTitle}>Imagen de Marca</Text>
           </View>
           
-          {businessBranding.hasCustomLogo && businessBranding.logo ? (
+          {providerContext.businessBranding.hasCustomLogo && providerContext.businessBranding.logo ? (
             <View style={styles.logoContainer}>
-              <Image source={{ uri: businessBranding.logo }} style={styles.businessLogo} />
+              <Image source={{ uri: providerContext.businessBranding.logo }} style={styles.businessLogo} />
               <View style={styles.logoInfo}>
-                <Text style={styles.logoFileName}>{businessBranding.logoFileName}</Text>
-                {businessBranding.logoSize && (
+                <Text style={styles.logoFileName}>{providerContext.businessBranding.logoFileName}</Text>
+                {providerContext.businessBranding.logoSize && (
                   <Text style={styles.logoSize}>
-                    {(businessBranding.logoSize / 1024 / 1024).toFixed(1)} MB
+                    {(providerContext.businessBranding.logoSize / 1024 / 1024).toFixed(1)} MB
                   </Text>
                 )}
               </View>
@@ -678,7 +681,7 @@ export default function EditProfileScreen() {
             <Text style={styles.addButtonText}>Agregar Nuevo Servicio</Text>
           </TouchableOpacity>
 
-          {services.map((service) => (
+          {providerContext.services.map((service) => (
             <View key={service.id} style={styles.serviceCard}>
               <View style={styles.serviceHeader}>
                 <Text style={styles.serviceName}>{service.name}</Text>
@@ -750,7 +753,7 @@ export default function EditProfileScreen() {
             </View>
             <View style={styles.galleryCounter}>
               <Text style={styles.galleryCounterText}>
-                {gallery.length} / {maxGallerySize} archivos
+                {providerContext.gallery.length} / {providerContext.maxGallerySize} archivos
               </Text>
               <Text style={styles.galleryCounterSubtext}>
                 Completa logros para aumentar el límite
@@ -764,7 +767,7 @@ export default function EditProfileScreen() {
           </TouchableOpacity>
 
           <View style={styles.galleryGrid}>
-            {gallery.map((media) => (
+            {providerContext.gallery.map((media) => (
               <View key={media.id} style={styles.galleryItem}>
                 {media.type === 'image' ? (
                   <Image source={{ uri: media.uri }} style={styles.galleryMedia} />
@@ -803,14 +806,14 @@ export default function EditProfileScreen() {
         </View>
 
         {/* Support Tickets Section */}
-        {supportTickets.length > 0 && (
+        {providerContext.supportTickets.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <FileText size={24} color="#D81B60" />
               <Text style={styles.sectionTitle}>Solicitudes Pendientes</Text>
             </View>
             
-            {supportTickets.map((ticket) => (
+            {providerContext.supportTickets.map((ticket) => (
               <View key={ticket.id} style={styles.ticketCard}>
                 <View style={styles.ticketHeader}>
                   <Text style={styles.ticketType}>
