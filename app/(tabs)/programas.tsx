@@ -217,15 +217,11 @@ export default function ProgramasScreen() {
 
           {/* Special Programs */}
           <Text style={styles.sectionTitle}>Programas Especiales</Text>
-          <Text style={styles.sectionDescription}>
-            Próximamente: Kraffles, descuentos exclusivos y más beneficios con OKoins.
-          </Text>
-
           <View style={styles.comingSoonCard}>
             <Gift size={32} color="#D81B60" />
-            <Text style={styles.comingSoonTitle}>Kraffles</Text>
+            <Text style={styles.comingSoonTitle}>Próximamente</Text>
             <Text style={styles.comingSoonDescription}>
-              Participa en rifas exclusivas usando tus OKoins. ¡Próximamente disponible!
+              Pronto estarán disponibles programas especiales para usar tus OKoins y obtener beneficios exclusivos.
             </Text>
           </View>
         </View>
