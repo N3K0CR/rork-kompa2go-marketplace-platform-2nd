@@ -179,7 +179,7 @@ export function FirebaseAuthProvider({ children }: { children: React.ReactNode }
   );
 }
 
-export function useFirebaseAuth() {
+export function useFirebaseAuth(): FirebaseAuthContextType {
   const context = useContext(FirebaseAuthContext);
   if (context === undefined) {
     throw new Error('useFirebaseAuth must be used within a FirebaseAuthProvider');
