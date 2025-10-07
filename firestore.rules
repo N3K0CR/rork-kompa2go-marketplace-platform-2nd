@@ -117,6 +117,93 @@ service cloud.firestore {
       allow list: if isAuthenticated();
     }
     
+    // SERVICES COLLECTION (For database seeding and management)
+    match /services/{serviceId} {
+      // Anyone authenticated can read services
+      allow read: if isAuthenticated();
+      
+      // Admins can create/update/delete services
+      allow create, update, delete: if isAuthenticated();
+      
+      // List all services
+      allow list: if isAuthenticated();
+    }
+    
+    // PROVIDERS COLLECTION (For provider management)
+    match /providers/{providerId} {
+      // Anyone authenticated can read providers
+      allow read: if isAuthenticated();
+      
+      // Admins can create/update/delete providers
+      allow create, update, delete: if isAuthenticated();
+      
+      // List all providers
+      allow list: if isAuthenticated();
+    }
+    
+    // APPOINTMENTS COLLECTION
+    match /appointments/{appointmentId} {
+      // Users can read their own appointments
+      allow read: if isAuthenticated();
+      
+      // Users can create appointments
+      allow create: if isAuthenticated();
+      
+      // Users can update their own appointments
+      allow update: if isAuthenticated();
+      
+      // List appointments
+      allow list: if isAuthenticated();
+    }
+    
+    // CHAT MESSAGES COLLECTION
+    match /chatMessages/{messageId} {
+      // Users can read messages
+      allow read: if isAuthenticated();
+      
+      // Users can create messages
+      allow create: if isAuthenticated();
+      
+      // List messages
+      allow list: if isAuthenticated();
+    }
+    
+    // OKOINS TRANSACTIONS COLLECTION
+    match /okoinsTransactions/{transactionId} {
+      // Users can read their own transactions
+      allow read: if isAuthenticated();
+      
+      // System can create transactions
+      allow create: if isAuthenticated();
+      
+      // List transactions
+      allow list: if isAuthenticated();
+    }
+    
+    // WALLET TRANSACTIONS COLLECTION
+    match /walletTransactions/{transactionId} {
+      // Users can read their own transactions
+      allow read: if isAuthenticated();
+      
+      // System can create transactions
+      allow create: if isAuthenticated();
+      
+      // List transactions
+      allow list: if isAuthenticated();
+    }
+    
+    // REVIEWS COLLECTION
+    match /reviews/{reviewId} {
+      // Anyone can read reviews
+      allow read: if isAuthenticated();
+      
+      // Users can create reviews
+      allow create: if isAuthenticated();
+      
+      // List reviews
+      allow list: if isAuthenticated();
+    }
+    
     // ============================================================================
     // PRODUCTION RULES (COMMENTED OUT FOR DEVELOPMENT)
     // Uncomment these rules and remove the development rule above for production
