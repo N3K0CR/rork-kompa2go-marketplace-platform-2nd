@@ -9,11 +9,5 @@ export NODE_ENV=development
 export PORT=8082
 export HOST=0.0.0.0
 
-# Ejecutar el servidor backend con configuración específica
-exec bun --tsconfig-override tsconfig.backend.json \
-  --external react-native \
-  --external react-native-web \
-  --external expo \
-  --external @react-native \
-  --external @expo \
-  run backend/server.ts
+# Run backend with Node.js to avoid Bun's React Native parsing issues
+exec node --loader tsx backend/server.ts
