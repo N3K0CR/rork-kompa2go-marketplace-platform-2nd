@@ -17,7 +17,7 @@ import { AccessibleButton } from '@/components/AccessibleButton';
 import { AccessibleInput } from '@/components/AccessibleInput';
 import { TermsAcceptance } from '@/components/TermsAcceptance';
 import { useAccessibility } from '@/contexts/AccessibilityContext';
-import { default as RegistrationService } from '@/src/modules/registration/services/firestore-registration-service';
+import RegistrationService from '@/src/modules/registration/services/registration-service-wrapper';
 import type { KommuterRegistrationData, VehicleData, FleetDriverData } from '@/src/shared/types/registration-types';
 
 export default function KommuterRegistrationScreen() {
