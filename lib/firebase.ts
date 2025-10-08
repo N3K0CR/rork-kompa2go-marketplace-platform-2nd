@@ -21,7 +21,7 @@ if (Platform.OS === 'web' && typeof window !== 'undefined') {
 }
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCCNEVP0CpDKz_anc1SD7t4tfiRr8rf3IE",
+  apiKey: "AIzaSyCyErsu4Trv2MgfQfglWl-VpFezC9uCtSU",
   authDomain: "kompa2go.firebaseapp.com",
   projectId: "kompa2go",
   storageBucket: "kompa2go.firebasestorage.app",
