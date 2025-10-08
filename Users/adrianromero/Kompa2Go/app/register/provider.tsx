@@ -21,6 +21,84 @@ import { useAuth } from '@/contexts/AuthContext';
 import RegistrationService from '@/src/modules/registration/services/firestore-registration-service';
 import type { ProviderRegistrationData } from '@/src/shared/types/registration-types';
 
+interface DocumentType {
+  id: string;
+  label: string;
+  placeholder: string;
+}
+
+interface CountryConfig {
+  code: string;
+  name: string;
+  documentTypes: DocumentType[];
+  taxIdLabel: string;
+  taxIdPlaceholder: string;
+}
+
+const COUNTRIES: CountryConfig[] = [
+  {
+    code: 'CR',
+    name: 'Costa Rica',
+    documentTypes: [
+      { id: 'cedula', label: 'Cédula Nacional', placeholder: '1-2345-6789' },
+      { id: 'cedula_residencia', label: 'Cédula de Residencia', placeholder: '123456789012' },
+      { id: 'dimex', label: 'DIMEX', placeholder: '123456789012' },
+    ],
+    taxIdLabel: 'Cédula Jurídica',
+    taxIdPlaceholder: '3-101-123456',
+  },
+  {
+    code: 'PA',
+    name: 'Panamá',
+    documentTypes: [
+      { id: 'cedula', label: 'Cédula Panameña', placeholder: '8-123-4567' },
+      { id: 'pasaporte', label: 'Pasaporte', placeholder: 'N1234567' },
+    ],
+    taxIdLabel: 'RUC',
+    taxIdPlaceholder: '1234567-1-123456',
+  },
+  {
+    code: 'NI',
+    name: 'Nicaragua',
+    documentTypes: [
+      { id: 'cedula', label: 'Cédula de Identidad', placeholder: '001-123456-0001A' },
+      { id: 'residencia', label: 'Carnet de Residencia', placeholder: 'R-123456' },
+    ],
+    taxIdLabel: 'RUC',
+    taxIdPlaceholder: 'J0310000000000',
+  },
+  {
+    code: 'SV',
+    name: 'El Salvador',
+    documentTypes: [
+      { id: 'dui', label: 'DUI', placeholder: '12345678-9' },
+      { id: 'pasaporte', label: 'Pasaporte', placeholder: 'A1234567' },
+    ],
+    taxIdLabel: 'NIT',
+    taxIdPlaceholder: '0614-123456-001-1',
+  },
+  {
+    code: 'GT',
+    name: 'Guatemala',
+    documentTypes: [
+      { id: 'dpi', label: 'DPI', placeholder: '1234 12345 0101' },
+      { id: 'pasaporte', label: 'Pasaporte', placeholder: 'A1234567' },
+    ],
+    taxIdLabel: 'NIT',
+    taxIdPlaceholder: '12345678-9',
+  },
+  {
+    code: 'HN',
+    name: 'Honduras',
+    documentTypes: [
+      { id: 'identidad', label: 'Tarjeta de Identidad', placeholder: '0801-1990-12345' },
+      { id: 'pasaporte', label: 'Pasaporte', placeholder: 'A123456' },
+    ],
+    taxIdLabel: 'RTN',
+    taxIdPlaceholder: '08011990123456',
+  },
+];
+
 export default function ProviderRegistrationScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -79,8 +157,17 @@ export default function ProviderRegistrationScreen() {
     }
   }, [user]);
 
+  useEffect(() => {
+    const country = COUNTRIES.find((c: CountryConfig) => c.name === formData.companyInfo.country);
+    if (country) {
+      setSelectedCountry(country);
+    }
+  }, [formData.companyInfo.country]);
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showHowFoundUsModal, setShowHowFoundUsModal] = useState(false);
+  const [showCountryModal, setShowCountryModal] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState<CountryConfig>(COUNTRIES[0]);
 
   const howFoundUsOptions = [
     'Redes Sociales (Facebook, Instagram, TikTok)',
@@ -99,8 +186,11 @@ export default function ProviderRegistrationScreen() {
     if (!formData.companyInfo.businessName.trim()) {
       newErrors.businessName = 'El nombre de la empresa es requerido';
     }
+    if (!formData.companyInfo.country.trim()) {
+      newErrors.country = 'El país es requerido';
+    }
     if (!formData.companyInfo.taxId.trim()) {
-      newErrors.taxId = 'El RUC/NIT es requerido';
+      newErrors.taxId = `El ${selectedCountry.taxIdLabel} es requerido`;
     }
     if (!formData.companyInfo.address.trim()) {
       newErrors.address = 'La dirección es requerida';
@@ -160,7 +250,7 @@ export default function ProviderRegistrationScreen() {
       await updateSettings(formData.accessibility!);
       
       if (isUpgrade && user) {
-        await RegistrationService.upgradeClientToProvider(user.id, formData);
+        await (RegistrationService as any).upgradeClientToProvider(user.id, formData);
         
         if (settings.ttsEnabled) {
           speak('Actualización completada exitosamente. Tu cuenta de proveedor está pendiente de aprobación.');
@@ -177,7 +267,7 @@ export default function ProviderRegistrationScreen() {
           ]
         );
       } else {
-        await RegistrationService.registerProvider(formData);
+        await (RegistrationService as any).registerProvider(formData);
         
         if (settings.ttsEnabled) {
           speak('Registro completado exitosamente. Tu cuenta está pendiente de aprobación.');
@@ -219,8 +309,24 @@ export default function ProviderRegistrationScreen() {
         required
       />
 
+      <View style={styles.inputContainer}>
+        <AccessibleText text="País *" style={styles.label} />
+        <TouchableOpacity
+          style={styles.dropdownButton}
+          onPress={() => setShowCountryModal(true)}
+        >
+          <Text style={styles.dropdownText}>
+            {formData.companyInfo.country || 'Selecciona un país'}
+          </Text>
+          <ChevronDown size={20} color="#666" />
+        </TouchableOpacity>
+        {errors.country && (
+          <Text style={styles.errorText}>{errors.country}</Text>
+        )}
+      </View>
+
       <AccessibleInput
-        label="RUC/NIT"
+        label={selectedCountry.taxIdLabel}
         value={formData.companyInfo.taxId}
         onChangeText={(text) =>
           setFormData({
@@ -228,6 +334,7 @@ export default function ProviderRegistrationScreen() {
             companyInfo: { ...formData.companyInfo, taxId: text },
           })
         }
+        placeholder={selectedCountry.taxIdPlaceholder}
         error={errors.taxId}
         required
       />
@@ -417,6 +524,43 @@ export default function ProviderRegistrationScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
+
+      <Modal
+        visible={showCountryModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCountryModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <AccessibleText text="Selecciona tu país" style={styles.modalTitle} />
+            <ScrollView style={styles.optionsList}>
+              {COUNTRIES.map((country: CountryConfig, index: number) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.optionItem}
+                  onPress={() => {
+                    setSelectedCountry(country);
+                    setFormData({
+                      ...formData,
+                      companyInfo: { ...formData.companyInfo, country: country.name },
+                    });
+                    setShowCountryModal(false);
+                  }}
+                >
+                  <Text style={styles.optionText}>{country.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <AccessibleButton
+              label="Cancelar"
+              text="Cancelar"
+              onPress={() => setShowCountryModal(false)}
+              style={styles.modalCancelButton}
+            />
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={showHowFoundUsModal}
@@ -624,5 +768,10 @@ const styles = StyleSheet.create({
   modalCancelButton: {
     marginTop: 16,
     backgroundColor: '#6C757D',
+  },
+  errorText: {
+    color: '#DC3545',
+    fontSize: 12,
+    marginTop: 4,
   },
 });
