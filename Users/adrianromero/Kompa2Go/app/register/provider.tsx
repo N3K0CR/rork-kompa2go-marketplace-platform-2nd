@@ -161,13 +161,17 @@ export default function ProviderRegistrationScreen() {
     const country = COUNTRIES.find((c: CountryConfig) => c.name === formData.companyInfo.country);
     if (country) {
       setSelectedCountry(country);
+      setSelectedDocumentType(country.documentTypes[0]);
     }
   }, [formData.companyInfo.country]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showHowFoundUsModal, setShowHowFoundUsModal] = useState(false);
   const [showCountryModal, setShowCountryModal] = useState(false);
+  const [showDocumentTypeModal, setShowDocumentTypeModal] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<CountryConfig>(COUNTRIES[0]);
+  const [selectedDocumentType, setSelectedDocumentType] = useState<DocumentType>(COUNTRIES[0].documentTypes[0]);
+  const [personalDocumentNumber, setPersonalDocumentNumber] = useState('');
 
   const howFoundUsOptions = [
     'Redes Sociales (Facebook, Instagram, TikTok)',
@@ -188,6 +192,9 @@ export default function ProviderRegistrationScreen() {
     }
     if (!formData.companyInfo.country.trim()) {
       newErrors.country = 'El país es requerido';
+    }
+    if (!personalDocumentNumber.trim()) {
+      newErrors.personalDocument = `El ${selectedDocumentType.label} es requerido`;
     }
     if (!formData.companyInfo.taxId.trim()) {
       newErrors.taxId = `El ${selectedCountry.taxIdLabel} es requerido`;
@@ -250,7 +257,14 @@ export default function ProviderRegistrationScreen() {
       await updateSettings(formData.accessibility!);
       
       if (isUpgrade && user) {
-        await (RegistrationService as any).upgradeClientToProvider(user.id, formData);
+        const upgradeData = {
+          ...formData,
+          personalDocument: {
+            type: selectedDocumentType.id,
+            number: personalDocumentNumber,
+          },
+        };
+        await (RegistrationService as any).upgradeClientToProvider(user.id, upgradeData);
         
         if (settings.ttsEnabled) {
           speak('Actualización completada exitosamente. Tu cuenta de proveedor está pendiente de aprobación.');
@@ -267,7 +281,14 @@ export default function ProviderRegistrationScreen() {
           ]
         );
       } else {
-        await (RegistrationService as any).registerProvider(formData);
+        const registrationData = {
+          ...formData,
+          personalDocument: {
+            type: selectedDocumentType.id,
+            number: personalDocumentNumber,
+          },
+        };
+        await (RegistrationService as any).registerProvider(registrationData);
         
         if (settings.ttsEnabled) {
           speak('Registro completado exitosamente. Tu cuenta está pendiente de aprobación.');
@@ -324,6 +345,28 @@ export default function ProviderRegistrationScreen() {
           <Text style={styles.errorText}>{errors.country}</Text>
         )}
       </View>
+
+      <View style={styles.inputContainer}>
+        <AccessibleText text="Tipo de Documento Personal *" style={styles.label} />
+        <TouchableOpacity
+          style={styles.dropdownButton}
+          onPress={() => setShowDocumentTypeModal(true)}
+        >
+          <Text style={styles.dropdownText}>
+            {selectedDocumentType.label}
+          </Text>
+          <ChevronDown size={20} color="#666" />
+        </TouchableOpacity>
+      </View>
+
+      <AccessibleInput
+        label={`Número de ${selectedDocumentType.label}`}
+        value={personalDocumentNumber}
+        onChangeText={setPersonalDocumentNumber}
+        placeholder={selectedDocumentType.placeholder}
+        error={errors.personalDocument}
+        required
+      />
 
       <AccessibleInput
         label={selectedCountry.taxIdLabel}
@@ -541,6 +584,7 @@ export default function ProviderRegistrationScreen() {
                   style={styles.optionItem}
                   onPress={() => {
                     setSelectedCountry(country);
+                    setSelectedDocumentType(country.documentTypes[0]);
                     setFormData({
                       ...formData,
                       companyInfo: { ...formData.companyInfo, country: country.name },
@@ -556,6 +600,39 @@ export default function ProviderRegistrationScreen() {
               label="Cancelar"
               text="Cancelar"
               onPress={() => setShowCountryModal(false)}
+              style={styles.modalCancelButton}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showDocumentTypeModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowDocumentTypeModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <AccessibleText text="Selecciona el tipo de documento" style={styles.modalTitle} />
+            <ScrollView style={styles.optionsList}>
+              {selectedCountry.documentTypes.map((docType: DocumentType, index: number) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.optionItem}
+                  onPress={() => {
+                    setSelectedDocumentType(docType);
+                    setShowDocumentTypeModal(false);
+                  }}
+                >
+                  <Text style={styles.optionText}>{docType.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <AccessibleButton
+              label="Cancelar"
+              text="Cancelar"
+              onPress={() => setShowDocumentTypeModal(false)}
               style={styles.modalCancelButton}
             />
           </View>
