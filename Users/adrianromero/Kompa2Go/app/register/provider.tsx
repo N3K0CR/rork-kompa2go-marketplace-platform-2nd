@@ -267,8 +267,11 @@ export default function ProviderRegistrationScreen() {
   };
 
   const handleBack = () => {
-    if (step > 1) {
+    if (step > 0) {
       setStep(step - 1);
+      if (step === 1) {
+        setTermsAccepted(false);
+      }
     }
   };
 
@@ -721,7 +724,7 @@ export default function ProviderRegistrationScreen() {
           {step === 3 && renderStep3()}
 
         <View style={styles.buttonContainer}>
-          {step > 1 && (
+          {step >= 1 && (
             <AccessibleButton
               label="Atrás"
               text="Atrás"
