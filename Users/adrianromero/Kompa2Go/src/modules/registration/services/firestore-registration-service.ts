@@ -306,7 +306,4 @@ class RegistrationService {
   }
 }
 
-const registrationFirestoreService = RegistrationService;
-
-export { RegistrationService, registrationFirestoreService };
 export default RegistrationService;
