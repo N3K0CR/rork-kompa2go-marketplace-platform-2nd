@@ -5,8 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   Text,
+  Linking,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { CheckSquare, Square } from 'lucide-react-native';
 import { AccessibleText } from './AccessibleText';
 import { AccessibleButton } from './AccessibleButton';
@@ -18,19 +18,16 @@ interface TermsAcceptanceProps {
 }
 
 export function TermsAcceptance({ onAccept, onDecline }: TermsAcceptanceProps) {
-  const router = useRouter();
   const { settings, speak } = useAccessibility();
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
-  
-  console.log('[TermsAcceptance] Component rendered. Terms:', termsAccepted, 'Privacy:', privacyAccepted);
 
   const handleTermsPress = () => {
-    router.push('/terms-of-service');
+    Linking.openURL('/terms-of-service');
   };
 
   const handlePrivacyPress = () => {
-    router.push('/privacy-policy');
+    Linking.openURL('/privacy-policy');
   };
 
   const handleAccept = () => {
