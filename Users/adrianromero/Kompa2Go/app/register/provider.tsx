@@ -109,8 +109,6 @@ export default function ProviderRegistrationScreen() {
   const [step, setStep] = useState(0);
   const [isUpgrade, setIsUpgrade] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
-  
-  console.log('[ProviderRegistration] Current step:', step, 'Terms accepted:', termsAccepted);
 
   const [formData, setFormData] = useState<ProviderRegistrationData>({
     companyInfo: {
@@ -231,7 +229,6 @@ export default function ProviderRegistrationScreen() {
   };
 
   const handleTermsAccept = () => {
-    console.log('[ProviderRegistration] Terms accepted, moving to step 1');
     setTermsAccepted(true);
     setStep(1);
     if (settings.ttsEnabled) {
@@ -267,11 +264,8 @@ export default function ProviderRegistrationScreen() {
   };
 
   const handleBack = () => {
-    if (step > 0) {
+    if (step > 1) {
       setStep(step - 1);
-      if (step === 1) {
-        setTermsAccepted(false);
-      }
     }
   };
 
@@ -724,7 +718,7 @@ export default function ProviderRegistrationScreen() {
           {step === 3 && renderStep3()}
 
         <View style={styles.buttonContainer}>
-          {step >= 1 && (
+          {step > 1 && (
             <AccessibleButton
               label="Atrás"
               text="Atrás"
