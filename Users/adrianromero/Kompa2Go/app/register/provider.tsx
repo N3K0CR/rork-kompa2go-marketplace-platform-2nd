@@ -16,6 +16,7 @@ import { ChevronDown } from 'lucide-react-native';
 import { AccessibleText } from '@/components/AccessibleText';
 import { AccessibleButton } from '@/components/AccessibleButton';
 import { AccessibleInput } from '@/components/AccessibleInput';
+import { TermsAcceptance } from '@/components/TermsAcceptance';
 import { useAccessibility } from '@/contexts/AccessibilityContext';
 import { useAuth } from '@/contexts/AuthContext';
 import RegistrationService from '@/src/modules/registration/services/firestore-registration-service';
@@ -105,8 +106,9 @@ export default function ProviderRegistrationScreen() {
   const { settings, updateSettings, speak } = useAccessibility();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
   const [isUpgrade, setIsUpgrade] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const [formData, setFormData] = useState<ProviderRegistrationData>({
     companyInfo: {
@@ -224,6 +226,27 @@ export default function ProviderRegistrationScreen() {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleTermsAccept = () => {
+    setTermsAccepted(true);
+    setStep(1);
+    if (settings.ttsEnabled) {
+      speak('Paso 1: Información de la empresa');
+    }
+  };
+
+  const handleTermsDecline = () => {
+    Alert.alert(
+      'Registro Cancelado',
+      'Debes aceptar los términos y condiciones para continuar con el registro.',
+      [
+        {
+          text: 'OK',
+          onPress: () => router.back(),
+        },
+      ]
+    );
   };
 
   const handleNext = () => {
@@ -671,22 +694,28 @@ export default function ProviderRegistrationScreen() {
         </View>
       </Modal>
       
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        <AccessibleText 
-          text={isUpgrade ? "Conviértete en Proveedor 2Kompa" : "Registro de Proveedor"} 
-          style={styles.title} 
+      {step === 0 ? (
+        <TermsAcceptance 
+          onAccept={handleTermsAccept}
+          onDecline={handleTermsDecline}
         />
-        {isUpgrade && (
+      ) : (
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
           <AccessibleText 
-            text="Completa la información adicional para ofrecer tus servicios" 
-            style={styles.upgradeSubtitle} 
+            text={isUpgrade ? "Conviértete en Proveedor 2Kompa" : "Registro de Proveedor"} 
+            style={styles.title} 
           />
-        )}
-        <AccessibleText text={`Paso ${step} de 3`} style={styles.subtitle} />
+          {isUpgrade && (
+            <AccessibleText 
+              text="Completa la información adicional para ofrecer tus servicios" 
+              style={styles.upgradeSubtitle} 
+            />
+          )}
+          <AccessibleText text={`Paso ${step} de 3`} style={styles.subtitle} />
 
-        {step === 1 && renderStep1()}
-        {step === 2 && renderStep2()}
-        {step === 3 && renderStep3()}
+          {step === 1 && renderStep1()}
+          {step === 2 && renderStep2()}
+          {step === 3 && renderStep3()}
 
         <View style={styles.buttonContainer}>
           {step > 1 && (
@@ -716,12 +745,13 @@ export default function ProviderRegistrationScreen() {
           )}
         </View>
 
-        {loading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#007AFF" />
-          </View>
-        )}
-      </ScrollView>
+          {loading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#007AFF" />
+            </View>
+          )}
+        </ScrollView>
+      )}
     </View>
   );
 }

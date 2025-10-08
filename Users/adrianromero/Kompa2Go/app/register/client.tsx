@@ -17,6 +17,7 @@ import { AccessibleText } from '@/components/AccessibleText';
 import { AccessibleButton } from '@/components/AccessibleButton';
 import { AccessibleInput } from '@/components/AccessibleInput';
 import { DatePicker } from '@/components/DatePicker';
+import { TermsAcceptance } from '@/components/TermsAcceptance';
 import { useAccessibility } from '@/contexts/AccessibilityContext';
 import RegistrationService from '@/src/modules/registration/services/firestore-registration-service';
 import type { ClientRegistrationData } from '@/src/shared/types/registration-types';
@@ -26,7 +27,8 @@ export default function ClientRegistrationScreen() {
   const router = useRouter();
   const { settings, updateSettings, speak } = useAccessibility();
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const [formData, setFormData] = useState<ClientRegistrationData>({
     personalInfo: {
@@ -118,6 +120,27 @@ export default function ClientRegistrationScreen() {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleTermsAccept = () => {
+    setTermsAccepted(true);
+    setStep(1);
+    if (settings.ttsEnabled) {
+      speak('Paso 1: Información personal');
+    }
+  };
+
+  const handleTermsDecline = () => {
+    Alert.alert(
+      'Registro Cancelado',
+      'Debes aceptar los términos y condiciones para continuar con el registro.',
+      [
+        {
+          text: 'OK',
+          onPress: () => router.back(),
+        },
+      ]
+    );
   };
 
   const handleNext = () => {
@@ -452,13 +475,19 @@ export default function ClientRegistrationScreen() {
         </View>
       </Modal>
       
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        <AccessibleText text="Registro de Cliente" style={styles.title} />
-        <AccessibleText text={`Paso ${step} de 3`} style={styles.subtitle} />
+      {step === 0 ? (
+        <TermsAcceptance 
+          onAccept={handleTermsAccept}
+          onDecline={handleTermsDecline}
+        />
+      ) : (
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+          <AccessibleText text="Registro de Cliente" style={styles.title} />
+          <AccessibleText text={`Paso ${step} de 3`} style={styles.subtitle} />
 
-        {step === 1 && renderStep1()}
-        {step === 2 && renderStep2()}
-        {step === 3 && renderStep3()}
+          {step === 1 && renderStep1()}
+          {step === 2 && renderStep2()}
+          {step === 3 && renderStep3()}
 
         <View style={styles.buttonContainer}>
           {step > 1 && (
@@ -488,12 +517,13 @@ export default function ClientRegistrationScreen() {
           )}
         </View>
 
-        {loading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#007AFF" />
-          </View>
-        )}
-      </ScrollView>
+          {loading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#007AFF" />
+            </View>
+          )}
+        </ScrollView>
+      )}
     </View>
   );
 }

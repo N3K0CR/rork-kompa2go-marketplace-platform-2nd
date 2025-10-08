@@ -15,6 +15,7 @@ import { Plus, Trash2 } from 'lucide-react-native';
 import { AccessibleText } from '@/components/AccessibleText';
 import { AccessibleButton } from '@/components/AccessibleButton';
 import { AccessibleInput } from '@/components/AccessibleInput';
+import { TermsAcceptance } from '@/components/TermsAcceptance';
 import { useAccessibility } from '@/contexts/AccessibilityContext';
 import RegistrationService from '@/src/modules/registration/services/firestore-registration-service';
 import type { KommuterRegistrationData, VehicleData, FleetDriverData } from '@/src/shared/types/registration-types';
@@ -24,7 +25,8 @@ export default function KommuterRegistrationScreen() {
   const router = useRouter();
   const { settings, updateSettings, speak } = useAccessibility();
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const [formData, setFormData] = useState<KommuterRegistrationData>({
     personalInfo: {
@@ -126,6 +128,27 @@ export default function KommuterRegistrationScreen() {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleTermsAccept = () => {
+    setTermsAccepted(true);
+    setStep(1);
+    if (settings.ttsEnabled) {
+      speak('Paso 1: Información personal');
+    }
+  };
+
+  const handleTermsDecline = () => {
+    Alert.alert(
+      'Registro Cancelado',
+      'Debes aceptar los términos y condiciones para continuar con el registro.',
+      [
+        {
+          text: 'OK',
+          onPress: () => router.back(),
+        },
+      ]
+    );
   };
 
   const handleNext = () => {
@@ -626,14 +649,20 @@ export default function KommuterRegistrationScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
       
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        <AccessibleText text="Registro de Kommuter" style={styles.title} />
-        <AccessibleText text={`Paso ${step} de 4`} style={styles.subtitle} />
+      {step === 0 ? (
+        <TermsAcceptance 
+          onAccept={handleTermsAccept}
+          onDecline={handleTermsDecline}
+        />
+      ) : (
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+          <AccessibleText text="Registro de Kommuter" style={styles.title} />
+          <AccessibleText text={`Paso ${step} de 4`} style={styles.subtitle} />
 
-        {step === 1 && renderStep1()}
-        {step === 2 && renderStep2()}
-        {step === 3 && renderStep3()}
-        {step === 4 && renderStep4()}
+          {step === 1 && renderStep1()}
+          {step === 2 && renderStep2()}
+          {step === 3 && renderStep3()}
+          {step === 4 && renderStep4()}
 
         <View style={styles.buttonContainer}>
           {step > 1 && (
@@ -663,12 +692,13 @@ export default function KommuterRegistrationScreen() {
           )}
         </View>
 
-        {loading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#007AFF" />
-          </View>
-        )}
-      </ScrollView>
+          {loading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#007AFF" />
+            </View>
+          )}
+        </ScrollView>
+      )}
     </View>
   );
 }
