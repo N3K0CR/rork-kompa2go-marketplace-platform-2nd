@@ -22,6 +22,8 @@ export function TermsAcceptance({ onAccept, onDecline }: TermsAcceptanceProps) {
   const { settings, speak } = useAccessibility();
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  
+  console.log('[TermsAcceptance] Component rendered. Terms:', termsAccepted, 'Privacy:', privacyAccepted);
 
   const handleTermsPress = () => {
     router.push('/terms-of-service');
