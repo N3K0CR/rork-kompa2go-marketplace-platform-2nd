@@ -317,19 +317,6 @@ export default function ProviderRegistrationScreen() {
     <View>
       <AccessibleText text="Información de la Empresa" style={styles.stepTitle} />
       
-      <AccessibleInput
-        label="Nombre de la Empresa"
-        value={formData.companyInfo.businessName}
-        onChangeText={(text) =>
-          setFormData({
-            ...formData,
-            companyInfo: { ...formData.companyInfo, businessName: text },
-          })
-        }
-        error={errors.businessName}
-        required
-      />
-
       <View style={styles.inputContainer}>
         <AccessibleText text="País *" style={styles.label} />
         <TouchableOpacity
@@ -365,6 +352,19 @@ export default function ProviderRegistrationScreen() {
         onChangeText={setPersonalDocumentNumber}
         placeholder={selectedDocumentType.placeholder}
         error={errors.personalDocument}
+        required
+      />
+
+      <AccessibleInput
+        label="Nombre de la Empresa"
+        value={formData.companyInfo.businessName}
+        onChangeText={(text) =>
+          setFormData({
+            ...formData,
+            companyInfo: { ...formData.companyInfo, businessName: text },
+          })
+        }
+        error={errors.businessName}
         required
       />
 
