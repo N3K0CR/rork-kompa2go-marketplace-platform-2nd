@@ -5,7 +5,7 @@ import { MapPin, Navigation, Search, Car, Users, Clock, DollarSign, X, TrendingU
 import { useCommute } from '@/src/modules/commute/context/CommuteContext';
 import { generateVehiclePrices, calculateDemandLevel, calculateTrafficLevel } from '@/src/modules/commute/utils/pricing';	
 import * as Location from 'expo-location';
-import { trpc } from '@/lib/trpc';
+import { trpcClient } from '@/lib/trpc';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 	
 interface AddressSuggestion {
@@ -66,7 +66,7 @@ export default function CommuteHome() {
   const reverseGeocode = async (latitude: number, longitude: number, retries = 3): Promise<string> => {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        const result = await trpc.geocoding.reverse.query({ latitude, longitude });
+        const result = await trpcClient.geocoding.reverse.query({ latitude, longitude });
         
         if (result) {
           return result.address;
@@ -155,7 +155,7 @@ export default function CommuteHome() {
       
       await new Promise(resolve => setTimeout(resolve, 400));
       
-      const results = await trpc.geocoding.search.query({ query, countryCode: 'cr' });
+      const results = await trpcClient.geocoding.search.query({ query, countryCode: 'cr' });
       
       console.log('Search results:', results.length, 'items found for:', query);
       
