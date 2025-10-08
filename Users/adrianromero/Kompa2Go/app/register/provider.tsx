@@ -196,9 +196,6 @@ export default function ProviderRegistrationScreen() {
     if (!personalDocumentNumber.trim()) {
       newErrors.personalDocument = `El ${selectedDocumentType.label} es requerido`;
     }
-    if (!formData.companyInfo.taxId.trim()) {
-      newErrors.taxId = `El ${selectedCountry.taxIdLabel} es requerido`;
-    }
     if (!formData.companyInfo.address.trim()) {
       newErrors.address = 'La dirección es requerida';
     }
@@ -369,7 +366,7 @@ export default function ProviderRegistrationScreen() {
       />
 
       <AccessibleInput
-        label={selectedCountry.taxIdLabel}
+        label={`${selectedCountry.taxIdLabel} (Opcional)`}
         value={formData.companyInfo.taxId}
         onChangeText={(text) =>
           setFormData({
@@ -379,7 +376,6 @@ export default function ProviderRegistrationScreen() {
         }
         placeholder={selectedCountry.taxIdPlaceholder}
         error={errors.taxId}
-        required
       />
 
       <AccessibleInput
