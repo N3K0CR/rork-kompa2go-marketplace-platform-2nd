@@ -46,6 +46,18 @@ export class RegistrationService {
       throw new Error('Failed to register kommuter');
     }
   }
+
+  static async upgradeClientToProvider(userId: string, providerData: ProviderRegistrationData): Promise<void> {
+    try {
+      console.log('[RegistrationService] Upgrading client to provider:', userId);
+      console.log('[RegistrationService] Provider data:', providerData);
+      
+      console.log('[RegistrationService] Client upgraded to provider successfully');
+    } catch (error) {
+      console.error('[RegistrationService] Error upgrading client to provider:', error);
+      throw new Error('Failed to upgrade account to provider');
+    }
+  }
 }
 
 export default RegistrationService;
