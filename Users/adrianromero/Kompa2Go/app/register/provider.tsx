@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   ScrollView,
@@ -17,6 +17,7 @@ import { AccessibleText } from '@/components/AccessibleText';
 import { AccessibleButton } from '@/components/AccessibleButton';
 import { AccessibleInput } from '@/components/AccessibleInput';
 import { useAccessibility } from '@/contexts/AccessibilityContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { RegistrationService } from '@/src/modules/registration/services/firestore-registration-service';
 import type { ProviderRegistrationData } from '@/src/shared/types/registration-types';
 
@@ -24,8 +25,10 @@ export default function ProviderRegistrationScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { settings, updateSettings, speak } = useAccessibility();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
+  const [isUpgrade, setIsUpgrade] = useState(false);
 
   const [formData, setFormData] = useState<ProviderRegistrationData>({
     companyInfo: {
@@ -59,6 +62,22 @@ export default function ProviderRegistrationScreen() {
     },
     referralCode: '',
   });
+
+  useEffect(() => {
+    if (user && user.userType === 'client') {
+      setIsUpgrade(true);
+      setFormData(prev => ({
+        ...prev,
+        contactInfo: {
+          ...prev.contactInfo,
+          contactName: user.name || '',
+          email: user.email || '',
+          phone: user.phone || '',
+        },
+      }));
+      console.log('[ProviderRegistration] Detected client upgrade, pre-filling data');
+    }
+  }, [user]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showHowFoundUsModal, setShowHowFoundUsModal] = useState(false);
@@ -140,22 +159,41 @@ export default function ProviderRegistrationScreen() {
     try {
       await updateSettings(formData.accessibility!);
       
-      await RegistrationService.registerProvider(formData);
-      
-      if (settings.ttsEnabled) {
-        speak('Registro completado exitosamente. Tu cuenta está pendiente de aprobación.');
-      }
+      if (isUpgrade && user) {
+        await RegistrationService.upgradeClientToProvider(user.id, formData);
+        
+        if (settings.ttsEnabled) {
+          speak('Actualización completada exitosamente. Tu cuenta de proveedor está pendiente de aprobación.');
+        }
 
-      Alert.alert(
-        'Registro Exitoso',
-        'Tu cuenta ha sido creada y está pendiente de aprobación',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.replace('/(tabs)'),
-          },
-        ]
-      );
+        Alert.alert(
+          'Actualización Exitosa',
+          'Tu cuenta ha sido actualizada a proveedor 2Kompa y está pendiente de aprobación. Podrás seguir usando tu cuenta de cliente mientras tanto.',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.replace('/(tabs)'),
+            },
+          ]
+        );
+      } else {
+        await RegistrationService.registerProvider(formData);
+        
+        if (settings.ttsEnabled) {
+          speak('Registro completado exitosamente. Tu cuenta está pendiente de aprobación.');
+        }
+
+        Alert.alert(
+          'Registro Exitoso',
+          'Tu cuenta ha sido creada y está pendiente de aprobación',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.replace('/(tabs)'),
+            },
+          ]
+        );
+      }
     } catch (error) {
       console.error('Registration error:', error);
       Alert.alert('Error', 'No se pudo completar el registro. Intenta nuevamente.');
@@ -369,7 +407,7 @@ export default function ProviderRegistrationScreen() {
 
       <AccessibleInput
         label="Código de Referido (Opcional)"
-        value={formData.referralCode}
+        value={formData.referralCode || ''}
         onChangeText={(text) => setFormData({ ...formData, referralCode: text })}
         autoCapitalize="characters"
       />
@@ -407,6 +445,7 @@ export default function ProviderRegistrationScreen() {
               ))}
             </ScrollView>
             <AccessibleButton
+              label="Cancelar"
               text="Cancelar"
               onPress={() => setShowHowFoundUsModal(false)}
               style={styles.modalCancelButton}
@@ -416,7 +455,16 @@ export default function ProviderRegistrationScreen() {
       </Modal>
       
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        <AccessibleText text="Registro de Proveedor" style={styles.title} />
+        <AccessibleText 
+          text={isUpgrade ? "Conviértete en Proveedor 2Kompa" : "Registro de Proveedor"} 
+          style={styles.title} 
+        />
+        {isUpgrade && (
+          <AccessibleText 
+            text="Completa la información adicional para ofrecer tus servicios" 
+            style={styles.upgradeSubtitle} 
+          />
+        )}
         <AccessibleText text={`Paso ${step} de 3`} style={styles.subtitle} />
 
         {step === 1 && renderStep1()}
@@ -426,6 +474,7 @@ export default function ProviderRegistrationScreen() {
         <View style={styles.buttonContainer}>
           {step > 1 && (
             <AccessibleButton
+              label="Atrás"
               text="Atrás"
               onPress={handleBack}
               style={[styles.button, styles.secondaryButton]}
@@ -434,12 +483,14 @@ export default function ProviderRegistrationScreen() {
           
           {step < 3 ? (
             <AccessibleButton
+              label="Siguiente"
               text="Siguiente"
               onPress={handleNext}
               style={styles.button}
             />
           ) : (
             <AccessibleButton
+              label={loading ? 'Registrando...' : 'Completar Registro'}
               text={loading ? 'Registrando...' : 'Completar Registro'}
               onPress={handleSubmit}
               disabled={loading}
@@ -479,6 +530,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginBottom: 24,
+  },
+  upgradeSubtitle: {
+    fontSize: 14,
+    color: '#D81B60',
+    marginBottom: 12,
+    textAlign: 'center',
   },
   stepTitle: {
     fontSize: 20,

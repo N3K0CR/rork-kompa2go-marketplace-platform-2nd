@@ -5,7 +5,7 @@ import { useWallet } from '@/contexts/WalletContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useReservationPlans } from '@/contexts/ReservationPlansContext';
 import { usePendingPayments } from '@/contexts/PendingPaymentsContext';
-import { User, Settings, CreditCard, History, LogOut, Shield, Calendar, Users, BarChart3, Star, TrendingUp, Lock, X, Package, Check, AlertTriangle, Share } from 'lucide-react-native';
+import { User, Settings, CreditCard, History, LogOut, Shield, Calendar, Users, BarChart3, Star, TrendingUp, Lock, X, Package, Check, AlertTriangle, Share, Briefcase } from 'lucide-react-native';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as Clipboard from 'expo-clipboard';
@@ -33,6 +33,7 @@ export default function ProfileScreen() {
   const [purchaseLoading, setPurchaseLoading] = useState(false);
   const [showReferralModal, setShowReferralModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const handleSignOut = () => {
     setShowLogoutModal(true);
@@ -136,6 +137,9 @@ export default function ProfileScreen() {
         break;
       case 'share_referral':
         handleShareReferral();
+        break;
+      case 'upgrade_to_provider':
+        setShowUpgradeModal(true);
         break;
       default:
         Alert.alert('Funcionalidad', 'En desarrollo');
@@ -318,6 +322,7 @@ export default function ProfileScreen() {
     { icon: User, title: t('edit_profile'), subtitle: t('update_personal_info'), action: 'edit_profile' },
     { icon: History, title: t('historical'), subtitle: t('view_previous_bookings'), action: 'history' },
     { icon: Share, title: 'Compartir Enlace de Referido', subtitle: 'Invita amigos y gana recompensas', action: 'share_referral' },
+    ...(user?.userType === 'client' ? [{ icon: Briefcase, title: '¿Deseas ofrecer servicios?', subtitle: 'Conviértete en proveedor 2Kompa', action: 'upgrade_to_provider' }] : []),
     ...(user?.userType !== 'provider' ? [{ icon: Settings, title: t('configurations'), subtitle: t('app_preferences'), action: 'settings' }] : []),
   ];
 
@@ -653,6 +658,80 @@ export default function ProfileScreen() {
                   onPress={confirmSignOut}
                 >
                   <Text style={styles.confirmLogoutButtonText}>{t('sign_out') || 'Cerrar Sesión'}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Upgrade to Provider Modal */}
+      <Modal
+        visible={showUpgradeModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowUpgradeModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Conviértete en Proveedor</Text>
+              <TouchableOpacity
+                onPress={() => setShowUpgradeModal(false)}
+                style={styles.closeButton}
+              >
+                <X size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.upgradeModalContent}>
+              <Briefcase size={48} color="#D81B60" style={styles.upgradeIcon} />
+              <Text style={styles.upgradeTitle}>
+                ¿Quieres ofrecer tus servicios?
+              </Text>
+              <Text style={styles.upgradeDescription}>
+                Conviértete en un proveedor 2Kompa y comienza a ofrecer tus servicios profesionales a miles de clientes.
+              </Text>
+              
+              <View style={styles.benefitsList}>
+                <View style={styles.benefitItem}>
+                  <Check size={20} color="#10B981" />
+                  <Text style={styles.benefitItemText}>Acceso a miles de clientes potenciales</Text>
+                </View>
+                <View style={styles.benefitItem}>
+                  <Check size={20} color="#10B981" />
+                  <Text style={styles.benefitItemText}>Gestiona tu calendario y disponibilidad</Text>
+                </View>
+                <View style={styles.benefitItem}>
+                  <Check size={20} color="#10B981" />
+                  <Text style={styles.benefitItemText}>Recibe pagos de forma segura</Text>
+                </View>
+                <View style={styles.benefitItem}>
+                  <Check size={20} color="#10B981" />
+                  <Text style={styles.benefitItemText}>Construye tu reputación con reseñas</Text>
+                </View>
+              </View>
+              
+              <Text style={styles.upgradeNote}>
+                Tu cuenta de cliente se mantendrá activa. Podrás seguir reservando servicios mientras ofreces los tuyos.
+              </Text>
+              
+              <View style={styles.upgradeButtonsContainer}>
+                <TouchableOpacity
+                  style={styles.cancelUpgradeButton}
+                  onPress={() => setShowUpgradeModal(false)}
+                >
+                  <Text style={styles.cancelUpgradeButtonText}>Ahora no</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.confirmUpgradeButton}
+                  onPress={() => {
+                    setShowUpgradeModal(false);
+                    router.push('/register/provider');
+                  }}
+                >
+                  <Text style={styles.confirmUpgradeButtonText}>Continuar</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1325,5 +1404,78 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-
+  upgradeModalContent: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  upgradeIcon: {
+    marginBottom: 16,
+  },
+  upgradeTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  upgradeDescription: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  benefitsList: {
+    width: '100%',
+    marginBottom: 24,
+  },
+  benefitItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 12,
+  },
+  benefitItemText: {
+    fontSize: 14,
+    color: '#333',
+    flex: 1,
+  },
+  upgradeNote: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginBottom: 24,
+    paddingHorizontal: 16,
+    lineHeight: 18,
+  },
+  upgradeButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  cancelUpgradeButton: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelUpgradeButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  confirmUpgradeButton: {
+    flex: 1,
+    backgroundColor: '#D81B60',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  confirmUpgradeButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });

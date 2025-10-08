@@ -258,4 +258,50 @@ export class RegistrationService {
       throw error;
     }
   }
+
+  static async upgradeClientToProvider(userId: string, providerData: ProviderRegistrationData): Promise<void> {
+    try {
+      const userRef = doc(db, USERS_COLLECTION, userId);
+      const userDoc = await getDoc(userRef);
+      
+      if (!userDoc.exists()) {
+        throw new Error('User not found');
+      }
+
+      const userData = userDoc.data() as UserProfile;
+      
+      if (userData.type !== 'client') {
+        throw new Error('Only clients can upgrade to provider');
+      }
+
+      const providerUserId = `provider_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const providerProfile: UserProfile = {
+        id: providerUserId,
+        type: 'provider',
+        status: 'pending',
+        registrationData: providerData,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        rating: 0,
+      };
+
+      await setDoc(doc(db, USERS_COLLECTION, providerUserId), {
+        ...providerProfile,
+        originalClientId: userId,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      await updateDoc(userRef, {
+        providerAccountId: providerUserId,
+        updatedAt: serverTimestamp(),
+      });
+
+      console.log('Client upgraded to provider successfully:', providerUserId);
+    } catch (error) {
+      console.error('Error upgrading client to provider:', error);
+      throw new Error('Failed to upgrade account to provider');
+    }
+  }
 }
