@@ -55,13 +55,13 @@ export default function AuthScreen() {
     targetRole: 'client' as 'client' | 'provider',
   });
   const firebaseAuth = useFirebaseAuth();
-  const { signIn, signUp, switchRole, resetPassword } = useAuth();
+  const { signIn, signUp, switchRole } = useAuth();
   
-  const signInWithEmail = firebaseAuth.signIn;
-  const signUpWithEmail = firebaseAuth.signUp;
+  const signInWithEmail = firebaseAuth.signInWithEmail;
+  const signUpWithEmail = firebaseAuth.signUpWithEmail;
   const firebaseSignOut = firebaseAuth.signOut;
   const firebaseResetPassword = firebaseAuth.resetPassword;
-  const firebaseUser = firebaseAuth.user;
+  const firebaseUser = firebaseAuth.firebaseUser;
   const firebaseLoading = firebaseAuth.loading;
 
   const totalProviderSteps = 4;
