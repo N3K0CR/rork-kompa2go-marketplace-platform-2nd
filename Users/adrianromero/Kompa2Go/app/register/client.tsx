@@ -19,7 +19,7 @@ import { AccessibleInput } from '@/components/AccessibleInput';
 import { DatePicker } from '@/components/DatePicker';
 import { TermsAcceptance } from '@/components/TermsAcceptance';
 import { useAccessibility } from '@/contexts/AccessibilityContext';
-import RegistrationService from '@/src/modules/registration/services/firestore-registration-service';
+import RegistrationService from '@/src/modules/registration/services/registration-service-wrapper';
 import type { ClientRegistrationData } from '@/src/shared/types/registration-types';
 
 export default function ClientRegistrationScreen() {
