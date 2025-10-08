@@ -33,7 +33,7 @@ interface SimpleReferralData {
 const USERS_COLLECTION = 'users';
 const REFERRALS_COLLECTION = 'referrals';
 
-export class RegistrationService {
+class RegistrationService {
   static async registerClient(data: ClientRegistrationData): Promise<string> {
     try {
       const userId = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -306,4 +306,5 @@ export class RegistrationService {
   }
 }
 
+export { RegistrationService };
 export default RegistrationService;

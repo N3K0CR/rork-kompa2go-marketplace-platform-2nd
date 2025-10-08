@@ -609,7 +609,7 @@ export default function KommuterRegistrationScreen() {
 
       <AccessibleInput
         label="Código de Referido (Opcional)"
-        value={formData.referralCode}
+        value={formData.referralCode || ''}
         onChangeText={(text) => setFormData({ ...formData, referralCode: text })}
         autoCapitalize="characters"
       />
@@ -639,6 +639,7 @@ export default function KommuterRegistrationScreen() {
           {step > 1 && (
             <AccessibleButton
               text="Atrás"
+              label="Atrás"
               onPress={handleBack}
               style={[styles.button, styles.secondaryButton]}
             />
@@ -647,12 +648,14 @@ export default function KommuterRegistrationScreen() {
           {step < 4 ? (
             <AccessibleButton
               text="Siguiente"
+              label="Siguiente"
               onPress={handleNext}
               style={styles.button}
             />
           ) : (
             <AccessibleButton
               text={loading ? 'Registrando...' : 'Completar Registro'}
+              label={loading ? 'Registrando...' : 'Completar Registro'}
               onPress={handleSubmit}
               disabled={loading}
               style={styles.button}

@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 export interface AccessibleButtonProps {
   onPress: () => void;
   text: string;
+  label?: string;
   style?: any;
   textStyle?: any;
   disabled?: boolean;
@@ -15,6 +16,7 @@ export interface AccessibleButtonProps {
 export function AccessibleButton({
   onPress,
   text,
+  label,
   style,
   textStyle,
   disabled = false,
@@ -55,7 +57,7 @@ export function AccessibleButton({
       onPress={handlePress}
       style={buttonStyle}
       disabled={disabled}
-      accessibilityLabel={text}
+      accessibilityLabel={label || text}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
     >
