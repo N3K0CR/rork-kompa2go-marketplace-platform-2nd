@@ -18,7 +18,7 @@ import { AccessibleButton } from '@/components/AccessibleButton';
 import { AccessibleInput } from '@/components/AccessibleInput';
 import { useAccessibility } from '@/contexts/AccessibilityContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { RegistrationService } from '@/src/modules/registration/services/firestore-registration-service';
+import RegistrationService from '@/src/modules/registration/services/firestore-registration-service';
 import type { ProviderRegistrationData } from '@/src/shared/types/registration-types';
 
 export default function ProviderRegistrationScreen() {

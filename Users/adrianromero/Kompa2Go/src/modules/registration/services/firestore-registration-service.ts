@@ -305,3 +305,5 @@ export class RegistrationService {
     }
   }
 }
+
+export default RegistrationService;
