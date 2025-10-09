@@ -251,7 +251,7 @@ export const [ProviderContext, useProvider] = createContextHook(() => {
       loadServices(user.uid);
       loadModificationRequests(user.uid);
     }
-  }, [user, loadProviderProfile, loadServices, loadModificationRequests]);
+  }, [user?.uid]);
 
   return useMemo(() => ({
     profile,
