@@ -5,6 +5,8 @@
 
 export * from './registration-types';
 export * from './accessibility-types';
+export * from './provider-types';
+export * from './alert-types';
 
 // Logo Service Types
 export interface LogoServiceRequest {
