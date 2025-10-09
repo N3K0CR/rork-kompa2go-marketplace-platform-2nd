@@ -2,6 +2,7 @@ export * from './registration-types';
 export * from './referral-types';
 export * from './accessibility-types';
 export * from './kommute-wallet-types';
+export * from './provider-types';
 
 export interface LogoServiceRequest {
   id?: string;
