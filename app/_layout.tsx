@@ -11,7 +11,7 @@ import { OKoinsProvider } from "@/contexts/OKoinsContext";
 import { AppointmentsProvider } from "@/contexts/AppointmentsContext";
 import { TeamCalendarProvider } from "@/contexts/TeamCalendarContext";
 import { ReservationAlertProvider } from "@/contexts/ReservationAlertContext";
-import { ProviderProvider } from "@/contexts/ProviderContext";
+import { ProviderContext as ProviderContextProvider } from "@/contexts/ProviderContext";
 import { ReservationPlansProvider } from "@/contexts/ReservationPlansContext";
 import { PendingPaymentsProvider } from "@/contexts/PendingPaymentsContext";
 import { LocationSearchProvider } from "@/contexts/LocationSearchContext";
@@ -25,6 +25,7 @@ import { CommuteContext } from "@/src/modules/commute/context/CommuteContext";
 import { AccessibilityProvider } from "@/contexts/AccessibilityContext";
 import { FirebaseAuthProvider } from "@/contexts/FirebaseAuthContext";
 import { DatabaseProvider } from "@/contexts/DatabaseContext";
+import { AdminContext } from "@/contexts/AdminContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ReservationAlertModal } from "@/components/ReservationAlertModal";
 import { trpc, trpcClient } from "@/lib/trpc";
@@ -100,26 +101,28 @@ export default function RootLayout() {
                       <WalletProvider>
                         <TeamCalendarProvider>
                           <ReservationAlertProvider>
-                            <ProviderProvider>
+                            <ProviderContextProvider>
                               <PendingPaymentsProvider>
                                 <LocationSearchProvider>
                                   <LemonSqueezyProvider>
                                     <ChatProvider>
                                       <K2GProductsProvider>
                                         <ReportedProblemsProvider>
-                                          <CommuteContext>
-                                            <GestureHandlerRootView style={styles.container}>
-                                              <RootLayoutNav />
-                                              <ReservationAlertModal />
-                                            </GestureHandlerRootView>
-                                          </CommuteContext>
+                                          <AdminContext>
+                                            <CommuteContext>
+                                              <GestureHandlerRootView style={styles.container}>
+                                                <RootLayoutNav />
+                                                <ReservationAlertModal />
+                                              </GestureHandlerRootView>
+                                            </CommuteContext>
+                                          </AdminContext>
                                         </ReportedProblemsProvider>
                                       </K2GProductsProvider>
                                     </ChatProvider>
                                   </LemonSqueezyProvider>
                                 </LocationSearchProvider>
                               </PendingPaymentsProvider>
-                            </ProviderProvider>
+                            </ProviderContextProvider>
                           </ReservationAlertProvider>
                         </TeamCalendarProvider>
                       </WalletProvider>
