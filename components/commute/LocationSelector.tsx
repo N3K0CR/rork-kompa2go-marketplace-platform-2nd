@@ -75,10 +75,10 @@ export function LocationSelector({
     }
 
     setIsSearching(true);
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
+    try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=cr`,
         {
@@ -99,8 +99,15 @@ export function LocationSelector({
 
       const data = await response.json();
       setSearchResults(data);
-    } catch (error) {
-      console.error('Error searching location:', error);
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        console.log('[LocationSelector] Search aborted (timeout or cancelled)');
+        return;
+      }
+      
+      console.error('[LocationSelector] Error searching location:', error);
       setSearchResults([]);
     } finally {
       setIsSearching(false);
@@ -377,10 +384,10 @@ export function MultiStopSelector({
     }
 
     setIsStopSearching(true);
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
+    try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=cr`,
         {
@@ -401,8 +408,15 @@ export function MultiStopSelector({
 
       const data = await response.json();
       setStopSearchResults(data);
-    } catch (error) {
-      console.error('Error searching location:', error);
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        console.log('[LocationSelector] Stop search aborted (timeout or cancelled)');
+        return;
+      }
+      
+      console.error('[LocationSelector] Error searching stop location:', error);
       setStopSearchResults([]);
     } finally {
       setIsStopSearching(false);

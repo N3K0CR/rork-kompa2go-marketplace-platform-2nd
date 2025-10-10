@@ -179,6 +179,37 @@ service cloud.firestore {
       allow list: if isAuthenticated();
     }
     
+    // ADMIN METRICS (Read-only for authenticated users)
+    match /admin_metrics/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+      allow list: if isAuthenticated();
+    }
+    
+    // KOMMUTE WALLET TRANSACTIONS
+    match /kommute_wallet_transactions/{transactionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow list: if isAuthenticated();
+    }
+    
+    // KOMMUTE WALLET RECHARGE REQUESTS
+    match /kommute_wallet_recharge_requests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow list: if isAuthenticated();
+    }
+    
+    // KOMMUTE PAYMENT DISTRIBUTIONS
+    match /kommute_payment_distributions/{distributionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow list: if isAuthenticated();
+    }
+    
     // DEFAULT DENY ALL
     match /{document=**} {
       allow read, write: if false;
