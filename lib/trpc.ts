@@ -17,7 +17,7 @@ const getBaseUrl = () => {
     'This is automatically set by Rork CLI when running the app.\n' +
     'If you are running locally, make sure to start the app with: bun start'
   );
-  return 'http://localhost:8083'; // Fallback URL (8083 as 8081 is occupied)
+  return 'http://localhost:8082'; // Fallback URL - Backend default port
 };
 
 // Global token storage for tRPC client
