@@ -274,6 +274,65 @@ service cloud.firestore {
       allow delete: if false;
     }
     
+    // Providers Collection
+    match /providers/{providerId} {
+      // Providers can read their own profile, admins can read all
+      allow read: if isAuthenticated() && (
+        request.auth.uid == providerId ||
+        isAdmin()
+      );
+      
+      // Providers can create their own profile
+      allow create: if isAuthenticated() && 
+                      request.auth.uid == providerId;
+      
+      // Providers can update their own profile, admins can update any
+      allow update: if isAuthenticated() && (
+        request.auth.uid == providerId ||
+        isAdmin()
+      );
+      
+      allow delete: if false;
+    }
+    
+    // Provider Services Collection
+    match /provider_services/{serviceId} {
+      // Anyone authenticated can read services (for browsing)
+      allow read: if isAuthenticated();
+      
+      // Providers can create services for themselves
+      allow create: if isAuthenticated() && 
+                      request.resource.data.providerId == request.auth.uid;
+      
+      // Providers can update their own services, admins can update any
+      allow update: if isAuthenticated() && (
+        resource.data.providerId == request.auth.uid ||
+        isAdmin()
+      );
+      
+      // Providers can delete their own services
+      allow delete: if isAuthenticated() && 
+                      resource.data.providerId == request.auth.uid;
+    }
+    
+    // Service Modification Requests
+    match /service_modification_requests/{requestId} {
+      // Providers can read their own requests, admins can read all
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.providerId ||
+        isAdmin()
+      );
+      
+      // Providers can create requests for themselves
+      allow create: if isAuthenticated() && 
+                      request.resource.data.providerId == request.auth.uid;
+      
+      // Only admins can update (approve/reject)
+      allow update: if isAdmin();
+      
+      allow delete: if false;
+    }
+    
     // Service Requests (Provider service management)
     match /service_requests/{requestId} {
       // Providers can read their own requests, admins can read all
@@ -292,7 +351,7 @@ service cloud.firestore {
       allow delete: if false;
     }
     
-    // Price Modification Requests
+    // Price Modification Requests (Legacy - keeping for backward compatibility)
     match /price_modification_requests/{requestId} {
       // Providers can read their own requests, admins can read all
       allow read: if isAuthenticated() && (
