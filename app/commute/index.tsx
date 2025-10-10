@@ -168,16 +168,29 @@ export default function CommuteHome() {
       await new Promise(resolve => setTimeout(resolve, 400));
       
       let results;
-      try {
-        results = await trpcClient.geocoding.search.query({ query, countryCode: 'cr' });
-        console.log('✅ Backend search results:', results.length, 'items found for:', query);
-      } catch (backendError) {
-        console.warn('⚠️ Backend unavailable, using direct Nominatim API');
-        
+      const backendUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
+      
+      if (backendUrl && backendUrl !== 'http://localhost:8082') {
+        try {
+          results = await trpcClient.geocoding.search.query({ query, countryCode: 'cr' });
+          console.log('✅ Backend search results:', results.length, 'items found for:', query);
+        } catch (backendError) {
+          console.warn('⚠️ Backend error, falling back to direct API:', backendError);
+          results = null;
+        }
+      } else {
+        console.log('⚠️ Backend not configured, using direct Nominatim API');
+        results = null;
+      }
+      
+      if (!results) {
         const searchQuery = query.includes('Costa Rica') ? query : `${query}, Costa Rica`;
         const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=8&addressdetails=1&countrycodes=cr`;
         
+        console.log('🔍 Fetching from Nominatim:', url);
+        
         const response = await fetch(url, {
+          method: 'GET',
           headers: {
             'User-Agent': 'Kompa2Go/1.0',
             'Accept': 'application/json',
@@ -185,7 +198,7 @@ export default function CommuteHome() {
         });
         
         if (!response.ok) {
-          throw new Error(`Geocoding failed: ${response.status}`);
+          throw new Error(`Geocoding failed: ${response.status} ${response.statusText}`);
         }
         
         const data = await response.json();
