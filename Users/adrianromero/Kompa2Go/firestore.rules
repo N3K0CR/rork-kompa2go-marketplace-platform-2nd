@@ -251,6 +251,220 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
+    // Trip Locations (Real-time location tracking during trips)
+    match /trip_locations/{tripId} {
+      // Passengers and kommuters can read their trip locations
+      allow read: if isAuthenticated();
+      
+      // Kommuters can update their location during active trips
+      allow create, update: if isAuthenticated();
+      
+      allow delete: if isAuthenticated();
+    }
+    
+    // Kommuter Status (Availability and current status)
+    match /kommuter_status/{kommuterId} {
+      // Anyone authenticated can read kommuter status (for matching)
+      allow read: if isAuthenticated();
+      
+      // Kommuters can update their own status
+      allow create, update: if isAuthenticated() && 
+                               request.auth.uid == kommuterId;
+      
+      allow delete: if false;
+    }
+    
+    // Service Requests (Provider service management)
+    match /service_requests/{requestId} {
+      // Providers can read their own requests, admins can read all
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.providerId ||
+        isAdmin()
+      );
+      
+      // Providers can create requests for themselves
+      allow create: if isAuthenticated() && 
+                      request.resource.data.providerId == request.auth.uid;
+      
+      // Only admins can update (approve/reject)
+      allow update: if isAdmin();
+      
+      allow delete: if false;
+    }
+    
+    // Price Modification Requests
+    match /price_modification_requests/{requestId} {
+      // Providers can read their own requests, admins can read all
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.providerId ||
+        isAdmin()
+      );
+      
+      // Providers can create requests for themselves
+      allow create: if isAuthenticated() && 
+                      request.resource.data.providerId == request.auth.uid;
+      
+      // Only admins can update (approve/reject)
+      allow update: if isAdmin();
+      
+      allow delete: if false;
+    }
+    
+    // Chats Collection
+    match /chats/{chatId} {
+      // Users can read chats they are part of
+      allow read: if isAuthenticated();
+      
+      // Users can create chats
+      allow create: if isAuthenticated();
+      
+      // Participants can update chat
+      allow update: if isAuthenticated();
+      
+      allow delete: if false;
+    }
+    
+    // Messages Collection
+    match /messages/{messageId} {
+      // Users can read messages from their chats
+      allow read: if isAuthenticated();
+      
+      // Users can send messages
+      allow create: if isAuthenticated() && 
+                      request.resource.data.senderId == request.auth.uid;
+      
+      // Users can update their own messages (mark as read)
+      allow update: if isAuthenticated();
+      
+      allow delete: if false;
+    }
+    
+    // Typing Indicators
+    match /typing/{typingId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if false;
+    }
+    
+    // Ratings Collection
+    match /ratings/{ratingId} {
+      // Users can read ratings for themselves or ratings they gave
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.toUserId ||
+        request.auth.uid == resource.data.fromUserId ||
+        resource.data.status == 'published'
+      );
+      
+      // Users can create ratings
+      allow create: if isAuthenticated() && 
+                      request.resource.data.fromUserId == request.auth.uid;
+      
+      // Users can update their own ratings or respond to ratings about them
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.fromUserId ||
+        request.auth.uid == resource.data.toUserId
+      );
+      
+      allow delete: if false;
+    }
+    
+    // Rating Stats
+    match /ratingStats/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+    
+    // Rating Prompts
+    match /ratingPrompts/{promptId} {
+      allow read: if isAuthenticated() && 
+                     request.auth.uid == resource.data.userId;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && 
+                       request.auth.uid == resource.data.userId;
+      allow delete: if false;
+    }
+    
+    // Help Articles
+    match /helpArticles/{articleId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    
+    // Support Tickets
+    match /supportTickets/{ticketId} {
+      // Users can read their own tickets, admins can read all
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        isAdmin()
+      );
+      
+      // Users can create tickets
+      allow create: if isAuthenticated() && 
+                      request.resource.data.userId == request.auth.uid;
+      
+      // Users can update their own tickets, admins can update any
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        isAdmin()
+      );
+      
+      allow delete: if false;
+    }
+    
+    // FAQs
+    match /faqs/{faqId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    
+    // Emergency Alerts
+    match /emergencyAlerts/{alertId} {
+      // Users can read their own alerts, admins can read all
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        isAdmin()
+      );
+      
+      // Users can create alerts for themselves
+      allow create: if isAuthenticated() && 
+                      request.resource.data.userId == request.auth.uid;
+      
+      // Users can update their own alerts, admins can update any
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        isAdmin()
+      );
+      
+      allow delete: if false;
+    }
+    
+    // Emergency Contacts
+    match /emergencyContacts/{contactId} {
+      allow read: if isAuthenticated() && 
+                     request.auth.uid == resource.data.userId;
+      allow create: if isAuthenticated() && 
+                      request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && 
+                       request.auth.uid == resource.data.userId;
+      allow delete: if isAuthenticated() && 
+                       request.auth.uid == resource.data.userId;
+    }
+    
+    // Safety Settings
+    match /safetySettings/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+    
+    // Notifications
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && 
+                     request.auth.uid == resource.data.userId;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && 
+                       request.auth.uid == resource.data.userId;
+      allow delete: if false;
+    }
+    
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;
