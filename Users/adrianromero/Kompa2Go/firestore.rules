@@ -79,6 +79,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
+    // Admin Metrics collection (only admins can read/write)
+    match /admin_metrics/{metricId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+    
     // Kommute Wallet Balances
     match /kommute_wallet_balances/{userId} {
       allow read: if isOwner(userId) || isAdmin();
