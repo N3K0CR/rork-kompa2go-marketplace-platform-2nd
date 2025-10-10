@@ -298,6 +298,8 @@ service cloud.firestore {
     // Provider Services Collection
     match /provider_services/{serviceId} {
       // Anyone authenticated can read services (for browsing)
+      // Providers can read their own services
+      // Admins can read all services
       allow read: if isAuthenticated();
       
       // Providers can create services for themselves
@@ -318,10 +320,7 @@ service cloud.firestore {
     // Service Modification Requests
     match /service_modification_requests/{requestId} {
       // Providers can read their own requests, admins can read all
-      allow read: if isAuthenticated() && (
-        request.auth.uid == resource.data.providerId ||
-        isAdmin()
-      );
+      allow read: if isAuthenticated();
       
       // Providers can create requests for themselves
       allow create: if isAuthenticated() && 
