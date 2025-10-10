@@ -170,8 +170,9 @@ export default function CommuteHome() {
       let results;
       const backendUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
       
-      if (backendUrl && backendUrl !== 'http://localhost:8082') {
+      if (backendUrl) {
         try {
+          console.log('🔍 Trying backend geocoding at:', backendUrl);
           results = await trpcClient.geocoding.search.query({ query, countryCode: 'cr' });
           console.log('✅ Backend search results:', results.length, 'items found for:', query);
         } catch (backendError) {
