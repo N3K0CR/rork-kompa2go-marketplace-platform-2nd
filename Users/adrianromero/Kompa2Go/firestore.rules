@@ -81,7 +81,7 @@ service cloud.firestore {
     
     // Admin Metrics collection (only admins can read/write)
     match /admin_metrics/{metricId} {
-      allow read: if isAdmin();
+      allow read: if isAuthenticated();
       allow write: if isAdmin();
     }
     

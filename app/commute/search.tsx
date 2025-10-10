@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
 import { Stack, router } from 'expo-router';
 import { Search, MapPin, Navigation, X } from 'lucide-react-native';
 import { useCommute } from '@/hooks/useCommute';
+import { trpcClient } from '@/lib/trpc';
 import { CommuteButton } from '@/components/commute';
 import { MultiStopSelector, LocationPoint as LocationSelectorPoint } from '@/components/commute/LocationSelector';
 import { Colors, Spacing, BorderRadius, Shadows, Typography } from '@/context-package/design-system';
@@ -54,7 +55,7 @@ export default function CommuteSearch() {
 
   console.log('🔍 CommuteSearch: Rendered');
 
-  const searchAddress = async (query: string, type: 'origin' | 'destination', retries = 2) => {
+  const searchAddress = async (query: string, type: 'origin' | 'destination') => {
     if (!query || query.length < 3) {
       if (type === 'origin') {
         setOriginSuggestions([]);
@@ -66,72 +67,58 @@ export default function CommuteSearch() {
       return;
     }
 
-    for (let attempt = 0; attempt <= retries; attempt++) {
-      try {
-        setSearchingAddress(type);
-        if (type === 'origin') {
+    try {
+      setSearchingAddress(type);
+      if (type === 'origin') {
+        setShowOriginSuggestions(true);
+      } else {
+        setShowDestinationSuggestions(true);
+      }
+      
+      console.log(`🔍 Searching address via tRPC:`, query);
+      
+      const results = await trpcClient.geocoding.search.query({
+        query,
+        countryCode: 'cr'
+      });
+      
+      console.log('✅ Address search results:', results.length, 'results');
+      
+      const formattedResults = results.map((result: any) => ({
+        place_id: result.placeId.toString(),
+        display_name: result.displayName,
+        lat: result.latitude.toString(),
+        lon: result.longitude.toString(),
+        address: {
+          road: result.address.split(',')[0],
+          city: result.address.split(',')[1]?.trim(),
+        }
+      }));
+      
+      if (type === 'origin') {
+        setOriginSuggestions(formattedResults);
+        if (formattedResults.length > 0) {
           setShowOriginSuggestions(true);
-        } else {
+        }
+      } else {
+        setDestinationSuggestions(formattedResults);
+        if (formattedResults.length > 0) {
           setShowDestinationSuggestions(true);
         }
-        
-        console.log(`🔍 Searching address (attempt ${attempt + 1}/${retries + 1}):`, query);
-        
-        const searchQuery = query.includes('Costa Rica') ? query : `${query}, Costa Rica`;
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=10&addressdetails=1&countrycodes=cr`;
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-        
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'User-Agent': 'Kompa2Go/1.0',
-          },
-          signal: controller.signal,
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log('✅ Address search results:', data.length, 'results');
-        
-        if (type === 'origin') {
-          setOriginSuggestions(data);
-          if (data.length > 0) {
-            setShowOriginSuggestions(true);
-          }
-        } else {
-          setDestinationSuggestions(data);
-          if (data.length > 0) {
-            setShowDestinationSuggestions(true);
-          }
-        }
-        
-        setSearchingAddress(null);
-        return;
-      } catch (error: any) {
-        console.error(`❌ Error searching address (attempt ${attempt + 1}/${retries + 1}):`, error.message);
-        
-        if (attempt === retries) {
-          console.error('❌ All search attempts failed');
-          if (type === 'origin') {
-            setOriginSuggestions([]);
-          } else {
-            setDestinationSuggestions([]);
-          }
-        } else {
-          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
-        }
       }
+      
+      setSearchingAddress(null);
+    } catch (error: any) {
+      console.error(`❌ Error searching address:`, error.message);
+      Alert.alert('Error', 'No se pudo buscar la dirección. Verifica tu conexión.');
+      
+      if (type === 'origin') {
+        setOriginSuggestions([]);
+      } else {
+        setDestinationSuggestions([]);
+      }
+      setSearchingAddress(null);
     }
-    
-    setSearchingAddress(null);
   };
 
   const selectAddressSuggestion = (suggestion: AddressSuggestion, type: 'origin' | 'destination') => {
@@ -159,61 +146,25 @@ export default function CommuteSearch() {
     }
   };
 
-  const reverseGeocodeWithRetry = async (latitude: number, longitude: number, retries = 3): Promise<string> => {
-    for (let i = 0; i < retries; i++) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
-        
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
-          {
-            method: 'GET',
-            headers: {
-              'Accept': 'application/json',
-              'User-Agent': 'Kompa2Go/1.0',
-            },
-            signal: controller.signal,
-          }
-        );
-        
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        if (data.display_name) {
-          return data.display_name;
-        }
-        
-        if (data.address) {
-          const parts = [];
-          if (data.address.road) parts.push(data.address.road);
-          if (data.address.house_number) parts.push(data.address.house_number);
-          if (data.address.suburb) parts.push(data.address.suburb);
-          if (data.address.city) parts.push(data.address.city);
-          if (data.address.state) parts.push(data.address.state);
-          if (parts.length > 0) {
-            return parts.join(', ');
-          }
-        }
-        
-        throw new Error('No address data');
-      } catch (error: any) {
-        console.log(`⚠️ Geocoding attempt ${i + 1}/${retries} failed:`, error.message);
-        
-        if (i === retries - 1) {
-          throw error;
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+  const reverseGeocodeWithRetry = async (latitude: number, longitude: number): Promise<string> => {
+    try {
+      console.log('🔍 Reverse geocoding via tRPC:', latitude, longitude);
+      
+      const result = await trpcClient.geocoding.reverse.query({
+        latitude,
+        longitude
+      });
+      
+      if (result) {
+        console.log('✅ Reverse geocoding result:', result.address);
+        return result.displayName;
       }
+      
+      throw new Error('No address data');
+    } catch (error: any) {
+      console.error('❌ Reverse geocoding error:', error.message);
+      throw error;
     }
-    
-    throw new Error('All geocoding attempts failed');
   };
 
   const handleUseCurrentLocation = async (type: 'origin' | 'destination') => {
