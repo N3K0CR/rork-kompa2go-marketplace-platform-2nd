@@ -68,23 +68,26 @@ export default function CommuteHome() {
       try {
         const result = await trpcClient.geocoding.reverse.query({ latitude, longitude });
         
-        if (result) {
+        if (result && result.address) {
+          console.log('✅ Geocoding success:', result.address);
           return result.address;
         }
         
-        return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-      } catch (error) {
-        console.log(`Geocoding attempt ${attempt}/${retries} failed:`, error);
-        
-        if (attempt === retries) {
-          return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+        if (result && result.displayName) {
+          console.log('✅ Geocoding success (displayName):', result.displayName);
+          return result.displayName;
         }
+      } catch (error) {
+        console.log(`⚠️ Geocoding attempt ${attempt}/${retries} failed:`, error);
         
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        if (attempt < retries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
       }
     }
     
-    return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+    console.log('⚠️ Geocoding failed, using generic location');
+    return 'Mi ubicación actual';
   };
 
   const getCurrentLocationAndAddress = async () => {
@@ -130,11 +133,20 @@ export default function CommuteHome() {
         setUserLocation({ latitude, longitude });
         
         const [geocode] = await Location.reverseGeocodeAsync({ latitude, longitude });
-        const address = geocode
-          ? `${geocode.street || ''} ${geocode.streetNumber || ''}, ${geocode.city || ''}`.trim()
-          : `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
         
-        setCurrentAddress(address);
+        if (geocode) {
+          const parts = [];
+          if (geocode.street) parts.push(geocode.street);
+          if (geocode.streetNumber) parts.push(geocode.streetNumber);
+          if (geocode.city) parts.push(geocode.city);
+          if (geocode.district) parts.push(geocode.district);
+          
+          const address = parts.length > 0 ? parts.join(', ') : 'Mi ubicación actual';
+          setCurrentAddress(address);
+        } else {
+          const address = await reverseGeocode(latitude, longitude);
+          setCurrentAddress(address);
+        }
         setLoadingLocation(false);
       }
     } catch (error) {
