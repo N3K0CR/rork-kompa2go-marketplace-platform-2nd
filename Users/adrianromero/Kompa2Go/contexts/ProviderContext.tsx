@@ -247,11 +247,17 @@ export const [ProviderContext, useProvider] = createContextHook(() => {
 
   useEffect(() => {
     if (user && user.uid) {
+      console.log('[ProviderContext] User authenticated, loading provider data:', user.uid);
       loadProviderProfile(user.uid);
       loadServices(user.uid);
       loadModificationRequests(user.uid);
+    } else {
+      console.log('[ProviderContext] No authenticated user, clearing provider data');
+      setProfile(null);
+      setServices([]);
+      setModificationRequests([]);
     }
-  }, [user?.uid]);
+  }, [user?.uid, loadProviderProfile, loadServices, loadModificationRequests]);
 
   return useMemo(() => ({
     profile,
