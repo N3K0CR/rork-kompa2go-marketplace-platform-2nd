@@ -190,13 +190,19 @@ export default function CommuteHome() {
         
         console.log('🔍 Fetching from Nominatim:', url);
         
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
         const response = await fetch(url, {
           method: 'GET',
           headers: {
             'User-Agent': 'Kompa2Go/1.0',
             'Accept': 'application/json',
           },
+          signal: controller.signal,
         });
+        
+        clearTimeout(timeoutId);
         
         if (!response.ok) {
           throw new Error(`Geocoding failed: ${response.status} ${response.statusText}`);
@@ -233,10 +239,13 @@ export default function CommuteHome() {
         
         if (error.message.includes('Rate limit')) {
           Alert.alert('Límite de búsqueda', 'Por favor espera un momento antes de buscar de nuevo.');
+        } else if (error.name === 'AbortError') {
+          console.log('⚠️ Search request timed out');
+          Alert.alert('Tiempo agotado', 'La búsqueda tardó demasiado. Por favor intenta de nuevo.');
         } else {
           Alert.alert(
             'Error de Búsqueda',
-            `No se pudo realizar la búsqueda: ${error.message}`,
+            'No se pudo realizar la búsqueda. Verifica tu conexión a internet.',
             [{ text: 'OK' }]
           );
         }
@@ -263,7 +272,6 @@ export default function CommuteHome() {
     }
 
     setDestination(suggestion.display_name);
-    setSuggestions([]);
     setSelectedDestination(suggestion);
 
     const R = 6371;
@@ -277,12 +285,18 @@ export default function CommuteHome() {
 
     setDistance(distanceKm);
     setDuration(Math.ceil((distanceKm / 30) * 60));
+    
+    setTimeout(() => {
+      setSuggestions([]);
+    }, 100);
   };
 
   const handleClearDestination = () => {
     setDestination('');
     setSelectedDestination(null);
     setSelectedVehicle(null);
+    setDistance(0);
+    setDuration(0);
     setSuggestions([]);
   };
 
