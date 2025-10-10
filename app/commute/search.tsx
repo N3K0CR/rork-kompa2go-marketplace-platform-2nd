@@ -1,27 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { Search, MapPin, Navigation, X } from 'lucide-react-native';
+import { Search, MapPin, Navigation } from 'lucide-react-native';
 import { useCommute } from '@/hooks/useCommute';
-import { trpcClient } from '@/lib/trpc';
+
 import { CommuteButton } from '@/components/commute';
-import { MultiStopSelector, LocationPoint as LocationSelectorPoint } from '@/components/commute/LocationSelector';
+import { MultiStopSelector } from '@/components/commute/LocationSelector';
+import { DestinationSearchInput } from '@/components/commute/DestinationSearchInput';
+import { PlaceDetails, PlacesService } from '@/src/modules/commute/services/places-service';
 import { Colors, Spacing, BorderRadius, Shadows, Typography } from '@/context-package/design-system';
 import * as Location from 'expo-location';
-
-interface AddressSuggestion {
-  place_id: string;
-  display_name: string;
-  lat: string;
-  lon: string;
-  address?: {
-    road?: string;
-    house_number?: string;
-    city?: string;
-    state?: string;
-    country?: string;
-  };
-}
 
 interface LocationPoint {
   latitude: number;
@@ -46,121 +34,59 @@ export default function CommuteSearch() {
   const [selectedVehicleType, setSelectedVehicleType] = useState<string>('kommute-4');
   const [isSearching, setIsSearching] = useState(false);
   const [loadingLocation, setLoadingLocation] = useState<'origin' | 'destination' | null>(null);
-  const [originSuggestions, setOriginSuggestions] = useState<AddressSuggestion[]>([]);
-  const [destinationSuggestions, setDestinationSuggestions] = useState<AddressSuggestion[]>([]);
-  const [showOriginSuggestions, setShowOriginSuggestions] = useState(false);
-  const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
-  const [searchingAddress, setSearchingAddress] = useState<'origin' | 'destination' | null>(null);
   const [saveAsFrequent, setSaveAsFrequent] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | undefined>();
 
   console.log('🔍 CommuteSearch: Rendered');
 
-  const searchAddress = async (query: string, type: 'origin' | 'destination') => {
-    if (!query || query.length < 3) {
-      if (type === 'origin') {
-        setOriginSuggestions([]);
-        setShowOriginSuggestions(false);
-      } else {
-        setDestinationSuggestions([]);
-        setShowDestinationSuggestions(false);
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const location = await Location.getCurrentPositionAsync({});
+          setUserLocation({
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          });
+          console.log('✅ User location obtained:', location.coords);
+        }
+      } catch (error) {
+        console.log('⚠️ Could not get user location:', error);
       }
-      return;
-    }
+    })();
+  }, []);
 
-    try {
-      setSearchingAddress(type);
-      if (type === 'origin') {
-        setShowOriginSuggestions(true);
-      } else {
-        setShowDestinationSuggestions(true);
-      }
-      
-      console.log(`🔍 Searching address via tRPC:`, query);
-      
-      const results = await trpcClient.geocoding.search.query({
-        query,
-        countryCode: 'cr'
-      });
-      
-      console.log('✅ Address search results:', results.length, 'results');
-      
-      const formattedResults = results.map((result: any) => ({
-        place_id: result.placeId.toString(),
-        display_name: result.displayName,
-        lat: result.latitude.toString(),
-        lon: result.longitude.toString(),
-        address: {
-          road: result.address.split(',')[0],
-          city: result.address.split(',')[1]?.trim(),
-        }
-      }));
-      
-      if (type === 'origin') {
-        setOriginSuggestions(formattedResults);
-        if (formattedResults.length > 0) {
-          setShowOriginSuggestions(true);
-        }
-      } else {
-        setDestinationSuggestions(formattedResults);
-        if (formattedResults.length > 0) {
-          setShowDestinationSuggestions(true);
-        }
-      }
-      
-      setSearchingAddress(null);
-    } catch (error: any) {
-      console.error(`❌ Error searching address:`, error.message);
-      Alert.alert('Error', 'No se pudo buscar la dirección. Verifica tu conexión.');
-      
-      if (type === 'origin') {
-        setOriginSuggestions([]);
-      } else {
-        setDestinationSuggestions([]);
-      }
-      setSearchingAddress(null);
-    }
+  const handleSelectOrigin = (place: PlaceDetails) => {
+    console.log('✅ Origin selected:', place);
+    setOrigin({
+      latitude: place.geometry.location.lat,
+      longitude: place.geometry.location.lng,
+      address: place.formatted_address,
+      name: place.name,
+    });
+    setOriginInput(place.name || place.formatted_address);
   };
 
-  const selectAddressSuggestion = (suggestion: AddressSuggestion, type: 'origin' | 'destination') => {
-    console.log('🎯 Selecting address suggestion:', { type, address: suggestion.display_name });
-    
-    const location: LocationPoint = {
-      latitude: parseFloat(suggestion.lat),
-      longitude: parseFloat(suggestion.lon),
-      address: suggestion.display_name,
-      name: suggestion.address?.road || suggestion.address?.city || undefined
-    };
-    
-    if (type === 'origin') {
-      setOrigin(location);
-      setOriginInput(suggestion.display_name);
-      setShowOriginSuggestions(false);
-      setOriginSuggestions([]);
-      console.log('✅ Origin set:', location);
-    } else {
-      setDestination(location);
-      setDestinationInput(suggestion.display_name);
-      setShowDestinationSuggestions(false);
-      setDestinationSuggestions([]);
-      console.log('✅ Destination set:', location);
-    }
+  const handleSelectDestination = (place: PlaceDetails) => {
+    console.log('✅ Destination selected:', place);
+    setDestination({
+      latitude: place.geometry.location.lat,
+      longitude: place.geometry.location.lng,
+      address: place.formatted_address,
+      name: place.name,
+    });
+    setDestinationInput(place.name || place.formatted_address);
   };
 
   const reverseGeocodeWithRetry = async (latitude: number, longitude: number): Promise<string> => {
     try {
-      console.log('🔍 Reverse geocoding via tRPC:', latitude, longitude);
+      console.log('🔍 Reverse geocoding via Google Maps:', latitude, longitude);
       
-      const result = await trpcClient.geocoding.reverse.query({
-        latitude,
-        longitude
-      });
+      const address = await PlacesService.reverseGeocode(latitude, longitude);
       
-      if (result) {
-        console.log('✅ Reverse geocoding result:', result.address);
-        return result.displayName;
-      }
-      
-      throw new Error('No address data');
+      console.log('✅ Reverse geocoding result:', address);
+      return address;
     } catch (error: any) {
       console.error('❌ Reverse geocoding error:', error.message);
       throw error;
@@ -395,106 +321,6 @@ export default function CommuteSearch() {
     }
   };
 
-  const renderLocationInput = (
-    type: 'origin' | 'destination',
-    value: string,
-    onChangeText: (text: string) => void,
-    suggestions: AddressSuggestion[],
-    showSuggestions: boolean,
-    placeholder: string
-  ) => (
-    <View style={styles.locationInputContainer}>
-      <View style={styles.locationInputHeader}>
-        <MapPin size={20} color={type === 'origin' ? Colors.success[500] : Colors.error[500]} />
-        <Text style={styles.locationLabel}>
-          {type === 'origin' ? 'Origen' : 'Destino'}
-        </Text>
-      </View>
-      
-      <View style={styles.inputWrapper}>
-        <TextInput
-          style={styles.addressInput}
-          placeholder={placeholder}
-          value={value}
-          onChangeText={(text) => {
-            onChangeText(text);
-            searchAddress(text, type);
-          }}
-          onFocus={() => {
-            if (value && value.length >= 3) {
-              searchAddress(value, type);
-            }
-          }}
-        />
-        {searchingAddress === type && (
-          <ActivityIndicator 
-            size="small" 
-            color={Colors.primary[500]} 
-            style={styles.searchIndicator}
-          />
-        )}
-        {value.length > 0 && (
-          <TouchableOpacity
-            style={styles.clearButton}
-            onPress={() => {
-              onChangeText('');
-              if (type === 'origin') {
-                setOrigin(null);
-                setOriginSuggestions([]);
-                setShowOriginSuggestions(false);
-              } else {
-                setDestination(null);
-                setDestinationSuggestions([]);
-                setShowDestinationSuggestions(false);
-              }
-            }}
-          >
-            <X size={16} color={Colors.neutral[400]} />
-          </TouchableOpacity>
-        )}
-      </View>
-      
-      {showSuggestions && suggestions.length > 0 && (
-        <View style={styles.suggestionsContainer}>
-          {suggestions.map((item) => (
-            <TouchableOpacity
-              key={item.place_id}
-              style={styles.suggestionItem}
-              onPress={() => {
-                console.log('🎯 Suggestion clicked:', item.display_name);
-                selectAddressSuggestion(item, type);
-              }}
-              activeOpacity={0.7}
-            >
-              <MapPin size={16} color={Colors.neutral[500]} />
-              <Text style={styles.suggestionText} numberOfLines={2}>
-                {item.display_name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-      
-      <TouchableOpacity 
-        style={[
-          styles.locationButton,
-          loadingLocation === type && styles.locationButtonLoading
-        ]}
-        onPress={() => handleUseCurrentLocation(type)}
-        disabled={loadingLocation === type}
-      >
-        {loadingLocation === type ? (
-          <ActivityIndicator size="small" color={Colors.primary[500]} />
-        ) : (
-          <Navigation size={16} color={Colors.primary[500]} />
-        )}
-        <Text style={styles.locationButtonText}>
-          {loadingLocation === type ? 'Obteniendo ubicación...' : 'Usar ubicación actual'}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-
   return (
     <View style={styles.container}>
       <Stack.Screen 
@@ -538,25 +364,67 @@ export default function CommuteSearch() {
             />
           ) : (
             <>
-              {renderLocationInput(
-                'origin',
-                originInput,
-                setOriginInput,
-                originSuggestions,
-                showOriginSuggestions,
-                'Escribe tu punto de partida...'
-              )}
+              <View style={styles.locationInputContainer}>
+                <View style={styles.locationInputHeader}>
+                  <MapPin size={20} color={Colors.success[500]} />
+                  <Text style={styles.locationLabel}>Origen</Text>
+                </View>
+                <DestinationSearchInput
+                  onSelectDestination={handleSelectOrigin}
+                  placeholder="Escribe tu punto de partida..."
+                  initialValue={originInput}
+                  userLocation={userLocation}
+                />
+                <TouchableOpacity 
+                  style={[
+                    styles.locationButton,
+                    loadingLocation === 'origin' && styles.locationButtonLoading
+                  ]}
+                  onPress={() => handleUseCurrentLocation('origin')}
+                  disabled={loadingLocation === 'origin'}
+                >
+                  {loadingLocation === 'origin' ? (
+                    <ActivityIndicator size="small" color={Colors.primary[500]} />
+                  ) : (
+                    <Navigation size={16} color={Colors.primary[500]} />
+                  )}
+                  <Text style={styles.locationButtonText}>
+                    {loadingLocation === 'origin' ? 'Obteniendo ubicación...' : 'Usar ubicación actual'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
               
               <View style={styles.separator} />
               
-              {renderLocationInput(
-                'destination',
-                destinationInput,
-                setDestinationInput,
-                destinationSuggestions,
-                showDestinationSuggestions,
-                'Escribe tu destino...'
-              )}
+              <View style={styles.locationInputContainer}>
+                <View style={styles.locationInputHeader}>
+                  <MapPin size={20} color={Colors.error[500]} />
+                  <Text style={styles.locationLabel}>Destino</Text>
+                </View>
+                <DestinationSearchInput
+                  onSelectDestination={handleSelectDestination}
+                  placeholder="Escribe tu destino..."
+                  initialValue={destinationInput}
+                  userLocation={userLocation}
+                />
+                <TouchableOpacity 
+                  style={[
+                    styles.locationButton,
+                    loadingLocation === 'destination' && styles.locationButtonLoading
+                  ]}
+                  onPress={() => handleUseCurrentLocation('destination')}
+                  disabled={loadingLocation === 'destination'}
+                >
+                  {loadingLocation === 'destination' ? (
+                    <ActivityIndicator size="small" color={Colors.primary[500]} />
+                  ) : (
+                    <Navigation size={16} color={Colors.primary[500]} />
+                  )}
+                  <Text style={styles.locationButtonText}>
+                    {loadingLocation === 'destination' ? 'Obteniendo ubicación...' : 'Usar ubicación actual'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </>
           )}
         </View>
