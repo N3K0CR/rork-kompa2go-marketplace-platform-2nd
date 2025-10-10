@@ -1,228 +1,407 @@
-# Google Maps Destination Search Implementation
+# ✅ Implementación Completa: Búsqueda de Destinos con Google Maps y Negociación de Precios
 
-## ✅ Implementación Completada
+## 📋 Resumen
 
-Se ha implementado exitosamente la búsqueda de destinos usando Google Maps Places API, reemplazando el sistema anterior basado en tRPC.
+Se ha implementado exitosamente:
 
-## 📁 Archivos Creados/Modificados
+1. **Sistema de búsqueda de destinos con Google Maps Places API**
+2. **Sistema de negociación de precios competitivo con Uber**
+3. **Integración completa con el backend tRPC**
+4. **Componentes de UI listos para usar**
 
-### Nuevos Archivos
+---
 
-1. **`lib/google-maps.ts`**
-   - Configuración de API Keys por plataforma (iOS, Android, Web)
-   - Validación de configuración
-   - Constantes regionales para Costa Rica
+## 🗺️ Google Maps Places API
 
-2. **`src/modules/commute/services/places-service.ts`**
-   - Servicio completo de Google Places API
-   - Búsqueda de destinos con autocomplete
-   - Obtención de detalles de lugares
-   - Geocoding reverso (coordenadas → dirección)
-   - Manejo robusto de errores y timeouts
-   - Cancelación de búsquedas pendientes
+### Archivos Creados/Actualizados
 
-3. **`hooks/useDebounce.ts`**
-   - Hook para debounce de valores
-   - Retrasa actualizaciones hasta que el usuario deje de escribir
-   - Delay configurable (default: 500ms)
+#### 1. `lib/google-maps.ts`
+- Configuración de API Keys por plataforma
+- Validación de configuración
+- Configuración regional para Costa Rica
 
-4. **`src/modules/commute/hooks/useDestinationSearch.ts`**
-   - Hook personalizado para búsqueda de destinos
-   - Gestión de estado (results, loading, error)
-   - Integración con PlacesService
-   - Limpieza automática al desmontar
+#### 2. `src/modules/commute/services/places-service.ts`
+- `searchDestination()` - Búsqueda con autocomplete
+- `getPlaceDetails()` - Detalles de un lugar específico
+- `reverseGeocode()` - Convertir coordenadas a dirección
+- Manejo robusto de errores y timeouts
+- Cancelación de búsquedas pendientes
 
-5. **`components/commute/DestinationSearchInput.tsx`**
-   - Componente reutilizable de búsqueda
-   - Input con debounce automático
-   - Lista de resultados con scroll
-   - Indicadores de carga y error
-   - Botón para limpiar búsqueda
+#### 3. `hooks/useDebounce.ts`
+- Hook para debounce de 500ms
+- Evita búsquedas excesivas mientras el usuario escribe
 
-### Archivos Modificados
+#### 4. `src/modules/commute/hooks/useDestinationSearch.ts`
+- Hook personalizado para búsqueda de destinos
+- Manejo de estado (loading, error, results)
+- Integración con ubicación del usuario
 
-1. **`app/commute/search.tsx`**
-   - Integración del nuevo componente `DestinationSearchInput`
-   - Uso de Google Maps para geocoding reverso
-   - Eliminación de código obsoleto de tRPC
-   - Obtención automática de ubicación del usuario
+#### 5. `components/commute/DestinationSearchInput.tsx`
+- Componente de UI completo
+- Input con autocomplete
+- Lista de resultados con scroll
+- Manejo de errores visual
+- Botón para limpiar búsqueda
 
-## 🔧 Configuración Requerida
+### Configuración
 
-### 1. Variables de Entorno
-
-Agregar en `.env.local`:
-
-```bash
-# Google Maps API Key (requerido)
-EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=TU_API_KEY_AQUI
-
-# Opcional: Keys específicas por plataforma
-# EXPO_PUBLIC_GOOGLE_MAPS_IOS_KEY=tu_key_ios
-# EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_KEY=tu_key_android
-# EXPO_PUBLIC_GOOGLE_MAPS_WEB_KEY=tu_key_web
+```env
+# .env.local
+EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=AIzaSyAVnzJY7V-8GHqm3TlKAMcT3_Lavh_CK-E
 ```
 
-### 2. Google Cloud Console
+### Uso
 
-1. **Ir a**: https://console.cloud.google.com/
-2. **Crear/Seleccionar proyecto**
-3. **Habilitar APIs**:
-   - ✅ Places API
-   - ✅ Geocoding API
-   - ✅ Maps SDK for Android (si usas Android)
-   - ✅ Maps SDK for iOS (si usas iOS)
+```tsx
+import { DestinationSearchInput } from '@/components/commute/DestinationSearchInput';
 
-4. **Crear API Key**:
-   - APIs & Services → Credentials
-   - Create Credentials → API Key
-   - Copiar la key
-
-5. **Configurar Restricciones** (Producción):
-   - **Application restrictions**: Seleccionar plataformas
-   - **API restrictions**: Solo las APIs necesarias
-
-6. **Para Desarrollo**:
-   - Dejar sin restricciones temporalmente
-
-## 🚀 Características Implementadas
-
-### Búsqueda de Destinos
-- ✅ Autocomplete con Google Places API
-- ✅ Debounce de 500ms para optimizar requests
-- ✅ Cancelación automática de búsquedas anteriores
-- ✅ Timeout de 10 segundos
-- ✅ Bias de ubicación del usuario
-- ✅ Filtrado por país (Costa Rica)
-- ✅ Resultados en español
-
-### Manejo de Errores
-- ✅ Mensajes de error amigables
-- ✅ Manejo de errores de red
-- ✅ Manejo de timeouts
-- ✅ Manejo de límites de API
-- ✅ Fallback con coordenadas si falla geocoding
-
-### UX/UI
-- ✅ Indicador de carga durante búsqueda
-- ✅ Botón para limpiar búsqueda
-- ✅ Lista de resultados con scroll
-- ✅ Selección de resultado actualiza el input
-- ✅ Diseño responsive y accesible
-
-## 📊 Flujo de Búsqueda
-
-```
-Usuario escribe → Debounce (500ms) → PlacesService.searchDestination()
-                                              ↓
-                                    Google Places API
-                                              ↓
-                                    Resultados filtrados
-                                              ↓
-                                    Lista de sugerencias
-                                              ↓
-Usuario selecciona → PlacesService.getPlaceDetails()
-                                              ↓
-                                    Detalles completos
-                                              ↓
-                                    Callback con lugar seleccionado
+<DestinationSearchInput
+  onSelectDestination={(place) => {
+    console.log('Selected:', place);
+    // place contiene: place_id, name, formatted_address, geometry.location
+  }}
+  placeholder="¿A dónde vas?"
+  userLocation={{ latitude: 9.9281, longitude: -84.0907 }}
+/>
 ```
 
-## 🔍 Ejemplo de Uso
+---
+
+## 💰 Sistema de Negociación de Precios
+
+### Estrategia
+
+- **Objetivo**: Ofrecer precios 2-3% más bajos que Uber
+- **Primeros 10 viajes**: Sin necesidad de captura de pantalla
+- **A partir del viaje 11**: Requiere captura de pantalla del precio de Uber
+- **Verificación**: Análisis de tendencias y muestras aleatorias
+- **Penalización**: Bloqueo permanente por fraude
+
+### Archivos Creados
+
+#### 1. `src/shared/types/price-negotiation-types.ts`
+- `UberPriceComparison` - Datos de negociación
+- `UserNegotiationProfile` - Perfil del usuario
+- `PriceNegotiationSettings` - Configuración del sistema
+- `ScreenshotVerificationRequest` - Verificación de capturas
+- `PriceNegotiationAnalytics` - Métricas del sistema
+
+#### 2. `src/modules/commute/services/price-negotiation-service.ts`
+- `getUserProfile()` - Obtener perfil de negociación
+- `createOrGetUserProfile()` - Crear perfil si no existe
+- `createNegotiation()` - Crear nueva negociación
+- `completeNegotiation()` - Completar negociación exitosa
+- `reportFraud()` - Reportar fraude y bloquear usuario
+- `getUserNegotiations()` - Historial de negociaciones
+- `calculateNegotiatedPrice()` - Calcular precio negociado
+
+#### 3. `backend/trpc/routes/commute/price-negotiation-routes.ts`
+- `getUserNegotiationProfile` - Query para perfil
+- `createPriceNegotiation` - Mutation para crear negociación
+- `completePriceNegotiation` - Mutation para completar
+- `detectFraud` - Mutation para reportar fraude
+- `getUserNegotiations` - Query para historial
+- `getNegotiationAnalytics` - Query para analíticas
+
+#### 4. `components/commute/PriceNegotiationCard.tsx`
+- Componente de UI completo
+- Input para precio de Uber
+- Selector de captura de pantalla
+- Visualización de precio negociado
+- Indicador de descuento
+- Manejo de estados (loading, success, error)
+
+### Integración en Backend
 
 ```typescript
-import { DestinationSearchInput } from '@/components/commute/DestinationSearchInput';
-import { PlaceDetails } from '@/src/modules/commute/services/places-service';
+// backend/trpc/app-router.ts
+commute: createTRPCRouter({
+  // ... otras rutas
+  
+  // Price Negotiation Service
+  getUserNegotiationProfile: priceNegotiationRoutes.getUserNegotiationProfile,
+  createPriceNegotiation: priceNegotiationRoutes.createPriceNegotiation,
+  completePriceNegotiation: priceNegotiationRoutes.completePriceNegotiation,
+  getUserNegotiations: priceNegotiationRoutes.getUserNegotiations,
+  detectFraud: priceNegotiationRoutes.detectFraud,
+  getNegotiationAnalytics: priceNegotiationRoutes.getNegotiationAnalytics,
+}),
+```
 
-function MyScreen() {
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number }>();
+### Uso del Componente
 
-  const handleSelectDestination = (place: PlaceDetails) => {
-    console.log('Destino seleccionado:', {
-      name: place.name,
-      address: place.formatted_address,
-      lat: place.geometry.location.lat,
-      lng: place.geometry.location.lng,
+```tsx
+import { PriceNegotiationCard } from '@/components/commute/PriceNegotiationCard';
+import { trpc } from '@/lib/trpc';
+
+function TripScreen() {
+  const kommutePrice = 5000; // Precio calculado de Kommute
+  const userId = 'user-123';
+  
+  const createNegotiation = trpc.commute.createPriceNegotiation.useMutation();
+  
+  const handleNegotiate = async (uberPrice: number, screenshot?: string) => {
+    const result = await createNegotiation.mutateAsync({
+      userId,
+      origin: { latitude: 9.9, longitude: -84.0, address: 'San José' },
+      destination: { latitude: 9.8, longitude: -84.1, address: 'Escazú' },
+      distance: 5000,
+      kommuteOriginalPrice: kommutePrice,
+      uberReportedPrice: uberPrice,
+      screenshotBase64: screenshot,
     });
+    
+    console.log('Negotiated price:', result.kommuteNegotiatedPrice);
+    console.log('Discount:', result.discountPercentage + '%');
   };
-
+  
   return (
-    <DestinationSearchInput
-      onSelectDestination={handleSelectDestination}
-      placeholder="¿A dónde vas?"
-      userLocation={userLocation}
+    <PriceNegotiationCard
+      kommutePrice={kommutePrice}
+      onNegotiate={handleNegotiate}
+      tripNumber={5}
+      requiresScreenshot={false}
     />
   );
 }
 ```
 
-## 🐛 Solución de Problemas
+---
 
-### Error: "Failed to fetch"
-- **Causa**: No hay conexión a internet o API Key inválida
-- **Solución**: Verificar conexión y API Key en `.env.local`
+## 🗄️ Estructura de Firestore
 
-### Error: "REQUEST_DENIED"
-- **Causa**: API Key sin permisos o Places API no habilitada
-- **Solución**: Habilitar Places API en Google Cloud Console
+### Colecciones Creadas
 
-### Error: "OVER_QUERY_LIMIT"
-- **Causa**: Límite de consultas excedido
-- **Solución**: Esperar o aumentar límite en Google Cloud Console
+#### `user_negotiation_profiles`
+```typescript
+{
+  userId: string;
+  totalNegotiations: number;
+  successfulNegotiations: number;
+  fraudAttempts: number;
+  isBlocked: boolean;
+  blockReason?: string;
+  blockedAt?: Timestamp;
+  freeNegotiationsRemaining: number;
+  requiresScreenshotAfterTrip: number; // 11
+  averageDiscount: number;
+  totalSavings: number;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+```
 
-### Los resultados no se mantienen en pantalla
-- **Causa**: El componente se desmonta o el estado se limpia
-- **Solución**: Los resultados se limpian automáticamente al seleccionar un lugar (comportamiento esperado)
+#### `price_negotiations`
+```typescript
+{
+  id: string;
+  userId: string;
+  tripId?: string;
+  origin: { latitude, longitude, address };
+  destination: { latitude, longitude, address };
+  distance: number;
+  kommuteOriginalPrice: number;
+  uberReportedPrice: number;
+  kommuteNegotiatedPrice: number;
+  discountPercentage: number;
+  tripNumber: number;
+  requiresScreenshot: boolean;
+  screenshotUrl?: string;
+  screenshotVerified: boolean;
+  screenshotVerifiedAt?: Timestamp;
+  status: 'pending' | 'active' | 'completed' | 'rejected' | 'fraud_detected';
+  fraudReason?: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  completedAt?: Timestamp;
+}
+```
 
-## 📝 Notas Importantes
+#### `screenshot_verifications`
+```typescript
+{
+  id: string;
+  negotiationId: string;
+  userId: string;
+  screenshotUrl: string;
+  autoVerificationStatus: 'pending' | 'passed' | 'failed' | 'needs_manual_review';
+  autoVerificationConfidence: number;
+  detectedPrice?: number;
+  detectedApp?: 'uber' | 'didi' | 'other' | 'unknown';
+  manualReviewRequired: boolean;
+  manualReviewStatus?: 'pending' | 'approved' | 'rejected';
+  reviewedBy?: string;
+  reviewedAt?: Timestamp;
+  reviewNotes?: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+```
 
-1. **Debounce**: El componente espera 500ms después de que el usuario deje de escribir antes de hacer la búsqueda
-2. **Cancelación**: Las búsquedas anteriores se cancelan automáticamente cuando se inicia una nueva
-3. **Timeout**: Las búsquedas tienen un timeout de 10 segundos
-4. **Limpieza**: El componente limpia recursos automáticamente al desmontarse
-5. **Ubicación**: Si se proporciona la ubicación del usuario, los resultados se ordenan por proximidad
+---
 
-## ✅ Persistencia de Datos
+## 🔧 Configuración de Google Cloud
 
-### Estado Actual
-La persistencia ya está correctamente implementada en el proyecto:
+### APIs Habilitadas
+- ✅ Places API
+- ✅ Geocoding API
+- ✅ Maps SDK for Android (opcional)
+- ✅ Maps SDK for iOS (opcional)
 
-1. **Kommuter Panel**:
-   - ✅ Promociones y colaboraciones se cargan desde Firestore
-   - ✅ Los switches actualizan Firestore al cambiar
-   - ✅ El estado persiste entre sesiones
+### Restricciones de API Key (Producción)
+1. **Application restrictions**: Restringir por bundle ID/package name
+2. **API restrictions**: Solo Places API y Geocoding API
+3. **Quotas**: Monitorear uso diario
 
-2. **Admin Context**:
-   - ✅ Maneja errores de permisos gracefully
-   - ✅ Usa métricas por defecto si no hay acceso
-   - ✅ El error de "permission-denied" es solo informativo
+---
 
-### Verificación
-Para verificar que la persistencia funciona:
+## 📊 Flujo de Negociación
 
-1. Abrir Kommuter Panel
-2. Cambiar el estado de una promoción/colaboración
-3. Verificar en consola: `[KommuterPanel] Promotion toggled: <id> <value>`
-4. Recargar la página
-5. El estado debe mantenerse
+```mermaid
+graph TD
+    A[Usuario ve precio Kommute] --> B{¿Quiere negociar?}
+    B -->|No| C[Acepta precio Kommute]
+    B -->|Sí| D[Ingresa precio Uber]
+    D --> E{¿Viaje >= 11?}
+    E -->|No| F[Crear negociación sin captura]
+    E -->|Sí| G{¿Tiene captura?}
+    G -->|No| H[Error: Captura requerida]
+    G -->|Sí| I[Crear negociación con captura]
+    F --> J[Calcular descuento 2-3%]
+    I --> J
+    J --> K[Mostrar precio negociado]
+    K --> L[Usuario acepta]
+    L --> M[Completar negociación]
+    M --> N[Actualizar estadísticas]
+```
 
-Si el estado no persiste:
-- Verificar que hay datos en Firestore (`kommuter_promotions` y `brand_collaborations`)
-- Verificar permisos de Firestore
-- Revisar logs de consola para errores
+---
 
-## 🚀 Próximos Pasos
+## 🚀 Testing
 
-1. **Obtener API Key de Google Maps**
-2. **Configurar en `.env.local`**
-3. **Habilitar APIs en Google Cloud Console**
-4. **Probar búsqueda de destinos**
-5. **Configurar restricciones de API Key para producción**
+### 1. Búsqueda de Destinos
+```bash
+# Navegar a /commute/search
+# Escribir "San José" en el input de destino
+# Verificar que aparecen resultados
+# Seleccionar un resultado
+# Verificar que se muestra la información completa
+```
+
+### 2. Negociación de Precios
+```bash
+# Crear un viaje con precio Kommute de ₡5000
+# Ingresar precio Uber de ₡5200
+# Verificar que se calcula descuento 2-3%
+# Verificar que el precio final es menor que Uber
+# Repetir 10 veces
+# En el viaje 11, verificar que pide captura
+```
+
+### 3. Detección de Fraude
+```bash
+# Ingresar precios sospechosos (muy bajos)
+# Verificar que se detecta el patrón
+# Verificar que se bloquea el usuario
+# Verificar que no puede crear más negociaciones
+```
+
+---
+
+## 📈 Métricas y Analíticas
+
+### Endpoint de Analíticas
+```typescript
+const analytics = await trpc.commute.getNegotiationAnalytics.query({
+  startDate: '2025-01-01',
+  endDate: '2025-01-31',
+});
+
+console.log(analytics);
+// {
+//   totalNegotiations: 150,
+//   successfulNegotiations: 140,
+//   fraudDetections: 5,
+//   fraudRate: 3.33,
+//   conversionRate: 93.33,
+//   averageDiscount: 2.5,
+//   totalDiscountAmount: 15000
+// }
+```
+
+---
+
+## ⚠️ Consideraciones de Seguridad
+
+1. **Validación de Precios**: Verificar que los precios reportados sean razonables
+2. **Rate Limiting**: Limitar número de negociaciones por usuario/día
+3. **Análisis de Patrones**: Detectar usuarios con comportamiento sospechoso
+4. **Verificación de Capturas**: Implementar OCR para validar capturas automáticamente
+5. **Auditoría**: Registrar todas las negociaciones para análisis posterior
+
+---
+
+## 🔄 Próximos Pasos
+
+### Fase 1: Validación (Actual) ✅
+- [x] Implementar búsqueda de destinos
+- [x] Implementar negociación básica
+- [x] Crear componentes de UI
+- [x] Integrar con backend
+
+### Fase 2: Verificación Automática
+- [ ] Implementar OCR para capturas de pantalla
+- [ ] Detectar app (Uber, DiDi, etc.) en captura
+- [ ] Extraer precio automáticamente
+- [ ] Validar coherencia de datos
+
+### Fase 3: Machine Learning
+- [ ] Entrenar modelo para detectar fraude
+- [ ] Predecir precios de Uber basado en histórico
+- [ ] Optimizar descuentos dinámicamente
+- [ ] Análisis de tendencias de mercado
+
+### Fase 4: Expansión
+- [ ] Agregar más competidores (DiDi, Cabify, etc.)
+- [ ] Negociación multi-plataforma
+- [ ] Programa de lealtad por negociaciones exitosas
+- [ ] Gamificación del sistema
+
+---
 
 ## 📞 Soporte
 
-Si encuentras problemas:
-1. Verificar logs de consola
-2. Verificar configuración de API Key
-3. Verificar que Places API está habilitada
-4. Verificar conexión a internet
+Si encuentras algún error o tienes preguntas:
+
+1. Revisa los logs del backend: `console.log` en tRPC routes
+2. Revisa los logs del frontend: `console.log` en componentes
+3. Verifica la configuración de Google Maps API Key
+4. Verifica las reglas de Firestore
+5. Verifica que el backend esté corriendo en puerto 8082
+
+---
+
+## ✅ Checklist de Implementación
+
+- [x] Google Maps API Key configurada
+- [x] Places API habilitada
+- [x] Geocoding API habilitada
+- [x] Servicio de búsqueda implementado
+- [x] Hook de búsqueda implementado
+- [x] Componente de búsqueda implementado
+- [x] Tipos de negociación definidos
+- [x] Servicio de negociación implementado
+- [x] Rutas tRPC implementadas
+- [x] Componente de negociación implementado
+- [x] Integración con Firestore
+- [x] Manejo de errores
+- [x] Testing básico
+- [ ] Testing en producción
+- [ ] Monitoreo de métricas
+- [ ] Optimización de costos de API
+
+---
+
+**Estado**: ✅ Implementación Completa y Lista para Testing
+
+**Última actualización**: 2025-01-10
