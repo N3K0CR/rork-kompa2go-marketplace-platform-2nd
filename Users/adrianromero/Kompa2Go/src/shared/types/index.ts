@@ -3,6 +3,11 @@ export * from './referral-types';
 export * from './accessibility-types';
 export * from './kommute-wallet-types';
 export * from './provider-types';
+export * from './chat-types';
+export * from './notification-types';
+export * from './rating-types';
+export * from './help-types';
+export * from './emergency-types';
 
 export interface LogoServiceRequest {
   id?: string;
