@@ -95,7 +95,9 @@ export const [AdminContext, useAdmin] = createContextHook<AdminContextType>(() =
           recentActivity: data.recentActivity || []
         };
         setMetrics(loadedMetrics);
+        console.log('[Admin] Metrics loaded from Firestore');
       } else {
+        console.log('[Admin] No metrics document found, using defaults');
         const defaultMetrics: AdminMetrics = {
           totalUsers: 0,
           totalKommuters: 0,
@@ -112,10 +114,28 @@ export const [AdminContext, useAdmin] = createContextHook<AdminContextType>(() =
         };
         setMetrics(defaultMetrics);
       }
-      console.log('[Admin] Metrics refreshed');
-    } catch (err) {
-      console.error('[Admin] Error refreshing metrics:', err);
-      setError(err instanceof Error ? err.message : 'Error al cargar métricas');
+    } catch (err: any) {
+      if (err?.code === 'permission-denied') {
+        console.warn('[Admin] Permission denied reading metrics, using defaults');
+        const defaultMetrics: AdminMetrics = {
+          totalUsers: 0,
+          totalKommuters: 0,
+          totalProviders: 0,
+          activeTrips: 0,
+          completedTripsToday: 0,
+          pendingRecharges: pendingRecharges.length,
+          pendingDistributions: pendingDistributions.length,
+          totalRevenueToday: 0,
+          totalRevenue30Days: 0,
+          averageTripPrice: 0,
+          topKommuters: [],
+          recentActivity: []
+        };
+        setMetrics(defaultMetrics);
+      } else {
+        console.error('[Admin] Error refreshing metrics:', err);
+        setError(err instanceof Error ? err.message : 'Error al cargar métricas');
+      }
     }
   }, [firebaseUser?.uid, pendingRecharges.length, pendingDistributions.length]);
 
