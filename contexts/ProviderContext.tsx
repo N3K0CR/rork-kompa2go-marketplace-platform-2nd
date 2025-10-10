@@ -247,9 +247,33 @@ export const [ProviderContext, useProvider] = createContextHook(() => {
 
   useEffect(() => {
     if (firebaseUser && firebaseUser.uid) {
-      loadProviderProfile(firebaseUser.uid);
-      loadServices(firebaseUser.uid);
-      loadModificationRequests(firebaseUser.uid);
+      console.log('[ProviderContext] Firebase user authenticated, loading provider data:', firebaseUser.uid);
+      
+      const loadData = async () => {
+        try {
+          await Promise.all([
+            loadProviderProfile(firebaseUser.uid).catch(err => {
+              console.warn('[ProviderContext] Profile load failed (may not exist):', err.message);
+            }),
+            loadServices(firebaseUser.uid).catch(err => {
+              console.warn('[ProviderContext] Services load failed:', err.message);
+            }),
+            loadModificationRequests(firebaseUser.uid).catch(err => {
+              console.warn('[ProviderContext] Modification requests load failed:', err.message);
+            })
+          ]);
+        } catch (err) {
+          console.error('[ProviderContext] Error loading provider data:', err);
+        }
+      };
+      
+      loadData();
+    } else {
+      console.log('[ProviderContext] No Firebase user, clearing provider data');
+      setProfile(null);
+      setServices([]);
+      setModificationRequests([]);
+      setError(null);
     }
   }, [firebaseUser, loadProviderProfile, loadServices, loadModificationRequests]);
 

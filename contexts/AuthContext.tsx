@@ -35,11 +35,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const { firebaseUser } = useFirebaseAuth();
+  const { firebaseUser, loading: firebaseLoading } = useFirebaseAuth();
 
   useEffect(() => {
-    loadStoredUser();
-  }, []);
+    if (!firebaseLoading) {
+      loadStoredUser();
+    }
+  }, [firebaseLoading]);
 
   useEffect(() => {
     if (!firebaseUser && user) {
@@ -93,11 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => {
     try {
       console.log('[AuthContext] SignIn attempt:', { email, hasPassword: !!password });
-      
-      if (!firebaseUser) {
-        console.error('[AuthContext] No Firebase user found');
-        throw new Error('Debe autenticarse con Firebase primero');
-      }
+      setLoading(true);
       
       // Test users as specified
       const testUsers = [
@@ -184,16 +182,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('[AuthContext] User state updated successfully');
     } catch (error: any) {
       console.error('[AuthContext] SignIn error:', error);
-      // Re-throw the original error message if it exists, otherwise use generic message
       throw new Error(error.message || 'Error al iniciar sesión');
+    } finally {
+      setLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string, userData: Partial<User>) => {
     try {
-      if (!firebaseUser) {
-        throw new Error('Debe autenticarse con Firebase primero');
-      }
+      setLoading(true);
       
       const userType = userData.userType || 'client';
       const uniqueId = userType !== 'admin' ? generateUniqueId(userType) : undefined;
@@ -220,6 +217,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(newUser);
     } catch (error) {
       throw new Error('Error al crear cuenta');
+    } finally {
+      setLoading(false);
     }
   };
 
