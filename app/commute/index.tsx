@@ -167,9 +167,39 @@ export default function CommuteHome() {
       
       await new Promise(resolve => setTimeout(resolve, 400));
       
-      const results = await trpcClient.geocoding.search.query({ query, countryCode: 'cr' });
-      
-      console.log('Search results:', results.length, 'items found for:', query);
+      let results;
+      try {
+        results = await trpcClient.geocoding.search.query({ query, countryCode: 'cr' });
+        console.log('✅ Backend search results:', results.length, 'items found for:', query);
+      } catch (backendError) {
+        console.warn('⚠️ Backend unavailable, using direct Nominatim API');
+        
+        const searchQuery = query.includes('Costa Rica') ? query : `${query}, Costa Rica`;
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=8&addressdetails=1&countrycodes=cr`;
+        
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'Kompa2Go/1.0',
+            'Accept': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Geocoding failed: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        results = data.map((item: any) => ({
+          placeId: item.place_id,
+          displayName: item.display_name,
+          latitude: parseFloat(item.lat),
+          longitude: parseFloat(item.lon),
+          address: item.display_name,
+        }));
+        
+        console.log('✅ Direct API search results:', results.length, 'items found for:', query);
+      }
       
       const suggestions: AddressSuggestion[] = results.map((result: { placeId: number; displayName: string; latitude: number; longitude: number; address: string }) => ({
         place_id: result.placeId.toString(),
@@ -187,13 +217,7 @@ export default function CommuteHome() {
       if (error instanceof Error) {
         console.error('Error searching destination:', error.message);
         
-        if (error.message.includes('Failed to fetch') || error.message.includes('fetch')) {
-          Alert.alert(
-            'Error de Conexión',
-            'No se pudo conectar con el servidor. Por favor verifica que el backend esté ejecutándose.\n\nPara iniciar el backend:\nbash start-backend-now.sh',
-            [{ text: 'OK' }]
-          );
-        } else if (error.message.includes('Rate limit')) {
+        if (error.message.includes('Rate limit')) {
           Alert.alert('Límite de búsqueda', 'Por favor espera un momento antes de buscar de nuevo.');
         } else {
           Alert.alert(
