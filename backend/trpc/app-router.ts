@@ -33,6 +33,7 @@ import {
 import { registrationRouter } from './routes/registration/routes';
 import { geocodingRouter } from './routes/geocoding/routes';
 import * as kommuteWalletRoutes from '@/Users/adrianromero/Kompa2Go/backend/trpc/routes/kommute-wallet/routes';
+import * as priceNegotiationRoutes from './routes/commute/price-negotiation-routes';
 
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
@@ -136,6 +137,14 @@ export const appRouter = createTRPCRouter({
     getSurgePricingAnalytics: getSurgePricingAnalyticsProcedure,
     getMultiZoneSurgePrice: getMultiZoneSurgePricingProcedure,
     getSurgeHeatmap: getSurgeHeatmapProcedure,
+    
+    // Price Negotiation Service
+    getUserNegotiationProfile: priceNegotiationRoutes.getUserNegotiationProfile,
+    createPriceNegotiation: priceNegotiationRoutes.createPriceNegotiation,
+    completePriceNegotiation: priceNegotiationRoutes.completePriceNegotiation,
+    getUserNegotiations: priceNegotiationRoutes.getUserNegotiations,
+    detectFraud: priceNegotiationRoutes.detectFraud,
+    getNegotiationAnalytics: priceNegotiationRoutes.getNegotiationAnalytics,
   }),
 });
 
