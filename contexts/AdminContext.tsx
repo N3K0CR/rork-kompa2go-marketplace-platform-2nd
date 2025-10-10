@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import createContextHook from '@nkzw/create-context-hook';
 import { trpc } from '@/lib/trpc';
 import { useFirebaseAuth } from './FirebaseAuthContext';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import type {
   AdminMetrics,
   RechargeApprovalStats,
@@ -74,26 +76,42 @@ export const [AdminContext, useAdmin] = createContextHook<AdminContextType>(() =
       setError(null);
       console.log('[Admin] Refreshing metrics');
 
-      const mockMetrics: AdminMetrics = {
-        totalUsers: 150,
-        totalKommuters: 45,
-        totalProviders: 30,
-        activeTrips: 12,
-        completedTripsToday: 87,
-        pendingRecharges: pendingRecharges.length,
-        pendingDistributions: pendingDistributions.length,
-        totalRevenueToday: 450000,
-        totalRevenue30Days: 12500000,
-        averageTripPrice: 3500,
-        topKommuters: [
-          { id: '1', name: 'Juan Pérez', tripsCompleted: 234, earnings: 820000 },
-          { id: '2', name: 'María González', tripsCompleted: 198, earnings: 693000 },
-          { id: '3', name: 'Carlos Rodríguez', tripsCompleted: 176, earnings: 616000 }
-        ],
-        recentActivity: []
-      };
-
-      setMetrics(mockMetrics);
+      const metricsDoc = await getDoc(doc(db, 'admin_metrics', 'current'));
+      
+      if (metricsDoc.exists()) {
+        const data = metricsDoc.data();
+        const loadedMetrics: AdminMetrics = {
+          totalUsers: data.totalUsers || 0,
+          totalKommuters: data.totalKommuters || 0,
+          totalProviders: data.totalProviders || 0,
+          activeTrips: data.activeTrips || 0,
+          completedTripsToday: data.completedTripsToday || 0,
+          pendingRecharges: pendingRecharges.length,
+          pendingDistributions: pendingDistributions.length,
+          totalRevenueToday: data.totalRevenueToday || 0,
+          totalRevenue30Days: data.totalRevenue30Days || 0,
+          averageTripPrice: data.averageTripPrice || 0,
+          topKommuters: data.topKommuters || [],
+          recentActivity: data.recentActivity || []
+        };
+        setMetrics(loadedMetrics);
+      } else {
+        const defaultMetrics: AdminMetrics = {
+          totalUsers: 0,
+          totalKommuters: 0,
+          totalProviders: 0,
+          activeTrips: 0,
+          completedTripsToday: 0,
+          pendingRecharges: pendingRecharges.length,
+          pendingDistributions: pendingDistributions.length,
+          totalRevenueToday: 0,
+          totalRevenue30Days: 0,
+          averageTripPrice: 0,
+          topKommuters: [],
+          recentActivity: []
+        };
+        setMetrics(defaultMetrics);
+      }
       console.log('[Admin] Metrics refreshed');
     } catch (err) {
       console.error('[Admin] Error refreshing metrics:', err);
