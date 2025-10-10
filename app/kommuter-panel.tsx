@@ -37,6 +37,8 @@ import type { KommuterRegistrationData, VehicleData } from '@/src/shared/types/r
 import { alertTrackingService } from '@/src/modules/alerts/services/alert-tracking-service';
 import type { DriverTrackingSession } from '@/src/shared/types/alert-types';
 import SecurityVerificationModal from '@/components/SecurityVerificationModal';
+import { firestoreKommuterSettingsService } from '@/src/modules/kommuter/services/firestore-kommuter-settings-service';
+import type { Promotion, BrandCollaboration } from '@/src/modules/kommuter/services/firestore-kommuter-settings-service';
 
 type AlertType = 'danger' | 'rating' | 'complaint';
 type AlertStatus = 'active' | 'resolved' | 'investigating' | 'awaiting_verification';
@@ -54,23 +56,7 @@ interface DriverAlert {
   priority: 'low' | 'medium' | 'high' | 'critical';
 }
 
-interface Promotion {
-  id: string;
-  title: string;
-  description: string;
-  discount: number;
-  validUntil: Date;
-  active: boolean;
-  type: 'percentage' | 'fixed';
-}
 
-interface BrandCollaboration {
-  id: string;
-  brandName: string;
-  description: string;
-  benefit: string;
-  active: boolean;
-}
 
 interface PendingKommuter {
   id: string;
@@ -116,27 +102,9 @@ export default function KommuterPanel() {
   const [showSecurityVerificationModal, setShowSecurityVerificationModal] = useState(false);
   const [verificationAlert, setVerificationAlert] = useState<DriverAlert | null>(null);
 
-  const [promotions, setPromotions] = useState<Promotion[]>([
-    {
-      id: '1',
-      title: 'Descuento Fin de Semana',
-      description: 'Viajes con 15% de descuento',
-      discount: 15,
-      validUntil: new Date('2025-12-31'),
-      active: true,
-      type: 'percentage'
-    }
-  ]);
-
-  const [collaborations, setCollaborations] = useState<BrandCollaboration[]>([
-    {
-      id: '1',
-      brandName: 'Café Britt',
-      description: 'Descuentos en productos',
-      benefit: '10% descuento en tienda',
-      active: true
-    }
-  ]);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [collaborations, setCollaborations] = useState<BrandCollaboration[]>([]);
+  const [loadingSettings, setLoadingSettings] = useState(true);
 
   const [driverAlerts, setDriverAlerts] = useState<DriverAlert[]>([
     {
@@ -250,6 +218,7 @@ export default function KommuterPanel() {
 
   useEffect(() => {
     initializeAuth();
+    loadSettings();
   }, []);
 
   const initializeAuth = async () => {
@@ -264,6 +233,28 @@ export default function KommuterPanel() {
       console.error('[KommuterPanel] Auth initialization error:', error);
       setAuthError('Error de autenticación. Por favor recarga la página.');
       setLoadingKommuters(false);
+    }
+  };
+
+  const loadSettings = async () => {
+    try {
+      setLoadingSettings(true);
+      console.log('[KommuterPanel] Loading settings from Firestore');
+      
+      const [loadedPromotions, loadedCollaborations] = await Promise.all([
+        firestoreKommuterSettingsService.getPromotions(),
+        firestoreKommuterSettingsService.getCollaborations()
+      ]);
+      
+      setPromotions(loadedPromotions);
+      setCollaborations(loadedCollaborations);
+      
+      console.log('[KommuterPanel] Settings loaded successfully');
+    } catch (error) {
+      console.error('[KommuterPanel] Error loading settings:', error);
+      Alert.alert('Error', 'No se pudieron cargar las configuraciones');
+    } finally {
+      setLoadingSettings(false);
     }
   };
 
@@ -521,10 +512,17 @@ export default function KommuterPanel() {
                 <Text style={styles.promoTitle}>{promo.title}</Text>
                 <Switch
                   value={promo.active}
-                  onValueChange={(value) => {
-                    setPromotions(prev => 
-                      prev.map(p => p.id === promo.id ? { ...p, active: value } : p)
-                    );
+                  onValueChange={async (value) => {
+                    try {
+                      await firestoreKommuterSettingsService.togglePromotionActive(promo.id, value);
+                      setPromotions(prev => 
+                        prev.map(p => p.id === promo.id ? { ...p, active: value } : p)
+                      );
+                      console.log('[KommuterPanel] Promotion toggled:', promo.id, value);
+                    } catch (error) {
+                      console.error('[KommuterPanel] Error toggling promotion:', error);
+                      Alert.alert('Error', 'No se pudo actualizar la promoción');
+                    }
                   }}
                   trackColor={{ false: '#ccc', true: '#65ea06' }}
                   thumbColor={promo.active ? '#fff' : '#f4f3f4'}
@@ -559,10 +557,17 @@ export default function KommuterPanel() {
                 <Text style={styles.collabBrand}>{collab.brandName}</Text>
                 <Switch
                   value={collab.active}
-                  onValueChange={(value) => {
-                    setCollaborations(prev => 
-                      prev.map(c => c.id === collab.id ? { ...c, active: value } : c)
-                    );
+                  onValueChange={async (value) => {
+                    try {
+                      await firestoreKommuterSettingsService.toggleCollaborationActive(collab.id, value);
+                      setCollaborations(prev => 
+                        prev.map(c => c.id === collab.id ? { ...c, active: value } : c)
+                      );
+                      console.log('[KommuterPanel] Collaboration toggled:', collab.id, value);
+                    } catch (error) {
+                      console.error('[KommuterPanel] Error toggling collaboration:', error);
+                      Alert.alert('Error', 'No se pudo actualizar la colaboración');
+                    }
                   }}
                   trackColor={{ false: '#ccc', true: '#007AFF' }}
                   thumbColor={collab.active ? '#fff' : '#f4f3f4'}
