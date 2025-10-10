@@ -246,18 +246,35 @@ export const [ProviderContext, useProvider] = createContextHook(() => {
   }, [loadProviderProfile]);
 
   useEffect(() => {
-    if (user && user.uid) {
-      console.log('[ProviderContext] User authenticated, loading provider data:', user.uid);
-      loadProviderProfile(user.uid);
-      loadServices(user.uid);
-      loadModificationRequests(user.uid);
-    } else {
+    if (!user) {
       console.log('[ProviderContext] No authenticated user, clearing provider data');
       setProfile(null);
       setServices([]);
       setModificationRequests([]);
+      return;
     }
-  }, [user?.uid, loadProviderProfile, loadServices, loadModificationRequests]);
+
+    if (!user.uid) {
+      console.log('[ProviderContext] User object exists but no UID yet');
+      return;
+    }
+
+    console.log('[ProviderContext] User authenticated, loading provider data:', user.uid);
+    
+    const loadData = async () => {
+      try {
+        await Promise.all([
+          loadProviderProfile(user.uid),
+          loadServices(user.uid),
+          loadModificationRequests(user.uid)
+        ]);
+      } catch (error) {
+        console.error('[ProviderContext] Error loading provider data:', error);
+      }
+    };
+
+    loadData();
+  }, [user, loadProviderProfile, loadServices, loadModificationRequests]);
 
   return useMemo(() => ({
     profile,

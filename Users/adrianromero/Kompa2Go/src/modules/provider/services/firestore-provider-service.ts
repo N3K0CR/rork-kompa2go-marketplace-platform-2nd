@@ -1,10 +1,9 @@
-import { db, storage } from '@/lib/firebase';
+import { db, storage, auth } from '@/lib/firebase';
 import {
   collection,
   doc,
   getDoc,
   getDocs,
-
   updateDoc,
   deleteDoc,
   query,
@@ -15,6 +14,44 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import type { ProviderService, ServiceModificationRequest, ProviderProfile } from '@/src/shared/types/provider-types';
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function ensureAuthenticated(): Promise<void> {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error('Usuario no autenticado. Por favor inicia sesión.');
+  }
+  
+  try {
+    await currentUser.getIdToken(true);
+    console.log('[ProviderService] Auth token refreshed successfully');
+  } catch (error) {
+    console.error('[ProviderService] Error refreshing auth token:', error);
+    throw new Error('Error al verificar autenticación. Por favor inicia sesión nuevamente.');
+  }
+}
+
+async function retryWithAuth<T>(fn: () => Promise<T>, maxRetries = 2): Promise<T> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      await ensureAuthenticated();
+      return await fn();
+    } catch (error: any) {
+      const isPermissionError = error?.code === 'permission-denied' || 
+                                error?.message?.includes('permission-denied') ||
+                                error?.message?.includes('Missing or insufficient permissions');
+      
+      if (isPermissionError && i < maxRetries - 1) {
+        console.log(`[ProviderService] Permission denied, retrying (${i + 1}/${maxRetries})...`);
+        await delay(1000 * (i + 1));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new Error('Max retries reached');
+}
 
 export class ProviderServiceManager {
   async getProviderProfile(providerId: string): Promise<ProviderProfile | null> {
@@ -69,7 +106,7 @@ export class ProviderServiceManager {
   }
 
   async getProviderServices(providerId: string): Promise<ProviderService[]> {
-    try {
+    return retryWithAuth(async () => {
       console.log('[ProviderService] Getting services for provider:', providerId);
       const servicesQuery = query(
         collection(db, 'provider_services'),
@@ -102,10 +139,7 @@ export class ProviderServiceManager {
 
       console.log('[ProviderService] Found services:', services.length);
       return services;
-    } catch (error) {
-      console.error('[ProviderService] Error getting services:', error);
-      throw error;
-    }
+    });
   }
 
   async addService(providerId: string, service: Omit<ProviderService, 'id' | 'providerId' | 'createdAt' | 'updatedAt'>): Promise<string> {
@@ -235,7 +269,7 @@ export class ProviderServiceManager {
   }
 
   async getPriceModificationRequests(providerId: string): Promise<ServiceModificationRequest[]> {
-    try {
+    return retryWithAuth(async () => {
       console.log('[ProviderService] Getting price modification requests for provider:', providerId);
       const requestsQuery = query(
         collection(db, 'service_modification_requests'),
@@ -266,10 +300,7 @@ export class ProviderServiceManager {
 
       console.log('[ProviderService] Found modification requests:', requests.length);
       return requests;
-    } catch (error) {
-      console.error('[ProviderService] Error getting modification requests:', error);
-      throw error;
-    }
+    });
   }
 
   async uploadServicePhoto(providerId: string, serviceId: string, photoUri: string): Promise<string> {
