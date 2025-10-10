@@ -6,27 +6,26 @@ import {
   FlatList,
   TouchableOpacity,
   TextInput,
-  Image,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, MessageCircle, ArrowLeft } from 'lucide-react-native';
-import { useChat } from '@/contexts/ChatContext';
-import type { Chat } from '@/src/shared/types/chat-types';
+import { useChat, type Chat } from '@/contexts/ChatContext';
 
 export default function ChatsListScreen() {
   const { chats } = useChat();
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  const filteredChats = chats.filter((chat) =>
-    chat.participants.some((p) =>
-      p.userName.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  );
+  const filteredChats = chats.filter((chat) => {
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      chat.clientName.toLowerCase().includes(searchLower) ||
+      chat.providerName.toLowerCase().includes(searchLower)
+    );
+  });
 
   const renderChatItem = ({ item }: { item: Chat }) => {
-    const otherParticipant = item.participants[0];
-    const unreadCount = item.unreadCount[otherParticipant?.userId] || 0;
+    const otherParticipantName = item.providerName || item.clientName;
+    const unreadCount = item.unreadCount || 0;
 
     return (
       <TouchableOpacity
@@ -35,16 +34,16 @@ export default function ChatsListScreen() {
       >
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
-            {otherParticipant?.userName.charAt(0).toUpperCase()}
+            {otherParticipantName.charAt(0).toUpperCase()}
           </Text>
         </View>
 
         <View style={styles.chatInfo}>
           <View style={styles.chatHeader}>
-            <Text style={styles.chatName}>{otherParticipant?.userName}</Text>
-            {item.lastMessage && (
+            <Text style={styles.chatName}>{otherParticipantName}</Text>
+            {item.lastMessageTime && (
               <Text style={styles.timestamp}>
-                {new Date(item.lastMessage.timestamp).toLocaleDateString('es-DO', {
+                {new Date(item.lastMessageTime).toLocaleDateString('es-DO', {
                   month: 'short',
                   day: 'numeric',
                 })}
@@ -60,7 +59,7 @@ export default function ChatsListScreen() {
               ]}
               numberOfLines={1}
             >
-              {item.lastMessage?.content || 'Sin mensajes'}
+              {item.lastMessage || 'Sin mensajes'}
             </Text>
             {unreadCount > 0 && (
               <View style={styles.unreadBadge}>
@@ -74,7 +73,7 @@ export default function ChatsListScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <View style={styles.container}>
       <Stack.Screen
         options={{
           headerShown: true,
@@ -117,7 +116,7 @@ export default function ChatsListScreen() {
           contentContainerStyle={styles.chatsList}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

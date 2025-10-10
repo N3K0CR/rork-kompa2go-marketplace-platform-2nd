@@ -11,27 +11,27 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Stack, useLocalSearchParams, router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Send, ArrowLeft, MoreVertical, Phone, Video } from 'lucide-react-native';
-import { useChat } from '@/contexts/ChatContext';
-import type { ChatMessage } from '@/src/shared/types/chat-types';
+import { useChat, type ChatMessage } from '@/contexts/ChatContext';
 
 export default function ConversationScreen() {
   const { chatId } = useLocalSearchParams<{ chatId: string }>();
-  const { currentChat, messages, typingIndicators, sendMessage, setTyping, selectChat, clearCurrentChat } = useChat();
+  const { chats, sendMessage, markAsRead, getChatMessages } = useChat();
   const [inputText, setInputText] = useState<string>('');
   const [sending, setSending] = useState<boolean>(false);
+  const [currentChat, setCurrentChat] = useState<any>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const flatListRef = useRef<FlatList>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (chatId) {
-      selectChat(chatId);
+      const chat = chats.find(c => c.id === chatId);
+      setCurrentChat(chat);
+      const chatMessages = getChatMessages(chatId);
+      setMessages(chatMessages);
+      markAsRead(chatId);
     }
-    return () => {
-      clearCurrentChat();
-    };
-  }, [chatId, selectChat, clearCurrentChat]);
+  }, [chatId, chats, getChatMessages, markAsRead]);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -42,13 +42,12 @@ export default function ConversationScreen() {
   }, [messages]);
 
   const handleSend = async () => {
-    if (!inputText.trim() || sending) return;
+    if (!inputText.trim() || sending || !chatId) return;
 
     try {
       setSending(true);
-      await sendMessage(inputText.trim());
+      await sendMessage(chatId, inputText.trim());
       setInputText('');
-      setTyping(false);
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
@@ -58,23 +57,10 @@ export default function ConversationScreen() {
 
   const handleTextChange = (text: string) => {
     setInputText(text);
-
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    if (text.length > 0) {
-      setTyping(true);
-      typingTimeoutRef.current = setTimeout(() => {
-        setTyping(false);
-      }, 3000);
-    } else {
-      setTyping(false);
-    }
   };
 
   const renderMessage = ({ item }: { item: ChatMessage }) => {
-    const isOwnMessage = item.senderId === currentChat?.participants[0]?.userId;
+    const isOwnMessage = item.senderType === 'client';
 
     return (
       <View
@@ -107,7 +93,7 @@ export default function ConversationScreen() {
               isOwnMessage ? styles.ownMessageText : styles.otherMessageText,
             ]}
           >
-            {item.content}
+            {item.message}
           </Text>
           <Text
             style={[
@@ -115,7 +101,7 @@ export default function ConversationScreen() {
               isOwnMessage ? styles.ownTimestamp : styles.otherTimestamp,
             ]}
           >
-            {new Date(item.createdAt).toLocaleTimeString('es-DO', {
+            {new Date(item.timestamp).toLocaleTimeString('es-DO', {
               hour: '2-digit',
               minute: '2-digit',
             })}
@@ -125,16 +111,14 @@ export default function ConversationScreen() {
     );
   };
 
-  const otherParticipant = currentChat?.participants.find(
-    (p) => p.userId !== currentChat?.participants[0]?.userId
-  );
+  const otherParticipantName = currentChat?.providerName || currentChat?.clientName || 'Chat';
 
   return (
     <View style={styles.container}>
       <Stack.Screen
         options={{
           headerShown: true,
-          title: otherParticipant?.userName || 'Chat',
+          title: otherParticipantName,
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => router.back()}
@@ -174,14 +158,6 @@ export default function ConversationScreen() {
             flatListRef.current?.scrollToEnd({ animated: true })
           }
         />
-
-        {typingIndicators.length > 0 && (
-          <View style={styles.typingContainer}>
-            <Text style={styles.typingText}>
-              {typingIndicators[0].userName} está escribiendo...
-            </Text>
-          </View>
-        )}
 
         <View style={styles.inputContainer}>
           <TextInput
