@@ -1,54 +1,137 @@
 #!/bin/bash
 
-echo "🔥 Desplegando reglas e índices de Firestore..."
+echo "================================================"
+echo "🔥 DESPLIEGUE COMPLETO DE FIRESTORE - KOMMUTE"
+echo "================================================"
 echo ""
 
-# Verificar que Firebase CLI esté instalado
+# Colores para output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Verificar que Firebase CLI está instalado
 if ! command -v firebase &> /dev/null; then
-    echo "❌ Firebase CLI no está instalado"
-    echo "Instálalo con: npm install -g firebase-tools"
+    echo -e "${RED}❌ Firebase CLI no está instalado${NC}"
+    echo ""
+    echo "Instalar con:"
+    echo "  npm install -g firebase-tools"
+    echo ""
     exit 1
 fi
 
-# Verificar que el usuario esté autenticado
-echo "📋 Verificando autenticación..."
-firebase projects:list &> /dev/null
-if [ $? -ne 0 ]; then
-    echo "❌ No estás autenticado en Firebase"
-    echo "Ejecuta: firebase login"
-    exit 1
-fi
-
-echo "✅ Autenticación verificada"
+echo -e "${GREEN}✅ Firebase CLI encontrado${NC}"
 echo ""
 
-# Desplegar reglas de Firestore
-echo "📤 Desplegando reglas de Firestore..."
-firebase deploy --only firestore:rules
+# Verificar que estamos logueados
+echo "Verificando autenticación de Firebase..."
+if ! firebase projects:list &> /dev/null; then
+    echo -e "${RED}❌ No estás autenticado en Firebase${NC}"
+    echo ""
+    echo "Ejecuta primero:"
+    echo "  firebase login"
+    echo ""
+    exit 1
+fi
 
-if [ $? -eq 0 ]; then
-    echo "✅ Reglas desplegadas exitosamente"
+echo -e "${GREEN}✅ Autenticado en Firebase${NC}"
+echo ""
+
+# Mostrar proyecto actual
+echo "Proyecto actual:"
+firebase use
+echo ""
+
+# Confirmar despliegue
+echo -e "${YELLOW}⚠️  IMPORTANTE:${NC}"
+echo "  - Esto desplegará las reglas de seguridad Y los índices"
+echo "  - Las reglas e índices anteriores serán reemplazados"
+echo "  - Los cambios son inmediatos"
+echo ""
+read -p "¿Continuar con el despliegue? (s/n): " -n 1 -r
+echo ""
+
+if [[ ! $REPLY =~ ^[Ss]$ ]]; then
+    echo "Despliegue cancelado"
+    exit 0
+fi
+
+echo ""
+echo "================================================"
+echo "📋 PASO 1: Desplegando reglas de Firestore..."
+echo "================================================"
+echo ""
+
+# Desplegar reglas
+if firebase deploy --only firestore:rules; then
+    echo ""
+    echo -e "${GREEN}✅ Reglas desplegadas exitosamente${NC}"
+    echo ""
 else
-    echo "❌ Error al desplegar reglas"
+    echo ""
+    echo -e "${RED}❌ Error al desplegar reglas${NC}"
+    echo ""
     exit 1
 fi
 
 echo ""
+echo "================================================"
+echo "📊 PASO 2: Desplegando índices de Firestore..."
+echo "================================================"
+echo ""
 
-# Desplegar índices de Firestore
-echo "📤 Desplegando índices de Firestore..."
-firebase deploy --only firestore:indexes
-
-if [ $? -eq 0 ]; then
-    echo "✅ Índices desplegados exitosamente"
+# Desplegar índices
+if firebase deploy --only firestore:indexes; then
+    echo ""
+    echo -e "${GREEN}✅ Índices desplegados exitosamente${NC}"
+    echo ""
 else
-    echo "❌ Error al desplegar índices"
+    echo ""
+    echo -e "${RED}❌ Error al desplegar índices${NC}"
+    echo ""
     exit 1
 fi
 
 echo ""
-echo "🎉 ¡Despliegue completado!"
+echo -e "${GREEN}================================================${NC}"
+echo -e "${GREEN}✅ DESPLIEGUE COMPLETO EXITOSO${NC}"
+echo -e "${GREEN}================================================${NC}"
 echo ""
-echo "Los índices pueden tardar unos minutos en construirse."
-echo "Puedes verificar el progreso en:"
-echo "https://console.firebase.google.com/project/kompa2go/firestore/indexes"
+echo "Cambios aplicados:"
+echo "  ✅ Reglas de seguridad actualizadas"
+echo "  ✅ Índices compuestos creados:"
+echo "     - kommuters (status + createdAt)"
+echo "     - kommute_wallet_recharges (userId + createdAt)"
+echo "     - kommute_wallet_recharges (status + createdAt)"
+echo "     - kommute_wallet_transactions (userId + createdAt)"
+echo "     - kommute_payment_distributions (kommuterId + createdAt)"
+echo "     - kommuter_applications (status + createdAt)"
+echo "     - alert_tracking (userId + createdAt)"
+echo "     - alert_tracking (status + createdAt)"
+echo "     - system_transactions (type + createdAt)"
+echo "     - trip_locations (kommuterId + status)"
+echo "     - kommuter_status (status + metadata.acceptingTrips)"
+echo "     - service_requests (providerId + createdAt)"
+echo "     - service_requests (status + createdAt)"
+echo "     - price_modification_requests (providerId + createdAt)"
+echo "     - chats (status + updatedAt)"
+echo "     - messages (chatId + createdAt)"
+echo "     - messages (chatId + senderId + read)"
+echo "     - ratings (toUserId + status + createdAt)"
+echo "     - ratings (fromUserId + status + createdAt)"
+echo "     - ratingPrompts (userId + status + createdAt)"
+echo "     - helpArticles (status + language + views)"
+echo "     - supportTickets (userId + createdAt)"
+echo "     - faqs (status + language + order)"
+echo "     - emergencyAlerts (userId + status + createdAt)"
+echo "     - emergencyContacts (userId + priority)"
+echo ""
+echo -e "${YELLOW}⚠️  NOTA:${NC}"
+echo "  Los índices pueden tardar unos minutos en estar completamente activos"
+echo "  Puedes verificar el estado en Firebase Console:"
+echo "  https://console.firebase.google.com/project/kompa2go/firestore/indexes"
+echo ""
+echo "================================================"
+echo "🎉 PROCESO COMPLETADO"
+echo "================================================"
