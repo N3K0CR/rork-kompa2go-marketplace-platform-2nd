@@ -732,3 +732,56 @@ export function adjustPrice(currentPrice: number, direction: 'up' | 'down'): num
   const newPrice = currentPrice + adjustment;
   return roundToNearestCurrency(newPrice);
 }
+
+/**
+ * Calcula precio competitivo con Uber (2-3% más barato)
+ * @param uberPrice Precio reportado de Uber
+ * @param discountPercentage Porcentaje de descuento (2-3%)
+ * @returns Precio de Kommute más competitivo
+ */
+export function calculateCompetitivePrice(
+  uberPrice: number,
+  discountPercentage: number = 2.5
+): number {
+  const discount = Math.min(Math.max(discountPercentage, 2), 3);
+  const competitivePrice = uberPrice * (1 - discount / 100);
+  return roundToNearestCurrency(competitivePrice);
+}
+
+/**
+ * Valida si un precio de Uber es razonable comparado con el precio de Kommute
+ * @param uberPrice Precio reportado de Uber
+ * @param kommutePrice Precio calculado de Kommute
+ * @param maxDifferencePercentage Diferencia máxima permitida (default 50%)
+ * @returns true si el precio es válido
+ */
+export function validateUberPrice(
+  uberPrice: number,
+  kommutePrice: number,
+  maxDifferencePercentage: number = 50
+): { isValid: boolean; reason?: string } {
+  const difference = Math.abs(uberPrice - kommutePrice) / kommutePrice;
+  
+  if (difference > maxDifferencePercentage / 100) {
+    return {
+      isValid: false,
+      reason: `Diferencia de precio sospechosa: ${(difference * 100).toFixed(0)}%`,
+    };
+  }
+  
+  if (uberPrice < kommutePrice * 0.5) {
+    return {
+      isValid: false,
+      reason: 'Precio de Uber demasiado bajo (posible error)',
+    };
+  }
+  
+  if (uberPrice > kommutePrice * 2) {
+    return {
+      isValid: false,
+      reason: 'Precio de Uber demasiado alto (posible error)',
+    };
+  }
+  
+  return { isValid: true };
+}
