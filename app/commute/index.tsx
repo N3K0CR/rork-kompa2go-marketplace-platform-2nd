@@ -186,8 +186,21 @@ export default function CommuteHome() {
     } catch (error) {
       if (error instanceof Error) {
         console.error('Error searching destination:', error.message);
-        if (error.message.includes('Rate limit')) {
+        
+        if (error.message.includes('Failed to fetch') || error.message.includes('fetch')) {
+          Alert.alert(
+            'Error de Conexión',
+            'No se pudo conectar con el servidor. Por favor verifica que el backend esté ejecutándose.\n\nPara iniciar el backend:\nbash start-backend-now.sh',
+            [{ text: 'OK' }]
+          );
+        } else if (error.message.includes('Rate limit')) {
           Alert.alert('Límite de búsqueda', 'Por favor espera un momento antes de buscar de nuevo.');
+        } else {
+          Alert.alert(
+            'Error de Búsqueda',
+            `No se pudo realizar la búsqueda: ${error.message}`,
+            [{ text: 'OK' }]
+          );
         }
       }
       setSuggestions([]);
