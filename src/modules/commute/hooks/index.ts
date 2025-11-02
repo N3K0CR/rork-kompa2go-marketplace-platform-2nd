@@ -14,6 +14,9 @@ export {
   useLocationTracking,
 } from './useCommute';
 
+// Location hooks
+export { useCurrentLocation } from './useCurrentLocation';
+
 // Trip chaining specialized hooks
 export {
   useTripChaining,
