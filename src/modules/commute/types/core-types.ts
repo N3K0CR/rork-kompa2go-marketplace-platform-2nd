@@ -71,6 +71,7 @@ export interface Trip {
   id: string;
   routeId: string;
   userId: string;
+  role: string;
   startTime: Date;
   endTime?: Date;
   actualDistance?: number;
