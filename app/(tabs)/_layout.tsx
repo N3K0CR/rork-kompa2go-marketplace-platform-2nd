@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Home, Search, Calendar, BarChart3, LayoutGrid, MessageCircle, Gift, UserCircle } from "lucide-react-native";
+import { Home, Search, Calendar, BarChart3, LayoutGrid, MessageCircle, Gift, UserCircle, Route } from "lucide-react-native";
 import React from "react";
 import { View, Text } from "react-native";
 import { useAuth } from "@/contexts/AuthContext";
@@ -88,6 +88,15 @@ export default function TabLayout() {
           title: userType === 'provider' ? 'Programas' : 'Analytics',
           tabBarIcon: ({ color, size }) => userType === 'provider' ? <LayoutGrid color={color} size={size} /> : <BarChart3 color={color} size={size} />,
           href: userType === 'admin' || userType === 'provider' ? undefined : null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="commute"
+        options={{
+          title: 'Viajar',
+          tabBarIcon: ({ color, size }) => <Route color={color} size={size} />,
+          href: '/commute'
         }}
       />
 
