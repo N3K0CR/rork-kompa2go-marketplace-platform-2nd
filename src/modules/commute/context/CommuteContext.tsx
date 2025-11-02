@@ -50,6 +50,9 @@ interface CommuteContextType {
   resetContext: () => Promise<void>;
   getErrorHistory: () => any[];
   clearErrorHistory: () => Promise<void>;
+  activeTrips: Trip[];
+  updateDriverStatus: (status: { isAvailable: boolean; routeId?: string; transportModeIds: string[]; pricePerKm: number }) => Promise<void>;
+  acceptRideRequest: (requestId: string) => Promise<Trip>;
 }
 
 interface CommuteStorageData {
@@ -274,6 +277,7 @@ const contextHook = createContextHook((): CommuteContextType => {
   const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [hasLocationPermission, setHasLocationPermission] = useState<boolean>(false);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  const [activeTrips, setActiveTrips] = useState<Trip[]>([]);
 
   // Transport modes (static for now, could be dynamic later)
   const transportModes = useMemo(() => DEFAULT_TRANSPORT_MODES, []);
@@ -715,6 +719,60 @@ const contextHook = createContextHook((): CommuteContextType => {
   }, []);
 
   // ============================================================================
+  // DRIVER FUNCTIONS
+  // ============================================================================
+
+  const updateDriverStatus = useCallback(async (status: { 
+    isAvailable: boolean; 
+    routeId?: string; 
+    transportModeIds: string[]; 
+    pricePerKm: number 
+  }): Promise<void> => {
+    await withErrorRecovery(
+      async () => {
+        console.log('[CommuteContext] Updating driver status:', status);
+        // TODO: Implement actual driver status update logic
+        // This would typically update Firestore or call a backend API
+        return { success: true };
+      },
+      { 
+        component: 'CommuteContext', 
+        operation: 'update_driver_status',
+        additionalData: status
+      }
+    );
+  }, []);
+
+  const acceptRideRequest = useCallback(async (requestId: string): Promise<Trip> => {
+    return await withErrorRecovery(
+      async () => {
+        console.log('[CommuteContext] Accepting ride request:', requestId);
+        
+        // TODO: Implement actual ride acceptance logic
+        // This is a placeholder implementation
+        const newTrip: Trip = {
+          id: requestId,
+          routeId: requestId,
+          userId: auth.currentUser?.uid || 'anonymous',
+          startTime: new Date(),
+          status: 'in_progress',
+          trackingPoints: [],
+        };
+        
+        setActiveTrips(prev => [...prev, newTrip]);
+        
+        return newTrip;
+      },
+      { 
+        component: 'CommuteContext', 
+        operation: 'accept_ride_request',
+        additionalData: { requestId }
+      },
+      null as any
+    );
+  }, []);
+
+  // ============================================================================
   // CONTEXT VALUE
   // ============================================================================
 
@@ -746,6 +804,11 @@ const contextHook = createContextHook((): CommuteContextType => {
     resetContext,
     getErrorHistory,
     clearErrorHistory,
+    
+    // Driver-specific properties
+    activeTrips,
+    updateDriverStatus,
+    acceptRideRequest,
   };
 });
 
