@@ -689,7 +689,7 @@ export default function HomeScreen() {
         {/* Modo Kommute - Solo para proveedores */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🚗 Modo Transporte</Text>
-          <Link href="/commute" asChild>
+          <Link href="/commute/driver" asChild>
             <TouchableOpacity style={styles.kommuteProviderCard}>
               <View style={styles.kommuteProviderHeader}>
                 <View style={styles.kommuteProviderTitleRow}>
