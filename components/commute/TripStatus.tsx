@@ -27,7 +27,9 @@ interface TripStatusProps {
   onContactPassenger?: (trip: Trip) => void;
   userRole?: 'driver' | 'passenger';
   showActions?: boolean;
+  showPassengerInfo?: boolean;
   compact?: boolean;
+  onAccept?: () => void;
 }
 
 export default function TripStatus({
@@ -42,7 +44,9 @@ export default function TripStatus({
   onContactPassenger,
   userRole = 'passenger',
   showActions = true,
-  compact = false
+  showPassengerInfo = false,
+  compact = false,
+  onAccept
 }: TripStatusProps) {
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);

@@ -83,9 +83,11 @@ export default function CommuteDriver() {
       {(commute.routes || []).length === 0 ? (
         <View style={styles.emptyState}>
           <MapPin size={32} color={Colors.neutral[400]} />
-          <Text style={styles.emptyStateText}>
-            Necesitas crear una ruta para ofrecer servicios de conductor
-          </Text>
+          <View style={{ marginBottom: 16 }}>
+            <Text style={styles.emptyStateText}>
+              Necesitas crear una ruta para ofrecer servicios de conductor
+            </Text>
+          </View>
           <TouchableOpacity
             style={styles.createRouteButton}
             onPress={() => router.back()}
@@ -161,9 +163,11 @@ export default function CommuteDriver() {
           >
             <Text style={styles.pricingButtonText}>-</Text>
           </TouchableOpacity>
-          <View style={styles.pricingDisplay}>
-            <Text style={styles.pricingAmount}>₡{pricePerKm}</Text>
-            <Text style={styles.pricingUnit}>por km</Text>
+          <View style={{ marginHorizontal: 24 }}>
+            <View style={styles.pricingDisplay}>
+              <Text style={styles.pricingAmount}>₡{pricePerKm}</Text>
+              <Text style={styles.pricingUnit}>por km</Text>
+            </View>
           </View>
           <TouchableOpacity
             style={styles.pricingButton}
@@ -413,7 +417,6 @@ const styles = StyleSheet.create({
   pricingDisplay: {
     alignItems: 'center',
     minWidth: 120,
-    marginHorizontal: 16,
   },
   pricingAmount: {
     ...Typography.textStyles.h4,
