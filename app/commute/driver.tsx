@@ -1,20 +1,21 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, TextInput } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Car, MapPin, Clock, Users, Settings, DollarSign, Star } from 'lucide-react-native';
+import { Car, MapPin, DollarSign, Star } from 'lucide-react-native';
 import { useCommute } from '@/hooks/useCommute';
-import { CommuteButton, TransportModeSelector, TripStatus } from '@/components/commute';
+import { TransportModeSelector, TripStatus } from '@/components/commute';
 import { Colors, Spacing, BorderRadius, Shadows, Typography } from '@/context-package/design-system';
-import { Route } from '@/backend/trpc/routes/commute/types';
+
 
 export default function CommuteDriver() {
   const commute = useCommute();
 
   const [isAvailable, setIsAvailable] = useState(false);
-  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
   const [selectedTransportModes, setSelectedTransportModes] = useState<string[]>([]);
   const [pricePerKm, setPricePerKm] = useState(500); // CRC per km
+  const [destinationMode, setDestinationMode] = useState(false);
+  const [destination, setDestination] = useState('');
 
   console.log('🚗 CommuteDriver: Rendered with availability:', isAvailable);
   console.log('🚗 CommuteDriver: Active trips as driver:', (commute.activeTrips || []).filter(t => t.role === 'driver').length);
@@ -26,7 +27,6 @@ export default function CommuteDriver() {
       
       await commute.updateDriverStatus({
         isAvailable: newStatus,
-        routeId: selectedRoute?.id,
         transportModeIds: selectedTransportModes,
         pricePerKm
       });
@@ -77,60 +77,101 @@ export default function CommuteDriver() {
     </View>
   );
 
-  const renderRouteSelection = () => (
+  const renderZoneManagement = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Ruta de Servicio</Text>
-      {(commute.routes || []).length === 0 ? (
-        <View style={styles.emptyState}>
-          <MapPin size={32} color={Colors.neutral[400]} />
-          <View style={{ marginBottom: 16 }}>
-            <Text style={styles.emptyStateText}>
-              Necesitas crear una ruta para ofrecer servicios de conductor
+      <Text style={styles.sectionTitle}>Gestión de Zonas</Text>
+      <View style={styles.zoneCard}>
+        <View style={styles.zoneHeader}>
+          <MapPin size={24} color={Colors.primary[500]} />
+          <View style={styles.zoneInfo}>
+            <Text style={styles.zoneTitle}>Zonas de Servicio</Text>
+            <Text style={styles.zoneSubtitle}>
+              Administra las zonas donde ofreces servicio
             </Text>
           </View>
-          <TouchableOpacity
-            style={styles.createRouteButton}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.createRouteButtonText}>Crear Ruta</Text>
-          </TouchableOpacity>
         </View>
-      ) : (
-        <View style={styles.routeSelector}>
-          {(commute.routes || []).map((route) => (
-            <TouchableOpacity
-              key={route.id}
-              style={[
-                styles.routeOption,
-                selectedRoute?.id === route.id && styles.routeOptionSelected
-              ]}
-              onPress={() => setSelectedRoute(route)}
-            >
-              <View style={styles.routeOptionContent}>
-                <Text style={[
-                  styles.routeOptionTitle,
-                  selectedRoute?.id === route.id && styles.routeOptionTitleSelected
-                ]}>
-                  {route.name}
-                </Text>
-                <View style={styles.routeOptionDetails}>
-                  <View style={styles.routeOptionDetail}>
-                    <MapPin size={12} color={Colors.neutral[500]} />
-                    <Text style={styles.routeOptionDetailText}>
-                      {route.points.length} paradas
-                    </Text>
-                  </View>
-                </View>
-              </View>
-              {selectedRoute?.id === route.id && (
-                <View style={styles.selectedIndicator}>
-                  <View style={styles.selectedDot} />
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
+        <TouchableOpacity
+          style={styles.manageZonesButton}
+          onPress={() => {
+            console.log('🗺️ Navegando a gestión de zonas');
+            // TODO: Navegar a pantalla de gestión de zonas
+          }}
+        >
+          <Text style={styles.manageZonesButtonText}>Gestionar Zonas de Servicio</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderDestinationMode = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Modo Destino</Text>
+      <View style={styles.destinationCard}>
+        <View style={styles.destinationHeader}>
+          <MapPin size={24} color={Colors.success[500]} />
+          <View style={styles.destinationInfo}>
+            <Text style={styles.destinationTitle}>Viaje con Destino</Text>
+            <Text style={styles.destinationSubtitle}>
+              Acepta solo pasajeros que vayan hacia tu destino
+            </Text>
+          </View>
         </View>
-      )}
+        
+        <View style={styles.destinationInputContainer}>
+          <Text style={styles.destinationInputLabel}>Destino</Text>
+          <TextInput
+            style={styles.destinationInput}
+            placeholder="Ingresa tu destino"
+            placeholderTextColor={Colors.neutral[400]}
+            value={destination}
+            onChangeText={setDestination}
+            editable={!destinationMode}
+          />
+        </View>
+
+        <TouchableOpacity
+          style={[
+            styles.activateDestinationButton,
+            destinationMode && styles.activateDestinationButtonActive,
+            !destination && !destinationMode && styles.activateDestinationButtonDisabled
+          ]}
+          onPress={async () => {
+            if (!destinationMode && !destination) return;
+            
+            try {
+              const newMode = !destinationMode;
+              console.log('🎯 Toggling destination mode:', newMode);
+              
+              if (newMode) {
+                await commute.setDestination(destination);
+              } else {
+                await commute.clearDestination();
+              }
+              
+              setDestinationMode(newMode);
+              if (!newMode) {
+                setDestination('');
+              }
+            } catch (error) {
+              console.error('❌ Error toggling destination mode:', error);
+            }
+          }}
+          disabled={!destination && !destinationMode}
+        >
+          <Text style={styles.activateDestinationButtonText}>
+            {destinationMode ? 'Desactivar Modo Destino' : 'Activar Modo Destino'}
+          </Text>
+        </TouchableOpacity>
+
+        {destinationMode && (
+          <View style={styles.destinationActiveIndicator}>
+            <View style={styles.destinationActiveDot} />
+            <Text style={styles.destinationActiveText}>
+              Modo Destino activo: {destination}
+            </Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 
@@ -244,7 +285,8 @@ export default function CommuteDriver() {
       
       <ScrollView style={styles.scrollView}>
         {renderAvailabilityToggle()}
-        {renderRouteSelection()}
+        {renderZoneManagement()}
+        {renderDestinationMode()}
         {renderTransportModes()}
         {renderPricing()}
         {renderActiveTrips()}
@@ -309,76 +351,120 @@ const styles = StyleSheet.create({
     color: Colors.success[700],
     fontWeight: Typography.fontWeight.medium,
   },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: Spacing[6],
-  },
-  emptyStateText: {
-    ...Typography.textStyles.body,
-    color: Colors.neutral[500],
-    textAlign: 'center',
-    marginTop: Spacing[2],
-    marginBottom: Spacing[3],
-    paddingHorizontal: Spacing[4],
-  },
-  createRouteButton: {
-    backgroundColor: Colors.primary[500],
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[2],
-    borderRadius: BorderRadius.md,
-  },
-  createRouteButtonText: {
-    ...Typography.textStyles.button,
-    color: 'white',
-  },
-  routeSelector: {
-    gap: Spacing[2],
-  },
-  routeOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  zoneCard: {
     backgroundColor: Colors.neutral[50],
     borderRadius: BorderRadius.lg,
     padding: Spacing[4],
-    borderWidth: 2,
-    borderColor: 'transparent',
   },
-  routeOptionSelected: {
-    borderColor: Colors.primary[500],
-    backgroundColor: Colors.primary[50],
-  },
-  routeOptionContent: {
-    flex: 1,
-  },
-  routeOptionTitle: {
-    ...Typography.textStyles.h6,
-    color: Colors.neutral[800],
-    marginBottom: Spacing[1],
-  },
-  routeOptionTitleSelected: {
-    color: Colors.primary[700],
-  },
-  routeOptionDetails: {
-    flexDirection: 'row',
-    gap: Spacing[3],
-  },
-  routeOptionDetail: {
+  zoneHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing[1],
+    gap: Spacing[3],
+    marginBottom: Spacing[4],
   },
-  routeOptionDetailText: {
+  zoneInfo: {
+    flex: 1,
+  },
+  zoneTitle: {
+    ...Typography.textStyles.h6,
+    color: Colors.neutral[800],
+  },
+  zoneSubtitle: {
     ...Typography.textStyles.caption,
     color: Colors.neutral[500],
+    marginTop: Spacing[1],
   },
-  selectedIndicator: {
-    marginLeft: Spacing[3],
-  },
-  selectedDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+  manageZonesButton: {
     backgroundColor: Colors.primary[500],
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing[3],
+    paddingHorizontal: Spacing[4],
+    alignItems: 'center',
+  },
+  manageZonesButtonText: {
+    ...Typography.textStyles.button,
+    color: 'white',
+  },
+  destinationCard: {
+    backgroundColor: Colors.neutral[50],
+    borderRadius: BorderRadius.lg,
+    padding: Spacing[4],
+  },
+  destinationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[3],
+    marginBottom: Spacing[4],
+  },
+  destinationInfo: {
+    flex: 1,
+  },
+  destinationTitle: {
+    ...Typography.textStyles.h6,
+    color: Colors.neutral[800],
+  },
+  destinationSubtitle: {
+    ...Typography.textStyles.caption,
+    color: Colors.neutral[500],
+    marginTop: Spacing[1],
+  },
+  destinationInputContainer: {
+    marginBottom: Spacing[4],
+  },
+  destinationInputLabel: {
+    ...Typography.textStyles.bodySmall,
+    color: Colors.neutral[600],
+    marginBottom: Spacing[2],
+    fontWeight: Typography.fontWeight.medium,
+  },
+  destinationInput: {
+    backgroundColor: 'white',
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.neutral[300],
+    paddingVertical: Spacing[3],
+    paddingHorizontal: Spacing[4],
+    ...Typography.textStyles.body,
+    color: Colors.neutral[800],
+  },
+  activateDestinationButton: {
+    backgroundColor: Colors.success[500],
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing[3],
+    paddingHorizontal: Spacing[4],
+    alignItems: 'center',
+  },
+  activateDestinationButtonActive: {
+    backgroundColor: Colors.error[500],
+  },
+  activateDestinationButtonDisabled: {
+    backgroundColor: Colors.neutral[300],
+    opacity: 0.6,
+  },
+  activateDestinationButtonText: {
+    ...Typography.textStyles.button,
+    color: 'white',
+  },
+  destinationActiveIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+    marginTop: Spacing[4],
+    backgroundColor: Colors.success[50],
+    borderRadius: BorderRadius.md,
+    padding: Spacing[3],
+  },
+  destinationActiveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.success[500],
+  },
+  destinationActiveText: {
+    ...Typography.textStyles.bodySmall,
+    color: Colors.success[700],
+    fontWeight: Typography.fontWeight.medium,
+    flex: 1,
   },
   pricingCard: {
     backgroundColor: Colors.neutral[50],
