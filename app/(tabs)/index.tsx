@@ -9,10 +9,10 @@ import { useReservationAlert } from '@/contexts/ReservationAlertContext';
 import { useReservationPlans } from '@/contexts/ReservationPlansContext';
 import { usePendingPayments } from '@/contexts/PendingPaymentsContext';
 import { useChat } from '@/contexts/ChatContext';
-import { Search, Calendar, Star, TrendingUp, Users, DollarSign, RefreshCw, X, Mail, Lock, Award, Bell, CreditCard, Camera, Upload, Package, Check } from 'lucide-react-native';
+import { Search, Calendar, Star, TrendingUp, Users, DollarSign, RefreshCw, X, Mail, Lock, Award, Bell, CreditCard, Camera, Upload, Package, Check, Route } from 'lucide-react-native';
 import FloatingKompi from '@/components/FloatingKompi';
 import ReservationDetailCard from '@/components/ReservationDetailCard';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, Link } from 'expo-router';
 
 import * as ImagePicker from 'expo-image-picker';
 
@@ -684,6 +684,32 @@ export default function HomeScreen() {
             <Users size={24} color="#D81B60" />
             <Text style={styles.actionText}>{t('collaborators')}</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Modo Kommute - Solo para proveedores */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🚗 Modo Transporte</Text>
+          <Link href="/commute" asChild>
+            <TouchableOpacity style={styles.kommuteProviderCard}>
+              <View style={styles.kommuteProviderHeader}>
+                <View style={styles.kommuteProviderTitleRow}>
+                  <Route size={24} color="#007AFF" />
+                  <Text style={styles.kommuteProviderTitle}>Modo Kommute</Text>
+                </View>
+                <View style={styles.kommuteProviderBadge}>
+                  <Text style={styles.kommuteProviderBadgeText}>PROVEEDOR</Text>
+                </View>
+              </View>
+              <Text style={styles.kommuteProviderDescription}>
+                Ofrece viajes compartidos y genera ingresos adicionales mientras te desplazas
+              </Text>
+              <View style={styles.kommuteProviderFeatures}>
+                <Text style={styles.kommuteProviderFeature}>🚗 Ofrece viajes</Text>
+                <Text style={styles.kommuteProviderFeature}>💰 Gana dinero</Text>
+                <Text style={styles.kommuteProviderFeature}>📍 En tu ruta</Text>
+              </View>
+            </TouchableOpacity>
+          </Link>
         </View>
 
 
@@ -2246,6 +2272,65 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 15,
     fontWeight: '600',
+  },
+
+  // Kommute Provider Card Styles
+  kommuteProviderCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#007AFF',
+  },
+  kommuteProviderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  kommuteProviderTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  kommuteProviderTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#007AFF',
+  },
+  kommuteProviderBadge: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  kommuteProviderBadgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  kommuteProviderDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  kommuteProviderFeatures: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  kommuteProviderFeature: {
+    fontSize: 12,
+    color: '#333',
+    fontWeight: '500',
+    flex: 1,
+    textAlign: 'center',
   },
 
 });
