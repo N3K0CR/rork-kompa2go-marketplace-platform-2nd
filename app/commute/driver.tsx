@@ -440,6 +440,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
+    flexDirection: 'column',
     backgroundColor: Colors.neutral[50],
     borderRadius: BorderRadius.lg,
     padding: Spacing[4],
