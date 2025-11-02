@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     color: Colors.neutral[500],
     textAlign: 'center',
     marginTop: Spacing[2],
-    marginBottom: Spacing[4],
+    marginBottom: Spacing[3],
     paddingHorizontal: Spacing[4],
   },
   createRouteButton: {
@@ -413,6 +413,7 @@ const styles = StyleSheet.create({
   pricingDisplay: {
     alignItems: 'center',
     minWidth: 120,
+    marginHorizontal: 16,
   },
   pricingAmount: {
     ...Typography.textStyles.h4,
