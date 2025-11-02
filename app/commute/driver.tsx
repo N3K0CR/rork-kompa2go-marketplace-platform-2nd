@@ -12,7 +12,7 @@ export default function CommuteDriver() {
   const {
     routes,
     transportModes,
-    activeTrips,
+    activeTrips = [],
     updateDriverStatus,
     acceptRideRequest
   } = useCommute();
