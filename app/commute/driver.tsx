@@ -9,13 +9,7 @@ import { Colors, Spacing, BorderRadius, Shadows, Typography } from '@/context-pa
 import { Route } from '@/backend/trpc/routes/commute/types';
 
 export default function CommuteDriver() {
-  const {
-    routes,
-    transportModes,
-    activeTrips = [],
-    updateDriverStatus,
-    acceptRideRequest
-  } = useCommute();
+  const commute = useCommute();
 
   const [isAvailable, setIsAvailable] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
@@ -23,14 +17,14 @@ export default function CommuteDriver() {
   const [pricePerKm, setPricePerKm] = useState(500); // CRC per km
 
   console.log('🚗 CommuteDriver: Rendered with availability:', isAvailable);
-  console.log('🚗 CommuteDriver: Active trips as driver:', activeTrips.filter(t => t.role === 'driver').length);
+  console.log('🚗 CommuteDriver: Active trips as driver:', (commute.activeTrips || []).filter(t => t.role === 'driver').length);
 
   const handleToggleAvailability = async () => {
     try {
       const newStatus = !isAvailable;
       console.log('🚗 CommuteDriver: Toggling availability to:', newStatus);
       
-      await updateDriverStatus({
+      await commute.updateDriverStatus({
         isAvailable: newStatus,
         routeId: selectedRoute?.id,
         transportModeIds: selectedTransportModes,
@@ -46,7 +40,7 @@ export default function CommuteDriver() {
   const handleAcceptRide = async (requestId: string) => {
     try {
       console.log('✅ CommuteDriver: Accepting ride request:', requestId);
-      const trip = await acceptRideRequest(requestId);
+      const trip = await commute.acceptRideRequest(requestId);
       router.push(`/commute/trip/${trip.id}`);
     } catch (error) {
       console.error('❌ CommuteDriver: Error accepting ride:', error);
@@ -86,7 +80,7 @@ export default function CommuteDriver() {
   const renderRouteSelection = () => (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Ruta de Servicio</Text>
-      {routes.length === 0 ? (
+      {(commute.routes || []).length === 0 ? (
         <View style={styles.emptyState}>
           <MapPin size={32} color={Colors.neutral[400]} />
           <Text style={styles.emptyStateText}>
@@ -101,7 +95,7 @@ export default function CommuteDriver() {
         </View>
       ) : (
         <View style={styles.routeSelector}>
-          {routes.map((route) => (
+          {(commute.routes || []).map((route) => (
             <TouchableOpacity
               key={route.id}
               style={[
@@ -142,7 +136,7 @@ export default function CommuteDriver() {
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Vehículos Disponibles</Text>
       <TransportModeSelector
-        transportModes={transportModes}
+        transportModes={commute.transportModes || []}
         selectedModes={selectedTransportModes}
         onSelectionChange={setSelectedTransportModes}
         maxSelection={2}
@@ -183,7 +177,7 @@ export default function CommuteDriver() {
   );
 
   const renderActiveTrips = () => {
-    const driverTrips = activeTrips.filter(trip => trip.role === 'driver');
+    const driverTrips = (commute.activeTrips || []).filter(trip => trip.role === 'driver');
     
     if (driverTrips.length === 0) return null;
 
