@@ -53,6 +53,8 @@ interface CommuteContextType {
   activeTrips: Trip[];
   updateDriverStatus: (status: { isAvailable: boolean; routeId?: string; transportModeIds: string[]; pricePerKm: number }) => Promise<void>;
   acceptRideRequest: (requestId: string) => Promise<Trip>;
+  setDestination: (destination: string) => Promise<void>;
+  clearDestination: () => Promise<void>;
 }
 
 interface CommuteStorageData {
@@ -567,6 +569,7 @@ const contextHook = createContextHook((): CommuteContextType => {
           id: `trip_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           routeId,
           userId,
+          role: 'driver',
           startTime: new Date(),
           status: 'in_progress',
           trackingPoints: [],
@@ -754,6 +757,7 @@ const contextHook = createContextHook((): CommuteContextType => {
           id: requestId,
           routeId: requestId,
           userId: auth.currentUser?.uid || 'anonymous',
+          role: 'driver',
           startTime: new Date(),
           status: 'in_progress',
           trackingPoints: [],
@@ -769,6 +773,47 @@ const contextHook = createContextHook((): CommuteContextType => {
         additionalData: { requestId }
       },
       null as any
+    );
+  }, []);
+
+  // ============================================================================
+  // DESTINATION MODE FUNCTIONS
+  // ============================================================================
+
+  const setDestination = useCallback(async (destination: string): Promise<void> => {
+    await withErrorRecovery(
+      async () => {
+        console.log('[CommuteContext] Setting destination mode:', destination);
+        // TODO: Implement actual destination mode logic
+        // This would typically:
+        // 1. Store destination in state/Firestore
+        // 2. Update driver status to filter matching passengers
+        // 3. Update backend to only show relevant ride requests
+        return { success: true };
+      },
+      { 
+        component: 'CommuteContext', 
+        operation: 'set_destination',
+        additionalData: { destination }
+      }
+    );
+  }, []);
+
+  const clearDestination = useCallback(async (): Promise<void> => {
+    await withErrorRecovery(
+      async () => {
+        console.log('[CommuteContext] Clearing destination mode');
+        // TODO: Implement actual destination clear logic
+        // This would typically:
+        // 1. Clear destination from state/Firestore
+        // 2. Update driver status to accept all passengers
+        // 3. Update backend to show all ride requests
+        return { success: true };
+      },
+      { 
+        component: 'CommuteContext', 
+        operation: 'clear_destination'
+      }
     );
   }, []);
 
@@ -809,6 +854,8 @@ const contextHook = createContextHook((): CommuteContextType => {
     activeTrips,
     updateDriverStatus,
     acceptRideRequest,
+    setDestination,
+    clearDestination,
   };
 });
 
