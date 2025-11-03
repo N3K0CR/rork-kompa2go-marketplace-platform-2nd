@@ -76,7 +76,7 @@ if (!fs.existsSync(tsxPath)) {
 const backend = createProcess(
   'BACKEND',
   nodemonPath,
-  ['--watch', 'backend', '--ext', 'ts,js,json', '--exec', `${tsxPath} backend/server.ts`],
+  ['--watch', 'backend/', '--exec', `${tsxPath} --ignore react-native backend/server.ts`],
   colors.backend
 );
 
