@@ -44,6 +44,8 @@ export class PlacesService {
     timeout = 10000,
   }: SearchDestinationParams): Promise<PlaceResult[]> {
     
+    console.log('DEBUG - GOOGLE_MAPS_API_KEY from process.env:', process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY);
+    console.log('DEBUG - GOOGLE_MAPS_API_KEY from lib:', GOOGLE_MAPS_API_KEY);
     console.log('🔑 API KEY disponible:', GOOGLE_MAPS_API_KEY ? `${GOOGLE_MAPS_API_KEY.substring(0, 10)}...` : 'NO CONFIGURADA');
     
     if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === 'YOUR_API_KEY_HERE') {
