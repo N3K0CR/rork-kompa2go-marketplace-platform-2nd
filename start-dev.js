@@ -78,6 +78,10 @@ const backend = createProcess(
   nodemonPath,
   [
     '--watch', 'backend/',
+    '--ext', 'ts,js,json',
+    '--ignore', 'backend/**/*.log',
+    '--ignore', 'node_modules/',
+    '--delay', '1000ms',
     '--exec',
     `${tsxPath} backend/server.ts`
   ],
