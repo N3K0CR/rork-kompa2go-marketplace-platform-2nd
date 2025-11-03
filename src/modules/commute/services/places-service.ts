@@ -44,8 +44,10 @@ export class PlacesService {
     timeout = 10000,
   }: SearchDestinationParams): Promise<PlaceResult[]> {
     
-    if (!GOOGLE_MAPS_API_KEY) {
-      throw new Error('Google Maps API Key no configurada');
+    console.log('🔑 API KEY disponible:', GOOGLE_MAPS_API_KEY ? `${GOOGLE_MAPS_API_KEY.substring(0, 10)}...` : 'NO CONFIGURADA');
+    
+    if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === 'YOUR_API_KEY_HERE') {
+      throw new Error('⚠️ Configura una API key real en .env.local\nVisita: https://console.cloud.google.com/apis/credentials');
     }
 
     if (this.abortController) {
