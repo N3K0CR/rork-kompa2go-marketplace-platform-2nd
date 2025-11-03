@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, ActivityIndicator } from 'react-native';
 import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MapPin, X, Check } from 'lucide-react-native';
 import { Colors, Spacing, BorderRadius, Typography } from '@/context-package/design-system';
+import { trpc } from '@/lib/trpc';
 
 const PROVINCES = [
   'San José',
@@ -55,16 +56,35 @@ export default function ManageZones() {
     setAvoidedZones(prev => prev.filter(z => z !== zone));
   };
 
+  const updatePreferencesMutation = trpc.commute.updateZonePreferences.useMutation({
+    onSuccess: (data: { success: boolean; message: string }) => {
+      console.log('✅ Preferences saved successfully:', data);
+      Alert.alert(
+        'Cambios Guardados',
+        data.message || 'Tus preferencias han sido guardadas correctamente',
+        [{ text: 'OK' }]
+      );
+    },
+    onError: (error: Error) => {
+      console.error('❌ Error saving preferences:', error);
+      Alert.alert(
+        'Error',
+        'No se pudieron guardar los cambios. Por favor intenta nuevamente.',
+        [{ text: 'OK' }]
+      );
+    },
+  });
+
   const handleSave = () => {
     console.log('💾 Saving changes:', {
       selectedProvinces,
       avoidedZones
     });
-    Alert.alert(
-      'Cambios Guardados',
-      `Provincias seleccionadas: ${selectedProvinces.length}\nZonas a evitar: ${avoidedZones.length}`,
-      [{ text: 'OK' }]
-    );
+    
+    updatePreferencesMutation.mutate({
+      provinces: selectedProvinces,
+      avoidedZones,
+    });
   };
 
   return (
@@ -174,11 +194,22 @@ export default function ManageZones() {
 
         <View style={styles.saveButtonContainer}>
           <TouchableOpacity
-            style={styles.saveButton}
+            style={[
+              styles.saveButton,
+              updatePreferencesMutation.isPending && styles.saveButtonDisabled
+            ]}
             onPress={handleSave}
             activeOpacity={0.8}
+            disabled={updatePreferencesMutation.isPending}
           >
-            <Text style={styles.saveButtonText}>Guardar Cambios</Text>
+            {updatePreferencesMutation.isPending ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator color="white" size="small" />
+                <Text style={styles.saveButtonText}>Guardando...</Text>
+              </View>
+            ) : (
+              <Text style={styles.saveButtonText}>Guardar Cambios</Text>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -313,5 +344,13 @@ const styles = StyleSheet.create({
     ...Typography.textStyles.button,
     color: 'white',
     fontSize: 16,
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
   },
 });
