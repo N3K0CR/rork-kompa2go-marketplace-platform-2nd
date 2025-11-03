@@ -8,9 +8,15 @@ import { getAnalytics } from 'firebase/analytics';
 const isNodeBackend = typeof process !== 'undefined' && process.versions && process.versions.node && typeof window === 'undefined';
 
 // Use mock Platform for backend, real Platform for React Native
-const Platform = isNodeBackend 
-  ? { OS: 'web' as const, select: (obj: any) => obj.default || obj.web }
-  : require('react-native').Platform;
+let Platform: { OS: 'web' | 'ios' | 'android'; select: (obj: any) => any };
+if (isNodeBackend) {
+  Platform = { 
+    OS: 'web' as const, 
+    select: (obj: any) => obj.default || obj.web 
+  };
+} else {
+  Platform = require('react-native').Platform;
+}
 
 if (Platform.OS === 'web' && typeof window !== 'undefined') {
   if (!(window as any).Buffer) {
