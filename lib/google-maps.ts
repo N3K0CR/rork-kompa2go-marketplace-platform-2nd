@@ -15,12 +15,21 @@ if (isNodeBackend) {
 /**
  * Configuración de Google Maps API Keys por plataforma
  */
+console.log('🔍 ENV CHECK (Google Maps):', {
+  fromEnv: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+  platformOS: Platform.OS,
+  isNodeBackend,
+  hasWindow: typeof window !== 'undefined'
+});
+
 export const GOOGLE_MAPS_API_KEY = Platform.select({
   ios: process.env.EXPO_PUBLIC_GOOGLE_MAPS_IOS_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
   android: process.env.EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
   web: process.env.EXPO_PUBLIC_GOOGLE_MAPS_WEB_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
   default: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
 });
+
+console.log('🗺️ GOOGLE_MAPS_API_KEY exported:', GOOGLE_MAPS_API_KEY ? `${GOOGLE_MAPS_API_KEY.substring(0, 10)}...` : 'undefined');
 
 /**
  * Validar que la API Key esté configurada
