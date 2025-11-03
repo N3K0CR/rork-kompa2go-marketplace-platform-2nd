@@ -1,12 +1,8 @@
 #!/usr/bin/env node
 
-/**
- * Script de inicio unificado para Kompa2Go
- * Inicia el backend (Hono/tRPC) y el frontend (Expo) en paralelo
- * Con auto-reload en cambios de código
- */
-
 const { spawn } = require('child_process');
+const path = require('path');
+const fs = require('fs');
 
 console.log('🚀 Iniciando Kompa2Go Development Environment...\n');
 console.log('📦 Backend: Hono/tRPC Server (con auto-reload)');
@@ -21,6 +17,8 @@ const colors = {
 
 // Función para crear un proceso con logs coloreados
 function createProcess(name, command, args, color) {
+  console.log(`${color}[${name}]${colors.reset} Iniciando: ${command} ${args.join(' ')}`);
+  
   const proc = spawn(command, args, {
     stdio: 'pipe',
     shell: true,
@@ -58,11 +56,27 @@ function createProcess(name, command, args, color) {
   return proc;
 }
 
+// Verificar que nodemon existe
+const nodemonPath = path.join(process.cwd(), 'node_modules', '.bin', 'nodemon');
+const tsxPath = path.join(process.cwd(), 'node_modules', '.bin', 'tsx');
+
+if (!fs.existsSync(nodemonPath)) {
+  console.error('❌ Error: nodemon no encontrado en node_modules/.bin/');
+  console.error('   Ejecuta: bun install');
+  process.exit(1);
+}
+
+if (!fs.existsSync(tsxPath)) {
+  console.error('❌ Error: tsx no encontrado en node_modules/.bin/');
+  console.error('   Ejecuta: bun install');
+  process.exit(1);
+}
+
 // Iniciar backend con nodemon (auto-reload)
 const backend = createProcess(
   'BACKEND',
-  './node_modules/.bin/nodemon',
-  ['--watch', 'backend', '--ext', 'ts,js,json', '--exec', './node_modules/.bin/tsx backend/server.ts'],
+  nodemonPath,
+  ['--watch', 'backend', '--ext', 'ts,js,json', '--exec', `${tsxPath} backend/server.ts`],
   colors.backend
 );
 
