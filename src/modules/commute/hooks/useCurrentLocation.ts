@@ -29,13 +29,22 @@ export const useCurrentLocation = (): UseCurrentLocationResult => {
 
           navigator.geolocation.getCurrentPosition(
             async (position) => {
+              console.log('✅ Web geolocation success:', {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy
+              });
+
               const { latitude, longitude } = position.coords;
               
               try {
+                console.log('🔍 Attempting reverse geocoding...');
                 const [geocode] = await Location.reverseGeocodeAsync({
                   latitude,
                   longitude,
                 });
+
+                console.log('✅ Reverse geocoding result:', geocode);
 
                 if (geocode) {
                   const parts = [];
@@ -44,44 +53,71 @@ export const useCurrentLocation = (): UseCurrentLocationResult => {
                   if (geocode.city) parts.push(geocode.city);
                   
                   const address = parts.length > 0 ? parts.join(', ') : 'Mi ubicación actual';
+                  console.log('📍 Final address:', address);
                   setData(address);
                 } else {
+                  console.log('⚠️ No geocoding result, using default');
                   setData('Mi ubicación actual');
                 }
               } catch (geocodeError) {
-                console.error('Geocoding error:', geocodeError);
+                console.error('❌ Geocoding error:', {
+                  error: geocodeError,
+                  message: geocodeError instanceof Error ? geocodeError.message : String(geocodeError),
+                  code: (geocodeError as any)?.code,
+                  stack: geocodeError instanceof Error ? geocodeError.stack : undefined
+                });
                 setData('Mi ubicación actual');
               }
 
               setIsLoading(false);
             },
             (err) => {
-              console.error('Geolocation error:', err);
+              console.error('❌ Web Geolocation error:', {
+                code: err.code,
+                message: err.message,
+                PERMISSION_DENIED: err.code === 1,
+                POSITION_UNAVAILABLE: err.code === 2,
+                TIMEOUT: err.code === 3
+              });
               setIsError(true);
-              setError(new Error(err.message));
+              setError(new Error(`Geolocation error (code ${err.code}): ${err.message}`));
               setIsLoading(false);
             },
             { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
           );
         } else {
+          console.log('📱 Requesting location permissions (mobile)...');
           const { status } = await Location.requestForegroundPermissionsAsync();
+          console.log('📱 Permission status:', status);
           
           if (status !== 'granted') {
+            console.error('❌ Location permission denied');
             setIsError(true);
             setError(new Error('Location permission denied'));
             setIsLoading(false);
             return;
           }
 
+          console.log('📍 Getting current position (mobile)...');
           const location = await Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.High,
           });
 
+          console.log('✅ Current position:', {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            accuracy: location.coords.accuracy
+          });
+
           const { latitude, longitude } = location.coords;
+          
+          console.log('🔍 Attempting reverse geocoding (mobile)...');
           const [geocode] = await Location.reverseGeocodeAsync({
             latitude,
             longitude,
           });
+
+          console.log('✅ Reverse geocoding result (mobile):', geocode);
 
           if (geocode) {
             const parts = [];
@@ -91,17 +127,26 @@ export const useCurrentLocation = (): UseCurrentLocationResult => {
             if (geocode.district) parts.push(geocode.district);
             
             const address = parts.length > 0 ? parts.join(', ') : 'Mi ubicación actual';
+            console.log('📍 Final address (mobile):', address);
             setData(address);
           } else {
+            console.log('⚠️ No geocoding result (mobile), using default');
             setData('Mi ubicación actual');
           }
 
           setIsLoading(false);
         }
       } catch (err) {
-        console.error('Error getting location:', err);
+        console.error('❌ Error getting location (catch block):', {
+          error: err,
+          message: err instanceof Error ? err.message : String(err),
+          code: (err as any)?.code,
+          name: err instanceof Error ? err.name : undefined,
+          stack: err instanceof Error ? err.stack : undefined,
+          stringified: JSON.stringify(err, null, 2)
+        });
         setIsError(true);
-        setError(err instanceof Error ? err : new Error('Unknown error'));
+        setError(err instanceof Error ? err : new Error(String(err)));
         setIsLoading(false);
       }
     };
