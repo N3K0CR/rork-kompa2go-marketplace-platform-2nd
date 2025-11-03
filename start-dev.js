@@ -79,7 +79,7 @@ const backend = createProcess(
   [
     '--watch', 'backend/',
     '--exec',
-    `${tsxPath} backend/server.ts`
+    `${tsxPath} --tsconfig backend/tsconfig.backend.json backend/server.ts`
   ],
   colors.backend
 );
