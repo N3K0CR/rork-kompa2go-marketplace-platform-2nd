@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, TextInput } from 'react-native';
-import { Stack, router } from 'expo-router';
+import { Stack, router, Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Car, MapPin, DollarSign, Star } from 'lucide-react-native';
 import { useCommute } from '@/hooks/useCommute';
@@ -90,15 +90,11 @@ export default function CommuteDriver() {
             </Text>
           </View>
         </View>
-        <TouchableOpacity
-          style={styles.manageZonesButton}
-          onPress={() => {
-            console.log('🗺️ Navegando a gestión de zonas');
-            // TODO: Navegar a pantalla de gestión de zonas
-          }}
-        >
-          <Text style={styles.manageZonesButtonText}>Gestionar Zonas de Servicio</Text>
-        </TouchableOpacity>
+        <Link href="/commute/manage-zones" asChild>
+          <TouchableOpacity style={styles.manageZonesButton}>
+            <Text style={styles.manageZonesButtonText}>Gestionar Zonas de Servicio</Text>
+          </TouchableOpacity>
+        </Link>
       </View>
     </View>
   );
