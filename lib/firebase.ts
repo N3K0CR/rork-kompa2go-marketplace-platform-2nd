@@ -49,6 +49,6 @@ export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 
-export const analytics = Platform.OS === 'web' ? getAnalytics(app) : null;
+export const analytics = (Platform.OS === 'web' && typeof window !== 'undefined') ? getAnalytics(app) : null;
 
 export default app;
