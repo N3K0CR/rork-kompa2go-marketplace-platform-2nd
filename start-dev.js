@@ -73,10 +73,12 @@ if (!fs.existsSync(tsxPath)) {
 }
 
 // Iniciar backend con nodemon (auto-reload)
+// Usamos tsx con el flag --conditions para ignorar react-native
+const backendCommand = `NODE_OPTIONS='--conditions=node' ${tsxPath} backend/server.ts`;
 const backend = createProcess(
   'BACKEND',
   nodemonPath,
-  ['--watch', 'backend/', '--exec', 'node --loader tsx/esm backend/server.ts'],
+  ['--watch', 'backend/', '--exec', backendCommand],
   colors.backend
 );
 
