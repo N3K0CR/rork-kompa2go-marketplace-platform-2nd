@@ -61,16 +61,16 @@ function createProcess(name, command, args, color) {
 // Iniciar backend con nodemon (auto-reload)
 const backend = createProcess(
   'BACKEND',
-  'nodemon',
-  ['--watch', 'backend', '--ext', 'ts,js,json', '--exec', 'tsx backend/server.ts'],
+  './node_modules/.bin/nodemon',
+  ['--watch', 'backend', '--ext', 'ts,js,json', '--exec', './node_modules/.bin/tsx backend/server.ts'],
   colors.backend
 );
 
 // Iniciar frontend con Expo
 const frontend = createProcess(
   'FRONTEND',
-  'bunx',
-  ['rork', 'start', '-p', 'z5be445fq2fb0yuu32aht', '--tunnel'],
+  'bun',
+  ['x', 'rork', 'start', '-p', 'z5be445fq2fb0yuu32aht', '--tunnel'],
   colors.frontend
 );
 
