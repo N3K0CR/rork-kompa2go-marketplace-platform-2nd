@@ -1,4 +1,10 @@
-import { Platform } from 'react-native';
+// Check if we're running in Node.js (backend) or React Native
+const isNodeBackend = typeof process !== 'undefined' && process.versions && process.versions.node && typeof window === 'undefined';
+
+// Use mock Platform for backend, real Platform for React Native
+const Platform = isNodeBackend 
+  ? { OS: 'web' as const, select: (obj: any) => obj.default || obj.web }
+  : require('react-native').Platform;
 
 /**
  * Configuración de Google Maps API Keys por plataforma
