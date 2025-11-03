@@ -1316,3 +1316,53 @@ export {
   getZoneStatusProcedure as getZoneStatus,
   getNearbyZonesProcedure as getNearbyZones,
 };
+
+// ============================================================================
+// KOMMUTER ZONE PREFERENCES
+// ============================================================================
+
+/**
+ * Updates zone preferences for a Kommuter (provinces and avoided zones)
+ */
+export const updateZonePreferences = protectedProcedure
+  .input(z.object({
+    provinces: z.array(z.string()),
+    avoidedZones: z.array(z.string()),
+  }))
+  .output(z.object({
+    success: z.boolean(),
+    message: z.string(),
+  }))
+  .mutation(async ({ input, ctx }) => {
+    console.log('\ud83d\uddfa\ufe0f Updating zone preferences for user:', ctx.user.id);
+    
+    try {
+      const { db } = await import('@/lib/firebase');
+      const { doc, setDoc, Timestamp } = await import('firebase/firestore');
+      
+      const kommuterRef = doc(db, 'kommuter_profiles', ctx.user.id);
+      
+      await setDoc(kommuterRef, {
+        zonePreferences: {
+          provinces: input.provinces,
+          avoidedZones: input.avoidedZones,
+          updatedAt: Timestamp.now(),
+        },
+        updatedAt: Timestamp.now(),
+      }, { merge: true });
+      
+      console.log('\u2705 Zone preferences updated successfully');
+      
+      return {
+        success: true,
+        message: 'Preferencias de zona guardadas correctamente',
+      };
+    } catch (error) {
+      console.error('\u274c Error updating zone preferences:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to update zone preferences',
+        cause: error,
+      });
+    }
+  });

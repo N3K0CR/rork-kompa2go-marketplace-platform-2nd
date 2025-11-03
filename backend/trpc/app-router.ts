@@ -125,6 +125,9 @@ export const appRouter = createTRPCRouter({
     getZoneStatus: getZoneStatusProcedure,
     getNearbyZones: getNearbyZonesProcedure,
     
+    // Kommuter Zone Preferences
+    updateZonePreferences: commuteRoutes.updateZonePreferences,
+    
     // Surge pricing procedures
     calculateSurgePrice: calculateSurgePriceProcedure,
     getSurgePrice: getSurgePriceProcedure,
