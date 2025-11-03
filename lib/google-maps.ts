@@ -29,7 +29,12 @@ export const GOOGLE_MAPS_API_KEY = Platform.select({
   default: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
 });
 
-console.log('🗺️ GOOGLE_MAPS_API_KEY exported:', GOOGLE_MAPS_API_KEY ? `${GOOGLE_MAPS_API_KEY.substring(0, 10)}...` : 'undefined');
+console.log('🔑 DEBUG API KEY:', {
+  raw: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+  exported: GOOGLE_MAPS_API_KEY,
+  type: typeof GOOGLE_MAPS_API_KEY,
+  preview: GOOGLE_MAPS_API_KEY ? `${GOOGLE_MAPS_API_KEY.substring(0, 10)}...` : 'undefined'
+});
 
 /**
  * Validar que la API Key esté configurada

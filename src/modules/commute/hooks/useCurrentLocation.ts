@@ -87,20 +87,22 @@ export const useCurrentLocation = (): UseCurrentLocationResult => {
           );
         } else {
           console.log('📱 Requesting location permissions (mobile)...');
+          
           const { status } = await Location.requestForegroundPermissionsAsync();
           console.log('📱 Permission status:', status);
           
           if (status !== 'granted') {
-            console.error('❌ Location permission denied');
+            const errorMsg = 'Permisos de ubicación denegados';
+            console.error('❌', errorMsg);
             setIsError(true);
-            setError(new Error('Location permission denied'));
+            setError(new Error(errorMsg));
             setIsLoading(false);
             return;
           }
 
           console.log('📍 Getting current position (mobile)...');
           const location = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.High,
+            accuracy: Location.Accuracy.Balanced,
           });
 
           console.log('✅ Current position:', {
