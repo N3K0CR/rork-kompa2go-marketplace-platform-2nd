@@ -65,7 +65,7 @@ export default function ManageZones() {
         [{ text: 'OK' }]
       );
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       console.error('❌ Error saving preferences:', error);
       Alert.alert(
         'Error',
