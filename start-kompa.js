@@ -24,13 +24,31 @@ function log(prefix, message, color = colors.system) {
 
 function killPort(port) {
   return new Promise((resolve) => {
-    const command = process.platform === 'win32'
-      ? `FOR /F "tokens=5" %P IN ('netstat -ano ^| findstr :${port}') DO taskkill /F /PID %P`
-      : `lsof -ti:${port} | xargs kill -9 2>/dev/null || true`;
+    // Intentar múltiples métodos para matar el proceso
+    const commands = [
+      `fuser -k ${port}/tcp 2>/dev/null`,
+      `lsof -ti:${port} | xargs kill -9 2>/dev/null`,
+      `ss -lptn 'sport = :${port}' | grep -Po '(?<=pid=)\\d+' | xargs kill -9 2>/dev/null`,
+    ];
     
-    exec(command, () => {
-      setTimeout(resolve, 1000);
+    let completed = 0;
+    const total = commands.length;
+    
+    commands.forEach(cmd => {
+      exec(cmd, () => {
+        completed++;
+        if (completed === total) {
+          setTimeout(resolve, 2000); // Esperar 2 segundos después de matar
+        }
+      });
     });
+    
+    // Si ningún comando funciona, continuar de todas formas
+    setTimeout(() => {
+      if (completed < total) {
+        resolve();
+      }
+    }, 3000);
   });
 }
 
@@ -54,7 +72,6 @@ function loadEnv() {
 
 function checkBackendHealth() {
   return new Promise((resolve) => {
-    // Intentar con localhost primero
     const req = http.get(`http://localhost:${PORT}/api/`, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
@@ -63,24 +80,12 @@ function checkBackendHealth() {
           const json = JSON.parse(data);
           resolve(res.statusCode === 200 && json.status === 'ok');
         } catch {
-          // Si no es JSON válido, revisar si al menos responde
           resolve(res.statusCode === 200);
         }
       });
     });
     
-    req.on('error', (err) => {
-      // Si falla con localhost, intentar con 127.0.0.1
-      const req2 = http.get(`http://127.0.0.1:${PORT}/api/`, (res) => {
-        resolve(res.statusCode === 200);
-      });
-      req2.on('error', () => resolve(false));
-      req2.setTimeout(2000, () => {
-        req2.destroy();
-        resolve(false);
-      });
-    });
-    
+    req.on('error', () => resolve(false));
     req.setTimeout(2000, () => {
       req.destroy();
       resolve(false);
@@ -137,25 +142,23 @@ function startBackend() {
         if (line.trim()) {
           log('BACKEND', line, colors.backend);
           
-          // Cuando vemos que el backend reporta que está corriendo, iniciamos health checks
           if ((line.includes('Backend running') || line.includes('Health check')) && !healthCheckStarted) {
             healthCheckStarted = true;
             setTimeout(async () => {
               log('BACKEND', 'Backend reporta estar listo, verificando conectividad...', colors.backend);
-              const isReady = await waitForBackend(15000); // Reducido a 15 segundos
+              const isReady = await waitForBackend(15000);
               
               if (isReady) {
                 backendReady = true;
                 log('BACKEND', `✅ Backend respondiendo en http://localhost:${PORT}/api/`, colors.success);
                 resolve(backendProcess);
               } else {
-                // No rechazar inmediatamente, dar más tiempo
                 log('BACKEND', '⚠️ Backend no responde al health check, pero continúa corriendo...', colors.system);
                 log('BACKEND', '⚠️ Intentando iniciar frontend de todas formas...', colors.system);
-                backendReady = true; // Marcarlo como listo de todas formas
+                backendReady = true;
                 resolve(backendProcess);
               }
-            }, 2000); // Esperar 2 segundos después de ver el mensaje
+            }, 2000);
           }
         }
       });
@@ -186,7 +189,6 @@ function startBackend() {
       }
     });
 
-    // Timeout de 40 segundos para todo el proceso
     setTimeout(() => {
       if (!backendReady) {
         log('BACKEND', '⚠️ Timeout esperando backend, pero intentando continuar...', colors.system);
