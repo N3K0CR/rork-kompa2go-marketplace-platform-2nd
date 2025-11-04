@@ -1,18 +1,21 @@
 #!/bin/bash
 
-# Script para iniciar el entorno de desarrollo completo
-# Frontend (Expo) + Backend (Hono/tRPC)
+# Version simplificada para desarrollo rápido
+# Solo inicia el backend y frontend sin verificaciones
 
-echo "🚀 Iniciando Kompa2Go Development Environment..."
-echo ""
-echo "📦 Backend: Hono/tRPC Server (con auto-reload)"
-echo "📱 Frontend: Expo React Native App"
-echo ""
+echo "🚀 Quick Start - Kompa2Go"
 
-# Ejecutar ambos procesos en paralelo con concurrently
-bunx concurrently \
-  --kill-others \
-  --names "BACKEND,FRONTEND" \
-  --prefix-colors "bgBlue.bold,bgMagenta.bold" \
-  "nodemon --watch backend --ext ts,js,json --exec 'tsx backend/server.ts'" \
-  "bunx rork start -p z5be445fq2fb0yuu32aht --tunnel"
+# Matar procesos
+lsof -ti:8082 | xargs kill -9 2>/dev/null || true
+lsof -ti:8081 | xargs kill -9 2>/dev/null || true
+
+# Iniciar backend
+node --import=tsx/esm backend/server.ts &
+
+# Esperar 3 segundos
+sleep 3
+
+# Iniciar frontend
+bunx rork start -p z5be445fq2fb0yuu32aht --tunnel
+
+wait
