@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { trpcServer } from "@hono/trpc-server";
-import { cors } from "hono/cors";
 import { appRouter } from "@/backend/trpc/app-router";
 import { createContext } from "@/backend/trpc/create-context";
 import { healthCheck } from "@/lib/db/index";
@@ -10,13 +9,19 @@ import { rateLimitMiddleware, securityHeadersMiddleware } from "@/backend/middle
 const app = new Hono();
 
 // Enable CORS FIRST - must be before other middleware
-app.use("*", cors({
-  origin: ['http://localhost:8081', 'http://localhost:19006', 'http://127.0.0.1:8081', 'http://127.0.0.1:19006'],
-  credentials: true,
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
-  maxAge: 86400
-}));
+app.use("*", async (c, next) => {
+  c.header('Access-Control-Allow-Origin', '*');
+  c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  c.header('Access-Control-Max-Age', '86400');
+  c.header('Access-Control-Allow-Credentials', 'true');
+  
+  if (c.req.method === 'OPTIONS') {
+    return c.text('', 204);
+  }
+  
+  await next();
+});
 
 // Security middleware - DDoS protection (after CORS)
 app.use("*", rateLimitMiddleware);
