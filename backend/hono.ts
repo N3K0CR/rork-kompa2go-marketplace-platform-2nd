@@ -17,7 +17,7 @@ app.use("*", async (c, next) => {
   c.header('Access-Control-Allow-Credentials', 'true');
   
   if (c.req.method === 'OPTIONS') {
-    return c.body(null, 204);
+    return new Response(null, { status: 204 });
   }
   
   await next();
