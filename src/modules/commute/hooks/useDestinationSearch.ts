@@ -1,9 +1,19 @@
-import { useState, useCallback, useEffect } from 'react';
-import { PlacesService, PlaceResult } from '../services/places-service';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { trpcClient } from '@/lib/trpc';
 
 interface Location {
   latitude: number;
   longitude: number;
+}
+
+export interface PlaceResult {
+  place_id: string;
+  description: string;
+  structured_formatting: {
+    main_text: string;
+    secondary_text: string;
+  };
+  types: string[];
 }
 
 interface UseDestinationSearchResult {
@@ -19,6 +29,7 @@ export function useDestinationSearch(userLocation?: Location): UseDestinationSea
   const [results, setResults] = useState<PlaceResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const search = useCallback(async (query: string) => {
     setError(null);
@@ -29,32 +40,45 @@ export function useDestinationSearch(userLocation?: Location): UseDestinationSea
       return;
     }
 
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    abortControllerRef.current = new AbortController();
     setLoading(true);
 
     try {
-      const searchResults = await PlacesService.searchDestination({
+      console.log('🔍 Frontend: Buscando destino vía tRPC:', query);
+
+      const response = await trpcClient.commute.searchPlaces.query({
         query: query.trim(),
         location: userLocation,
       });
 
-      setResults(searchResults);
+      console.log('✅ Frontend: Resultados recibidos:', response.predictions.length);
+
+      setResults(response.predictions);
       
     } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        console.error('Error en búsqueda de destino:', err);
+      if (err.name !== 'AbortError' && !err.message?.includes('aborted')) {
+        console.error('❌ Frontend: Error en búsqueda de destino:', err);
         setError(err.message || 'Error al buscar destino');
         setResults([]);
       }
       
     } finally {
       setLoading(false);
+      abortControllerRef.current = null;
     }
   }, [userLocation]);
 
   const clearResults = useCallback(() => {
     setResults([]);
     setError(null);
-    PlacesService.cancelSearch();
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
   }, []);
 
   const clearError = useCallback(() => {
@@ -63,7 +87,9 @@ export function useDestinationSearch(userLocation?: Location): UseDestinationSea
 
   useEffect(() => {
     return () => {
-      PlacesService.cancelSearch();
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
   }, []);
 
