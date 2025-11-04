@@ -1366,3 +1366,257 @@ export const updateZonePreferences = protectedProcedure
       });
     }
   });
+
+// ============================================================================
+// GOOGLE PLACES PROXY PROCEDURES
+// ============================================================================
+
+/**
+ * Busca lugares usando Google Places API (proxy para evitar CORS)
+ */
+export const searchPlaces = protectedProcedure
+  .input(z.object({
+    query: z.string().min(1),
+    location: z.object({
+      latitude: z.number(),
+      longitude: z.number(),
+    }).optional(),
+    radius: z.number().optional().default(50000),
+    language: z.string().optional().default('es'),
+  }))
+  .output(z.object({
+    predictions: z.array(z.object({
+      place_id: z.string(),
+      description: z.string(),
+      structured_formatting: z.object({
+        main_text: z.string(),
+        secondary_text: z.string(),
+      }),
+      types: z.array(z.string()),
+    })),
+    status: z.string(),
+  }))
+  .query(async ({ input }) => {
+    console.log('🔍 Backend: Buscando lugares para:', input.query);
+
+    try {
+      const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+      if (!GOOGLE_MAPS_API_KEY) {
+        console.error('❌ Backend: API Key no configurada');
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Google Maps API Key no configurada en el servidor',
+        });
+      }
+
+      let url = 'https://maps.googleapis.com/maps/api/place/autocomplete/json';
+      url += `?input=${encodeURIComponent(input.query)}`;
+      url += `&key=${GOOGLE_MAPS_API_KEY}`;
+      url += `&language=${input.language}`;
+      url += `&components=country:cr`;
+
+      if (input.location) {
+        url += `&location=${input.location.latitude},${input.location.longitude}`;
+        url += `&radius=${input.radius}`;
+      }
+
+      console.log('📡 Backend: Llamando a Google Places API...');
+
+      const response = await fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('❌ Backend: Error HTTP:', response.status);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Error al llamar a Google Places API: ${response.status}`,
+        });
+      }
+
+      const data = await response.json();
+
+      console.log('✅ Backend: Respuesta recibida:', {
+        status: data.status,
+        results: data.predictions?.length || 0,
+      });
+
+      if (data.status === 'ZERO_RESULTS') {
+        return {
+          predictions: [],
+          status: data.status,
+        };
+      }
+
+      if (data.status !== 'OK') {
+        console.error('❌ Backend: Error de Google:', data.status, data.error_message);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: data.error_message || 'Error al buscar lugares',
+        });
+      }
+
+      return {
+        predictions: data.predictions || [],
+        status: data.status,
+      };
+    } catch (error: any) {
+      console.error('❌ Backend: Error en searchPlaces:', error);
+      
+      if (error instanceof TRPCError) {
+        throw error;
+      }
+
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Error al buscar lugares',
+        cause: error,
+      });
+    }
+  });
+
+/**
+ * Obtiene detalles de un lugar específico
+ */
+export const getPlaceDetails = protectedProcedure
+  .input(z.object({
+    placeId: z.string(),
+    language: z.string().optional().default('es'),
+  }))
+  .output(z.object({
+    result: z.object({
+      place_id: z.string(),
+      formatted_address: z.string(),
+      name: z.string(),
+      geometry: z.object({
+        location: z.object({
+          lat: z.number(),
+          lng: z.number(),
+        }),
+      }),
+    }),
+    status: z.string(),
+  }))
+  .query(async ({ input }) => {
+    console.log('🔍 Backend: Obteniendo detalles del lugar:', input.placeId);
+
+    try {
+      const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+      if (!GOOGLE_MAPS_API_KEY) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Google Maps API Key no configurada en el servidor',
+        });
+      }
+
+      const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${input.placeId}&key=${GOOGLE_MAPS_API_KEY}&language=${input.language}&fields=geometry,formatted_address,name,place_id`;
+
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Error al llamar a Google Places API: ${response.status}`,
+        });
+      }
+
+      const data = await response.json();
+
+      if (data.status !== 'OK') {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: data.error_message || 'Error al obtener detalles del lugar',
+        });
+      }
+
+      console.log('✅ Backend: Detalles obtenidos exitosamente');
+
+      return {
+        result: data.result,
+        status: data.status,
+      };
+    } catch (error: any) {
+      console.error('❌ Backend: Error en getPlaceDetails:', error);
+      
+      if (error instanceof TRPCError) {
+        throw error;
+      }
+
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Error al obtener detalles del lugar',
+        cause: error,
+      });
+    }
+  });
+
+/**
+ * Geocoding inverso (coordenadas a dirección)
+ */
+export const reverseGeocode = protectedProcedure
+  .input(z.object({
+    latitude: z.number(),
+    longitude: z.number(),
+    language: z.string().optional().default('es'),
+  }))
+  .output(z.object({
+    address: z.string(),
+    status: z.string(),
+  }))
+  .query(async ({ input }) => {
+    console.log('🔍 Backend: Reverse geocoding:', input.latitude, input.longitude);
+
+    try {
+      const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+      if (!GOOGLE_MAPS_API_KEY) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Google Maps API Key no configurada en el servidor',
+        });
+      }
+
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${input.latitude},${input.longitude}&key=${GOOGLE_MAPS_API_KEY}&language=${input.language}`;
+
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: `Error al llamar a Google Geocoding API: ${response.status}`,
+        });
+      }
+
+      const data = await response.json();
+
+      if (data.status !== 'OK' || !data.results || data.results.length === 0) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'No se pudo obtener la dirección',
+        });
+      }
+
+      console.log('✅ Backend: Dirección obtenida exitosamente');
+
+      return {
+        address: data.results[0].formatted_address,
+        status: data.status,
+      };
+    } catch (error: any) {
+      console.error('❌ Backend: Error en reverseGeocode:', error);
+      
+      if (error instanceof TRPCError) {
+        throw error;
+      }
+
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Error al obtener la dirección',
+        cause: error,
+      });
+    }
+  });

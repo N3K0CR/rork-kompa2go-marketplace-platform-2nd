@@ -128,6 +128,11 @@ export const appRouter = createTRPCRouter({
     // Kommuter Zone Preferences
     updateZonePreferences: commuteRoutes.updateZonePreferences,
     
+    // Google Places Proxy (para evitar CORS)
+    searchPlaces: commuteRoutes.searchPlaces,
+    getPlaceDetails: commuteRoutes.getPlaceDetails,
+    reverseGeocode: commuteRoutes.reverseGeocode,
+    
     // Surge pricing procedures
     calculateSurgePrice: calculateSurgePriceProcedure,
     getSurgePrice: getSurgePriceProcedure,
