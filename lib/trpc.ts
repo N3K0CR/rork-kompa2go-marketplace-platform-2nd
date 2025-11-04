@@ -37,11 +37,12 @@ export const getAuthToken = () => {
 export const trpcClient = trpc.createClient({
   links: [
     httpLink({
-      url: `${getBaseUrl()}/api/trpc`,
+      url: 'http://localhost:8082/api/trpc',
       transformer: superjson,
       headers: () => {
         const token = getAuthToken();
         console.log('🔍 tRPC request headers - token:', token ? 'Present' : 'Missing');
+        console.log('🌐 tRPC URL:', 'http://localhost:8082/api/trpc');
         return token ? {
           authorization: `Bearer ${token}`,
         } : {};
