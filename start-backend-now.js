@@ -30,7 +30,7 @@ async function main() {
   console.log('📦 Starting backend process...\n');
 
   const backendProcess = spawn('node', [
-    '--loader', 'tsx',
+    '--import', 'tsx',
     path.join(process.cwd(), 'backend', 'server.ts')
   ], {
     env: {
