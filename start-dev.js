@@ -83,7 +83,7 @@ const backend = createProcess(
     '--ignore', 'node_modules/',
     '--delay', '1000ms',
     '--exec',
-    `${tsxPath} --tsconfig backend/tsconfig.backend.json backend/server.ts`
+    `node --import tsx/esm backend/server.ts`
   ],
   colors.backend
 );
