@@ -2,6 +2,7 @@
 
 const { spawn, exec } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 
 const PORT = 8082;
 const HOST = '0.0.0.0';
@@ -24,18 +25,39 @@ function killPort(port) {
   });
 }
 
+function loadEnv() {
+  const envPath = path.join(process.cwd(), '.env.local');
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    const envVars = {};
+    envContent.split('\n').forEach(line => {
+      const match = line.match(/^([^=]+)=(.*)$/);
+      if (match) {
+        const key = match[1].trim();
+        const value = match[2].trim();
+        envVars[key] = value;
+      }
+    });
+    console.log('✅ Loaded environment variables from .env.local');
+    return envVars;
+  }
+  console.warn('⚠️ .env.local not found');
+  return {};
+}
+
 async function main() {
   await killPort(PORT);
 
+  const envVars = loadEnv();
   console.log('📦 Starting backend process...\n');
 
   const backendProcess = spawn('node', [
-    '--import',
-    'tsx/esm',
+    '--import=tsx/esm',
     path.join(process.cwd(), 'backend', 'server.ts')
   ], {
     env: {
       ...process.env,
+      ...envVars,
       PORT: PORT.toString(),
       HOST: HOST,
       NODE_ENV: process.env.NODE_ENV || 'development'
