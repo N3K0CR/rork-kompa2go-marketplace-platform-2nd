@@ -112,9 +112,12 @@ export class GeocodingService {
     try {
       const url = `${NOMINATIM_BASE_URL}/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`;
       
-      console.log('[GeocodingService] Reverse geocoding:', latitude, longitude);
+      console.log('[GeocodingService] Reverse geocoding URL:', url);
+      console.log('[GeocodingService] Request params:', { latitude, longitude });
       
       const response = await rateLimitedFetch(url);
+      
+      console.log('[GeocodingService] Response status:', response.status, response.statusText);
       
       if (!response.ok) {
         if (response.status === 429) {
@@ -124,6 +127,13 @@ export class GeocodingService {
       }
       
       const data: NominatimResult = await response.json();
+      
+      console.log('[GeocodingService] Raw response data:', JSON.stringify(data, null, 2));
+      
+      if (!data || !data.lat || !data.lon) {
+        console.error('[GeocodingService] Invalid response format:', data);
+        throw new Error('Invalid geocoding response format');
+      }
       
       const result: GeocodingResult = {
         latitude: parseFloat(data.lat),
@@ -140,7 +150,13 @@ export class GeocodingService {
       return result;
     } catch (error) {
       console.error('[GeocodingService] Reverse geocoding error:', error);
-      return null;
+      console.error('[GeocodingService] Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        latitude,
+        longitude
+      });
+      throw error;
     }
   }
 
