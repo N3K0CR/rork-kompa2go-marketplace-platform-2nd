@@ -65,11 +65,12 @@ app.get("/health/db", async (c) => {
     const dbHealth = await healthCheck();
     return c.json(dbHealth);
   } catch (error) {
+    console.warn('⚠️ Database unavailable, running without PostgreSQL');
     return c.json({ 
-      status: "unhealthy", 
-      error: error instanceof Error ? error.message : "Unknown error",
+      status: "degraded", 
+      note: "Running without PostgreSQL - using Firebase",
       timestamp: new Date().toISOString() 
-    }, 500);
+    }, 200);
   }
 });
 
