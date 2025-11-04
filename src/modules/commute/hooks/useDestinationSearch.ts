@@ -62,6 +62,10 @@ export function useDestinationSearch(userLocation?: Location): UseDestinationSea
     } catch (err: any) {
       if (err.name !== 'AbortError' && !err.message?.includes('aborted')) {
         console.error('❌ Frontend: Error en búsqueda de destino:', err);
+        console.error('❌ Error name:', err.name);
+        console.error('❌ Error message:', err.message);
+        console.error('❌ Error cause:', err.cause);
+        console.error('❌ Error stack:', err.stack);
         setError(err.message || 'Error al buscar destino');
         setResults([]);
       }
