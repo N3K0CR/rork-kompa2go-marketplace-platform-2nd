@@ -1430,10 +1430,10 @@ export const searchPlaces = protectedProcedure
       });
 
       if (!response.ok) {
-        console.error('❌ Backend: Error HTTP:', response.status);
+        console.error('❌ Backend: Error HTTP:', response.status, response.statusText);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `Error al llamar a Google Places API: ${response.status}`,
+          message: `Error al llamar a Google Places API: ${response.status} ${response.statusText}`,
         });
       }
 
@@ -1465,6 +1465,11 @@ export const searchPlaces = protectedProcedure
       };
     } catch (error: any) {
       console.error('❌ Backend: Error en searchPlaces:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      });
       
       if (error instanceof TRPCError) {
         throw error;
@@ -1472,7 +1477,7 @@ export const searchPlaces = protectedProcedure
 
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: 'Error al buscar lugares',
+        message: `Error al buscar lugares: ${error.message || 'Error desconocido'}`,
         cause: error,
       });
     }
@@ -1507,6 +1512,7 @@ export const getPlaceDetails = protectedProcedure
       const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
       if (!GOOGLE_MAPS_API_KEY) {
+        console.error('❌ Backend: API Key no configurada');
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Google Maps API Key no configurada en el servidor',
@@ -1515,18 +1521,22 @@ export const getPlaceDetails = protectedProcedure
 
       const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${input.placeId}&key=${GOOGLE_MAPS_API_KEY}&language=${input.language}&fields=geometry,formatted_address,name,place_id`;
 
+      console.log('📡 Backend: Llamando a Google Place Details API...');
+
       const response = await fetch(url);
 
       if (!response.ok) {
+        console.error('❌ Backend: Error HTTP:', response.status, response.statusText);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `Error al llamar a Google Places API: ${response.status}`,
+          message: `Error al llamar a Google Places API: ${response.status} ${response.statusText}`,
         });
       }
 
       const data = await response.json();
 
       if (data.status !== 'OK') {
+        console.error('❌ Backend: Error de Google:', data.status, data.error_message);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: data.error_message || 'Error al obtener detalles del lugar',
@@ -1541,6 +1551,11 @@ export const getPlaceDetails = protectedProcedure
       };
     } catch (error: any) {
       console.error('❌ Backend: Error en getPlaceDetails:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      });
       
       if (error instanceof TRPCError) {
         throw error;
@@ -1548,7 +1563,7 @@ export const getPlaceDetails = protectedProcedure
 
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: 'Error al obtener detalles del lugar',
+        message: `Error al obtener detalles del lugar: ${error.message || 'Error desconocido'}`,
         cause: error,
       });
     }
@@ -1574,6 +1589,7 @@ export const reverseGeocode = protectedProcedure
       const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
       if (!GOOGLE_MAPS_API_KEY) {
+        console.error('❌ Backend: API Key no configurada');
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Google Maps API Key no configurada en el servidor',
@@ -1582,18 +1598,22 @@ export const reverseGeocode = protectedProcedure
 
       const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${input.latitude},${input.longitude}&key=${GOOGLE_MAPS_API_KEY}&language=${input.language}`;
 
+      console.log('📡 Backend: Llamando a Google Geocoding API...');
+
       const response = await fetch(url);
 
       if (!response.ok) {
+        console.error('❌ Backend: Error HTTP:', response.status, response.statusText);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: `Error al llamar a Google Geocoding API: ${response.status}`,
+          message: `Error al llamar a Google Geocoding API: ${response.status} ${response.statusText}`,
         });
       }
 
       const data = await response.json();
 
       if (data.status !== 'OK' || !data.results || data.results.length === 0) {
+        console.error('❌ Backend: No se encontraron resultados:', data.status);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'No se pudo obtener la dirección',
@@ -1608,6 +1628,11 @@ export const reverseGeocode = protectedProcedure
       };
     } catch (error: any) {
       console.error('❌ Backend: Error en reverseGeocode:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      });
       
       if (error instanceof TRPCError) {
         throw error;
@@ -1615,7 +1640,7 @@ export const reverseGeocode = protectedProcedure
 
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: 'Error al obtener la dirección',
+        message: `Error al obtener la dirección: ${error.message || 'Error desconocido'}`,
         cause: error,
       });
     }
