@@ -54,15 +54,24 @@ function loadEnv() {
 
 function checkBackendHealth() {
   return new Promise((resolve) => {
-    const req = http.get(`http://localhost:${PORT}/api/`, (res) => {
-      resolve(res.statusCode === 200);
+    const req = http.get(`http://127.0.0.1:${PORT}/api/`, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          resolve(res.statusCode === 200 && json.status === 'ok');
+        } catch {
+          resolve(false);
+        }
+      });
     });
     
-    req.on('error', () => {
+    req.on('error', (err) => {
       resolve(false);
     });
     
-    req.setTimeout(1000, () => {
+    req.setTimeout(2000, () => {
       req.destroy();
       resolve(false);
     });
@@ -148,7 +157,7 @@ function startBackend() {
     const isReady = await waitForBackend();
     
     if (isReady) {
-      log('BACKEND', `✅ Backend respondiendo en http://localhost:${PORT}`, colors.success);
+      log('BACKEND', `✅ Backend respondiendo en http://localhost:${PORT}/api/`, colors.success);
       resolve(backendProcess);
     } else {
       log('BACKEND', '❌ Backend no respondió a tiempo', colors.error);
