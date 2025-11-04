@@ -13,7 +13,7 @@ sleep 2
 # Iniciar backend
 echo "🔧 Iniciando backend..."
 cd /home/user/rork-app
-node backend/server.ts > backend.log 2>&1 &
+bun backend/server.ts > backend.log 2>&1 &
 BACKEND_PID=$!
 
 echo "   Backend PID: $BACKEND_PID"
