@@ -9,18 +9,18 @@ import { rateLimitMiddleware, securityHeadersMiddleware } from "@/backend/middle
 // app will be mounted at /api
 const app = new Hono();
 
-// Security middleware - DDoS protection
-app.use("*", rateLimitMiddleware);
-app.use("*", securityHeadersMiddleware);
-
-// Enable CORS for all routes
+// Enable CORS FIRST - must be before other middleware
 app.use("*", cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://yourdomain.com'] // Reemplaza con tu dominio
-    : '*',
+  origin: ['http://localhost:8081', 'http://localhost:19006', 'http://127.0.0.1:8081', 'http://127.0.0.1:19006'],
   credentials: true,
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
   maxAge: 86400
 }));
+
+// Security middleware - DDoS protection (after CORS)
+app.use("*", rateLimitMiddleware);
+app.use("*", securityHeadersMiddleware);
 
 // Mount tRPC router at /trpc
 app.use(
