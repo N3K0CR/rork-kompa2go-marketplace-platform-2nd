@@ -12,12 +12,19 @@ const app = new Hono();
 app.use("*", async (c, next) => {
   c.header('Access-Control-Allow-Origin', '*');
   c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, content-type');
   c.header('Access-Control-Max-Age', '86400');
-  c.header('Access-Control-Allow-Credentials', 'true');
   
   if (c.req.method === 'OPTIONS') {
-    return new Response(null, { status: 204 });
+    return new Response(null, { 
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, content-type',
+        'Access-Control-Max-Age': '86400'
+      }
+    });
   }
   
   await next();
@@ -40,6 +47,16 @@ app.use(
 // Simple health check endpoint
 app.get("/", (c) => {
   return c.json({ status: "ok", message: "API is running" });
+});
+
+// Debug endpoint to check environment
+app.get("/debug/env", (c) => {
+  return c.json({
+    googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ? 'Configured' : 'Missing',
+    firebaseProject: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'Missing',
+    nodeEnv: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Database health check endpoint

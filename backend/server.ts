@@ -8,6 +8,9 @@ console.log("🚀 Starting Kompa2Go Backend...");
 console.log(`📍 Port: ${PORT}`);
 console.log(`📍 Host: ${HOST}`);
 console.log(`📍 Environment: ${process.env.NODE_ENV || "development"}`);
+console.log(`📍 Google Maps API Key: ${process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ? '✓ Configured' : '✗ Missing'}`);
+console.log(`📍 Firebase Project: ${process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || '✗ Missing'}`);
+console.log('=====================================');
 
 const server = serve({
   fetch: app.fetch,
