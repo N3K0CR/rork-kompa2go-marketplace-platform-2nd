@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { trpcServer } from '@hono/trpc-server';
 import { appRouter } from '@/backend/trpc/app-router';
 import { createContext } from '@/backend/trpc/create-context';
+import { rateLimitMiddleware } from '@/backend/middleware/security';
 
 const app = new Hono();
 
@@ -13,6 +14,7 @@ app.use('*', cors({
 }));
 
 app.options('*', (c) => c.body(null, 204));
+app.use('*', rateLimitMiddleware);
 
 app.get('/api/', (c) => c.json({ message: 'Kompa2Go API', version: '1.0.0' }));
 
