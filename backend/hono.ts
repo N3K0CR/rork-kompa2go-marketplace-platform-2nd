@@ -11,14 +11,20 @@ app.use('*', cors({
   origin: '*',
   allowMethods: ['GET', 'POST', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
 }));
 
 app.options('*', (c) => c.body(null, 204));
 app.use('*', rateLimitMiddleware);
 
-app.get('/api/', (c) => c.json({ message: 'Kompa2Go API', version: '1.0.0' }));
+app.get('/', (c) => c.json({ 
+  message: 'Kompa2Go API', 
+  version: '1.0.0',
+  status: 'healthy',
+  timestamp: new Date().toISOString()
+}));
 
-app.use('/api/trpc/*', trpcServer({
+app.use('/trpc/*', trpcServer({
   router: appRouter,
   createContext,
 }));

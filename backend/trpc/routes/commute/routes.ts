@@ -4,7 +4,7 @@
 // Rutas tRPC para el módulo de transporte avanzado
 
 import { z } from 'zod';
-import { protectedProcedure } from '@/backend/trpc/create-context';
+import { protectedProcedure, publicProcedure } from '@/backend/trpc/create-context';
 import { TRPCError } from '@trpc/server';
 import { MatchingService } from './matching-service';
 import { RealTimeService } from './realtime-service';
@@ -1374,7 +1374,7 @@ export const updateZonePreferences = protectedProcedure
 /**
  * Busca lugares usando Google Places API (proxy para evitar CORS)
  */
-export const searchPlaces = protectedProcedure
+export const searchPlaces = publicProcedure
   .input(z.object({
     query: z.string().min(1),
     location: z.object({
@@ -1486,7 +1486,7 @@ export const searchPlaces = protectedProcedure
 /**
  * Obtiene detalles de un lugar específico
  */
-export const getPlaceDetails = protectedProcedure
+export const getPlaceDetails = publicProcedure
   .input(z.object({
     placeId: z.string(),
     language: z.string().optional().default('es'),
@@ -1572,7 +1572,7 @@ export const getPlaceDetails = protectedProcedure
 /**
  * Geocoding inverso (coordenadas a dirección)
  */
-export const reverseGeocode = protectedProcedure
+export const reverseGeocode = publicProcedure
   .input(z.object({
     latitude: z.number(),
     longitude: z.number(),
